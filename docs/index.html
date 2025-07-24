@@ -18,9 +18,7 @@
     gtag('config', 'G-PYVRSFMDRL');
   </script>
 
-
-  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro"
-        rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="static/css/bulma.min.css">
   <link rel="stylesheet" href="static/css/bulma-carousel.min.css">
   <link rel="stylesheet" href="static/css/bulma-slider.min.css">
@@ -34,72 +32,368 @@
   <script src="static/js/bulma-carousel.min.js"></script>
   <script src="static/js/bulma-slider.min.js"></script>
   <script src="static/js/index.js"></script>
+
+  <style>
+    :root {
+      --primary-color: #2E7D32;
+      --secondary-color: #388E3C;
+      --accent-color: #66BB6A;
+      --text-primary: #2d3748;
+      --text-secondary: #4a5568;
+      --background-gradient: linear-gradient(135deg, #2E7D32 0%, #388E3C 100%);
+      --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      transition: var(--transition);
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      line-height: 1.6;
+      color: var(--text-primary);
+    }
+
+    .hero {
+      background: var(--background-gradient);
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+      opacity: 0.3;
+    }
+
+    .hero-body {
+      position: relative;
+      z-index: 1;
+      padding: 4rem 1.5rem;
+    }
+
+    .publication-title {
+      font-weight: 700;
+      color: white !important;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      margin-bottom: 1rem;
+      animation: fadeInUp 0.8s ease-out;
+    }
+
+    .hero .title.is-4 {
+      color: white !important;
+      opacity: 0.95;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .publication-authors {
+      animation: fadeInUp 0.8s ease-out 0.2s both;
+    }
+
+    .publication-links {
+      animation: fadeInUp 0.8s ease-out 0.4s both;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .link-block .button {
+      background: rgba(255, 255, 255, 0.15);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      color: white;
+      backdrop-filter: blur(10px);
+      margin: 0.25rem 0.5rem;
+      transition: var(--transition);
+      font-weight: 500;
+    }
+
+    .link-block .button:hover {
+      background: rgba(255, 255, 255, 0.25);
+      border-color: rgba(255, 255, 255, 0.5);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    }
+
+    .section {
+      padding: 1.5rem 1.5rem;
+    }
+
+    .card-enhanced {
+      background: white;
+      border-radius: 20px;
+      box-shadow: var(--card-shadow);
+      padding: 2rem;
+      margin: 0.5rem 0;
+      transition: var(--transition);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .card-enhanced:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+    }
+
+    .title.is-3 {
+      color: var(--primary-color);
+      font-weight: 600;
+      position: relative;
+      margin-bottom: 1rem;
+    }
+
+    .title.is-3::after {
+      content: '';
+      position: absolute;
+      bottom: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 4px;
+      background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+      border-radius: 2px;
+    }
+
+    .highlight-box {
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+      border-radius: 15px;
+      padding: 1.5rem;
+      border-left: 5px solid var(--primary-color);
+      margin: 0.5rem 0;
+    }
+
+    .highlight-box ul li {
+      margin-bottom: 1rem;
+      position: relative;
+      padding-left: 1.5rem;
+    }
+
+    .highlight-box ul li::before {
+      content: '✨';
+      position: absolute;
+      left: 0;
+      top: 0;
+    }
+
+    .image-container {
+      border-radius: 15px;
+      overflow: hidden;
+      box-shadow: var(--card-shadow);
+      margin: 0.5rem 0;
+      transition: var(--transition);
+    }
+
+    .image-container:hover {
+      transform: scale(1.02);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+    }
+
+    .image-container img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .demo-section {
+      background: linear-gradient(135deg, #2E7D32 0%, #388E3C 100%);
+      color: white;
+      border-radius: 20px;
+      padding: 1.5rem;
+      margin: 0.5rem 0;
+      text-align: center;
+    }
+
+    .demo-section .button {
+      background: white;
+      color: var(--primary-color);
+      font-weight: 600;
+      border-radius: 25px;
+      padding: 0.75rem 2rem;
+      border: none;
+      font-size: 1.1rem;
+      margin: 1rem;
+      transition: var(--transition);
+    }
+
+    .demo-section .button:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      background: #f8f9fa;
+    }
+
+    .bibtex-container {
+      background: #1a202c;
+      border-radius: 15px;
+      padding: 1.5rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: #e2e8f0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .bibtex-container::before {
+      content: 'BibTeX';
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: var(--primary-color);
+      color: white;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+    .footer {
+      background: #2d3748;
+      color: white;
+      margin-top: 1rem;
+    }
+
+    .footer .icon-link {
+      color: white;
+      transition: var(--transition);
+      margin: 0 0.5rem;
+      padding: 0.5rem;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .footer .icon-link:hover {
+      color: var(--accent-color);
+      background: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .scroll-indicator {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.2);
+      z-index: 9999;
+    }
+
+    .scroll-progress {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+      width: 0%;
+      transition: width 0.1s ease;
+    }
+
+    /* Responsive enhancements */
+    @media (max-width: 768px) {
+      .hero-body {
+        padding: 1.5rem 1rem;
+      }
+      
+      .card-enhanced {
+        padding: 1rem;
+        margin: 0.25rem 0;
+      }
+      
+      .link-block .button {
+        margin: 0.25rem 0.25rem;
+        font-size: 0.9rem;
+      }
+
+      .section {
+        padding: 1rem 0.75rem;
+      }
+
+      .highlight-box {
+        padding: 1rem;
+      }
+
+      .demo-section {
+        padding: 1rem;
+      }
+    }
+  </style>
 </head>
 <body>
+
+<div class="scroll-indicator">
+  <div class="scroll-progress" id="scrollProgress"></div>
+</div>
 
 <section class="hero">
   <div class="hero-body" align="center">
     <div class="container is-max-desktop">
       <div class="columns is-centered">
         <div class="column has-text-centered">
-          <h2 class="title is-2 publication-title">X-SAM </h2>
+          <h2 class="title is-2 publication-title">X-SAM ✨</h2>
           <h3 class="title is-4"> From Segment Anything to Any Segmentation </h3>
           <div class="is-size-5 publication-authors">
             <span class="author-block">
-              <a href="https://github.com/wanghao9610">Hao Wang</a><sup>1,2</sup>,</span>
+              <a href="https://github.com/wanghao9610" style="color: white; text-decoration: underline;">Hao Wang</a><sup>1,2</sup>,</span>
             <span class="author-block">
-              <a href="https://scholar.google.com/citations?user=3PFZAg0AAAAJ&hl=en">Limeng Qiao</a><sup>3</sup>,</span>
+              <a href="https://scholar.google.com/citations?user=3PFZAg0AAAAJ&hl=en" style="color: white; text-decoration: underline;">Limeng Qiao</a><sup>3</sup>,</span>
             <span class="author-block">
-              <a href="https://scholar.google.com/citations?user=4sKGNB0AAAAJ&hl=en">Zequn Jie</a><sup>3</sup>,</span>
+              <a href="https://scholar.google.com/citations?user=4sKGNB0AAAAJ&hl=en" style="color: white; text-decoration: underline;">Zequn Jie</a><sup>3</sup>,</span>
             <span class="author-block">
-              <a href="https://zhijian11.github.io/">Zhijian Huang</a><sup>1</sup>,</span>
+              <a href="https://zhijian11.github.io/" style="color: white; text-decoration: underline;">Zhijian Huang</a><sup>1</sup>,</span>
             <span class="author-block">
-              <a href="https://fcjian.github.io/">Chengjian Feng</a><sup>3</sup>,</span><br>
+              <a href="https://fcjian.github.io/" style="color: white; text-decoration: underline;">Chengjian Feng</a><sup>3</sup>,</span><br>
             <span class="author-block">
-              <a href="https://openreview.net/profile?id=%7EZheng_Qingfang1">Qingfang Zheng</a><sup>1</sup>,</span>
+              <a href="https://openreview.net/profile?id=%7EZheng_Qingfang1" style="color: white; text-decoration: underline;">Qingfang Zheng</a><sup>1</sup>,</span>
             <span class="author-block">
-              <a href="https://forestlinma.com/">Lin Ma</a><sup>3</sup>,</span>
+              <a href="https://forestlinma.com/" style="color: white; text-decoration: underline;">Lin Ma</a><sup>3</sup>,</span>
             <span class="author-block">
-              <a href="https://scholar.google.com/citations?user=c3iwWRcAAAAJ&hl=en">Xiangyuan Lan</a><sup>2</sup><sup>📧</sup>,</span>
+              <a href="https://scholar.google.com/citations?user=c3iwWRcAAAAJ&hl=en" style="color: white; text-decoration: underline;">Xiangyuan Lan</a><sup>2</sup><sup>📧</sup>,</span>
             <span class="author-block">
-              <a href="https://scholar.google.com/citations?user=voxznZAAAAAJ&hl=en">Xiaodan Liang</a><sup>1,2</sup><sup>📧</sup>
+              <a href="https://scholar.google.com/citations?user=voxznZAAAAAJ&hl=en" style="color: white; text-decoration: underline;">Xiaodan Liang</a><sup>1,2</sup><sup>📧</sup>
             </span>
           </div>
-          <div class="is-size-5 publication-authors">
+          <div class="is-size-5 publication-authors" style="margin-top: 1rem;">
             <span class="author-block"><sup>1</sup> Sun Yat-sen University,</span>
             <span class="author-block"><sup>2</sup> Pengcheng Lab,</span>
             <span class="author-block"><sup>3</sup> Meituan Inc</span>
           </div>
-          <div class="is-size-5 publication-authors">
+          <div class="is-size-6 publication-authors" style="margin-top: 0.5rem;">
             <span class="author-block"><sup>📧</sup> Corresponding author.</span>
           </div>
 
           <div class="column has-text-centered">
-            <div class="publication-links">
+                         <div class="publication-links" style="margin-top: 1rem;">
               <!-- PDF Link. -->
               <span class="link-block">
-                <a href="https://arxiv.org/pdf/"
-                    class="external-link button is-normal is-rounded is-dark">
+                <a href="#" onclick="alert('Paper will be available soon!')"
+                    class="external-link button is-normal is-rounded">
                   <span class="icon">
                       <i class="fas fa-file-pdf"></i>
                   </span>
-                  <span>Paper </span>
+                  <span>Paper</span>
                 </a>
               </span>
               <!--  Arxiv Link. -->
               <span class="link-block">
-                <a href="https://arxiv.org/abs/"
-                   class="external-link button is-normal is-rounded is-dark">
+                <a href="#" onclick="alert('arXiv link will be available soon!')"
+                   class="external-link button is-normal is-rounded">
                   <span class="icon">
                       <i class="ai ai-arxiv"></i>
                   </span>
-                  <span>arXiv </span>
+                  <span>arXiv</span>
                 </a>
               </span>
               <!--  Demo Link. -->
               <span class="link-block">
                 <a href="http://47.115.200.157:7861"
-                   class="external-link button is-normal is-rounded is-dark">
+                   class="external-link button is-normal is-rounded">
                   <span class="icon">
                       <i class="fas fa-gamepad"></i>
                   </span>
@@ -109,21 +403,21 @@
               <!-- HF Link. -->
               <span class="link-block">
                 <a href="https://huggingface.co/hao9610/X-SAM"
-                   class="external-link button is-normal is-rounded is-dark">
+                   class="external-link button is-normal is-rounded">
                   <span class="icon">
                     <i class="fas fa-cube"></i>
                   </span>
-                  <span>HuggingFace </span>
+                  <span>HuggingFace</span>
                 </a>
               </span>
               <!-- Code Link. -->
               <span class="link-block">
                 <a href="https://github.com/wanghao9610/X-SAM"
-                   class="external-link button is-normal is-rounded is-dark">
+                   class="external-link button is-normal is-rounded">
                   <span class="icon">
                       <i class="fab fa-github"></i>
                   </span>
-                  <span>Code </span>
+                  <span>Code</span>
                   </a>
               </span>
             </div>
@@ -137,23 +431,21 @@
 <section class="section">
   <!-- Highlight -->
   <div class="container is-max-desktop">
-    <div class="columns is-centered has-text-centered">
-    <div class="column is-four-fifths">
-        <h2 class="title is-3">Highlight</h2>
-        <div class="content has-text-justified">
-        <ul>
-          <li> X-SAM is a novel unified segmentation MLLMs, which offers superior performance on all image segmentation benchmarks.</li>
-  
-          <li> X-SAM integrates the SAM into MLLMs via a unified formulation adapted to all image segmentation, extending the SAM's capability from <i>segment anything</i> to <i>any segmentation</i>.</li>
-          
-          <li> X-SAM co-trains on multi data sources via a effective multi-stage training strategy, achieving the robust performance across all tasks.</li>
-        </ul>
+    <div class="columns is-centered">
+      <div class="column is-four-fifths">
+        <div class="card-enhanced">
+          <h2 class="title is-3" style="text-align: center;"> 🚀 Highlights</h2>
+          <div class="highlight-box">
+            <ul style="list-style: none; padding: 0; text-align: left;">
+              <li>X-SAM is a novel unified segmentation MLLMs, which offers superior performance on all image segmentation benchmarks.</li>
+              <li>X-SAM integrates the SAM into MLLMs via a unified formulation adapted to all image segmentation, extending the SAM's capability from <i>segment anything</i> to <i>any segmentation</i>.</li>
+              <li>X-SAM co-trains on multi data sources via an effective multi-stage training strategy, achieving robust performance across all tasks.</li>
+            </ul>
+          </div>
         </div>
-        </div>
+      </div>
     </div>
-    </div>
-    <!--/ Overview -->
-  </div>`
+  </div>
 </section>
 
 <section class="section">
@@ -161,13 +453,14 @@
   <div class="container is-max-desktop">
     <div class="columns is-centered has-text-centered">
       <div class="column is-four-fifths">
-        <h2 class="title is-3">Abstract</h2>
-        <div class="content has-text-justified">
-          <p>The Segment Anything Model (SAM) has emerged as a pivotal advancement in computer vision, particularly within the context of visual-prompt-driven segmentation. However, SAM is constrained by intrinsic limitations in multi-mask prediction and category-specific image segmentation tasks. Concurrently, Large Language Models (LLMs) have exhibited remarkable proficiency in comprehensive knowledge representation across a wide range of domains, yet they inherently lack the capacity for pixel-level perceptual understanding. To bridge these complementary gaps, we present X-SAM, a streamlined Multimodal Large Language Model (MLLM) framework that seamlessly integrates SAM with LLMs, thereby augmenting SAM's functionality from <i>segment anything</i> to <i>any segmentation</i>. Specifically, we introduce a novel approach for integrating SAM with MLLMs, which facilitates more advanced dense, pixel-level perceptual comprehension within MLLMs. Furthermore, we propose a new segmentation paradigm, termed <b>V</b>isual <b>G</b>roun<b>D</b>ed (VGD) segmentation, which empowers MLLMs with visual grounded, pixel-wise interpretative capabilities. To enable effective training of MLLMs on diverse data sources, we devise a unified training strategy that supports co-training across multiple datasets. Experimental results demonstrate that X-SAM achieves state-of-the-art performance on a wide range of image segmentation benchmarks, highlighting its efficacy for multimodal pixel-level visual understanding.</p>
+        <div class="card-enhanced">
+          <h2 class="title is-3">📄 Abstract</h2>
+          <div class="content has-text-justified" style="font-size: 1.1rem; line-height: 1.8;">
+            <p>The Segment Anything Model (SAM) has emerged as a pivotal advancement in computer vision, particularly within the context of visual-prompt-driven segmentation. However, SAM is constrained by intrinsic limitations in multi-mask prediction and category-specific image segmentation tasks. Concurrently, Large Language Models (LLMs) have exhibited remarkable proficiency in comprehensive knowledge representation across a wide range of domains, yet they inherently lack the capacity for pixel-level perceptual understanding. To bridge these complementary gaps, we present <strong>X-SAM</strong>, a streamlined Multimodal Large Language Model (MLLM) framework that seamlessly integrates SAM with LLMs, thereby augmenting SAM's functionality from <i>segment anything</i> to <i>any segmentation</i>. Specifically, we introduce a novel approach for integrating SAM with MLLMs, which facilitates more advanced dense, pixel-level perceptual comprehension within MLLMs. Furthermore, we propose a new segmentation paradigm, termed <strong>V</strong>isual <strong>G</strong>roun<strong>D</strong>ed (VGD) segmentation, which empowers MLLMs with visual grounded, pixel-wise interpretative capabilities. To enable effective training of MLLMs on diverse data sources, we devise a unified training strategy that supports co-training across multiple datasets. Experimental results demonstrate that X-SAM achieves state-of-the-art performance on a wide range of image segmentation benchmarks, highlighting its efficacy for multimodal pixel-level visual understanding.</p>
+          </div>
         </div>
       </div>
     </div>
-    <!--/ Abstract -->
   </div>
 </section>
 
@@ -176,17 +469,18 @@
   <div class="container is-max-desktop">
     <div class="columns is-centered has-text-centered">
       <div class="column is-four-fifths">
-          <h2 class="title is-3">Overview</h2>
-          <div class="content has-text-justified">
-          <img src="images/xsam_framework.png">
-          <div class="content has-text-justified"></div>
-            <p>Figure 1. <strong>Overview of X-SAM.</strong> X-SAM consists of dual encoders, dual projectors, a language model, a segmentation connector, and a segmentation decoder. First, the dual encoders encode the image simultaneously, then project them into the same dimension as text embeddings and feed them to the language model along with tokenized text embedding for instruction-guided image understanding. We bridge the SAM encoded feature with a connector to the segmentation decoder. In addition, the <span>&lt;SEG&gt;</span> token output by the LLM is decoded by the segmentation decoder into segmentation masks.</p>
+        <div class="card-enhanced">
+          <h2 class="title is-3">📄 Overview</h2>
+          <div class="image-container">
+            <img src="images/xsam_framework.png" alt="X-SAM Framework">
+          </div>
+                     <div class="content has-text-justified" style="margin-top: 0.5rem; font-size: 1rem; line-height: 1.7;">
+            <p><strong>Figure 1. Overview of X-SAM.</strong> X-SAM consists of dual encoders, dual projectors, a language model, a segmentation connector, and a segmentation decoder. First, the dual encoders encode the image simultaneously, then project them into the same dimension as text embeddings and feed them to the language model along with tokenized text embedding for instruction-guided image understanding. We bridge the SAM encoded feature with a connector to the segmentation decoder. In addition, the <span style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace;">&lt;SEG&gt;</span> token output by the LLM is decoded by the segmentation decoder into segmentation masks.</p>
           </div>
         </div>
       </div>
-      </div>
-        <!--/ Overview -->
     </div>
+  </div>
 </section>
 
 <section class="section">
@@ -194,30 +488,37 @@
     <!-- Experiments -->
     <div class="columns is-centered">
       <div class="column is-full-width">
-        <h2 class="title is-3">Benchmark Results</h2>
-      </div>
-    </div>
-
-    <!-- Main Results -->
-    <div class="columns is-centered">
-      <div class="column is-full-width">
-          <h3 class="title is-4"></h3>
-          <div class="content has-text-justified">
+        <div class="card-enhanced">
+          <h2 class="title is-3">📊 Benchmark Results</h2>
+                     <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
             <p><strong>Table 1. Comprehensive Performance Comparison.</strong> We compare X-SAM with other methods, including segmentation-specific models (<span style="color:gray;">Gray</span>) and MLLMs. A "-" indicates that the method does not support this task, while a "?" indicates that the method does not report results for this dataset. X-SAM achieves state-of-the-art performance across all image segmentation tasks with one model. The best performance is highlighted in <strong>bold</strong>, and the second-best performance is highlighted with <span style="text-decoration: underline;">underline</span>.</p>
           </div>
-          <img src="images/main_results.png">
+          
+          <div class="image-container">
+            <img src="images/main_results.png" alt="Benchmark Results">
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- Demo -->
     <div class="columns is-centered">
       <div class="column is-full-width">
-        <h2 class="title is-3">Demo</h2>
-        <div class="content has-text-justified">
-          <p>
-            We provide the <a href="http://47.115.200.157:7861">Demo</a> of X-SAM.
+        <div class="demo-section">
+          <h2 class="title is-3" style="color: white; margin-bottom: 1rem;">🚀 Interactive Demo</h2>
+                     <p style="font-size: 1.2rem; margin-bottom: 0.5rem; opacity: 0.9;">
+            Experience X-SAM in action! Try our interactive demo to see how X-SAM performs advanced segmentation tasks.
           </p>
-          <img src="images/xsam_demo.png">
+          <a href="http://47.115.200.157:7861" class="button" target="_blank">
+            <span class="icon">
+              <i class="fas fa-play"></i>
+            </span>
+            <span>Launch Demo</span>
+          </a>
+          
+                     <div class="image-container" style="margin-top: 0.5rem;">
+            <img src="images/xsam_demo.png" alt="X-SAM Demo Screenshot">
+          </div>
         </div>
       </div>
     </div>
@@ -225,11 +526,17 @@
     <!-- Acknowledgement -->
     <div class="columns is-centered">
       <div class="column is-full-width">
-        <h2 class="title is-3">Acknowledgement</h2>
-        <div class="content has-text-justified">
-          <p>
-            This project has referenced some excellent open-sourced repos <a href="https://github.com/InternLM/xtuner">xtuner</a>, <a href="https://github.com/open-compass/VLMEvalKit">VLMEvalKit</a>, <a href="https://github.com/magic-research/Sa2VA">Sa2VA</a>. Thanks for their wonderful works and contributions to the community.
-          </p>
+        <div class="card-enhanced">
+          <h2 class="title is-3">🙏 Acknowledgement</h2>
+          <div class="content has-text-justified" style="font-size: 1.1rem; line-height: 1.7;">
+            <p>
+              This project has referenced some excellent open-sourced repositories: 
+              <a href="https://github.com/InternLM/xtuner" style="color: var(--primary-color); font-weight: 500;">xtuner</a>, 
+              <a href="https://github.com/open-compass/VLMEvalKit" style="color: var(--primary-color); font-weight: 500;">VLMEvalKit</a>, 
+              <a href="https://github.com/magic-research/Sa2VA" style="color: var(--primary-color); font-weight: 500;">Sa2VA</a>. 
+              Thanks for their wonderful works and contributions to the community.
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -237,47 +544,103 @@
     <!-- BibTeX -->
     <div class="columns is-centered">
       <div class="column is-full-width">
-        <h2 class="title is-3">BibTeX</h2>
-        <pre><code>
-        </code></pre>
+        <div class="card-enhanced">
+          <h2 class="title is-3">📝 Citation</h2>
+          <div class="bibtex-container">
+            <pre><code>@article{wang2024xsam,
+  title={X-SAM: From Segment Anything to Any Segmentation},
+  author={Wang, Hao and Qiao, Limeng and Jie, Zequn and Huang, Zhijian and Feng, Chengjian and Zheng, Qingfang and Ma, Lin and Lan, Xiangyuan and Liang, Xiaodan},
+  journal={arXiv preprint arXiv:2024.xxxxx},
+  year={2024}
+}</code></pre>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </section>
 
-
-
 <footer class="footer">
   <div class="container">
     <div class="content has-text-centered">
-      <a class="icon-link" href="https://arxiv.org/abs/" class="external-link" disabled>
-        <i class="ai ai-arxiv"></i>
-      </a>
-      <a class="icon-link" href="https://arxiv.org/pdf/">
-        <i class="fas fa-file-pdf"></i>
-      </a>
-      <a class="icon-link" href="http://47.115.200.157:7861" class="external-link" disabled>
-        <i class="fas fa-gamepad"></i>
-      </a>
-      <a class="icon-link" href="https://huggingface.co/hao9610/X-SAM" class="external-link" disabled>
-        <i class="fas fa-cube"></i>
-      </a>
-      <a class="icon-link" href="https://github.com/wanghao9610/X-SAM" class="external-link" disabled>
-        <i class="fab fa-github"></i>
-      </a>
-    </div>
-    <div class="columns is-centered">
-      <div class="column is-8">
-        <div class="content">
-          <p>
-            This website is modified from <a href="https://nerfies.github.io/">Nerfies</a>. Thanks for the great work!
-            Their source code is available on <a href="https://github.com/nerfies/nerfies.github.io">GitHub</a>.
-         </p>
+             <div style="margin-bottom: 0.5rem;">
+        <a class="icon-link" href="#" onclick="alert('arXiv link will be available soon!')">
+          <i class="ai ai-arxiv"></i>
+        </a>
+        <a class="icon-link" href="#" onclick="alert('Paper will be available soon!')">
+          <i class="fas fa-file-pdf"></i>
+        </a>
+        <a class="icon-link" href="http://47.115.200.157:7861">
+          <i class="fas fa-gamepad"></i>
+        </a>
+        <a class="icon-link" href="https://huggingface.co/hao9610/X-SAM">
+          <i class="fas fa-cube"></i>
+        </a>
+        <a class="icon-link" href="https://github.com/wanghao9610/X-SAM">
+          <i class="fab fa-github"></i>
+        </a>
+      </div>
+      
+      <div class="columns is-centered">
+        <div class="column is-8">
+          <div class="content">
+            <p style="opacity: 0.8;">
+              This website is modified from <a href="https://nerfies.github.io/" style="color: var(--accent-color);">Nerfies</a>. Thanks for the great work!
+              Their source code is available on <a href="https://github.com/nerfies/nerfies.github.io" style="color: var(--accent-color);">GitHub</a>.
+            </p>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </footer>
+
+<script>
+// Scroll progress indicator
+window.addEventListener('scroll', function() {
+  const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+  const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+  const scrolled = (winScroll / height) * 100;
+  document.getElementById('scrollProgress').style.width = scrolled + '%';
+});
+
+// Smooth scrolling for anchor links
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+  anchor.addEventListener('click', function (e) {
+    e.preventDefault();
+    const target = document.querySelector(this.getAttribute('href'));
+    if (target) {
+      target.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+  });
+});
+
+// Add animation on scroll
+const observerOptions = {
+  threshold: 0.1,
+  rootMargin: '0px 0px -50px 0px'
+};
+
+const observer = new IntersectionObserver(function(entries) {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.style.opacity = '1';
+      entry.target.style.transform = 'translateY(0)';
+    }
+  });
+}, observerOptions);
+
+// Observe all card elements
+document.querySelectorAll('.card-enhanced').forEach(card => {
+  card.style.opacity = '0';
+  card.style.transform = 'translateY(30px)';
+  card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+  observer.observe(card);
+});
+</script>
 
 </body>
 </html>
