@@ -295,6 +295,77 @@
       transition: width 0.1s ease;
     }
 
+    /* More Results Collapsible Styles */
+    .more-results-section {
+      margin: 2rem 0;
+      border: 2px solid rgba(46, 125, 50, 0.1);
+      border-radius: 15px;
+      overflow: hidden;
+      transition: var(--transition);
+    }
+
+    .more-results-section:hover {
+      border-color: rgba(46, 125, 50, 0.2);
+    }
+
+    .more-results-toggle {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      color: white;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 1.2rem;
+      transition: var(--transition);
+      border: none;
+      outline: none;
+      list-style: none;
+    }
+
+    .more-results-toggle:hover {
+      background: linear-gradient(135deg, var(--secondary-color), var(--accent-color));
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(46, 125, 50, 0.3);
+    }
+
+    .more-results-toggle::marker {
+      display: none;
+    }
+
+    .more-results-text {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .more-results-icon {
+      font-size: 1rem;
+      transition: transform 0.3s ease;
+    }
+
+    .more-results-section[open] .more-results-icon {
+      transform: rotate(180deg);
+    }
+
+    .more-results-content {
+      padding: 2rem;
+      background: #fafafa;
+      animation: slideDown 0.3s ease-out;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
     /* Responsive enhancements */
     @media (max-width: 768px) {
       .hero-body {
@@ -321,6 +392,15 @@
 
       .demo-section {
         padding: 1rem;
+      }
+
+      .more-results-toggle {
+        padding: 1rem 1.5rem;
+        font-size: 1.1rem;
+      }
+
+      .more-results-content {
+        padding: 1.5rem;
       }
     }
   </style>
@@ -470,12 +550,12 @@
     <div class="columns is-centered has-text-centered">
       <div class="column is-four-fifths">
         <div class="card-enhanced">
-          <h2 class="title is-3">📄 Overview</h2>
+          <h2 class="title is-3">🔍 Overview</h2>
           <div class="image-container">
             <img src="images/xsam_framework.png" alt="X-SAM Framework">
           </div>
                      <div class="content has-text-justified" style="margin-top: 0.5rem; font-size: 1rem; line-height: 1.7;">
-            <p><strong>Figure 1. Overview of X-SAM.</strong> X-SAM consists of dual encoders, dual projectors, a language model, a segmentation connector, and a segmentation decoder. First, the dual encoders encode the image simultaneously, then project them into the same dimension as text embeddings and feed them to the language model along with tokenized text embedding for instruction-guided image understanding. We bridge the SAM encoded feature with a connector to the segmentation decoder. In addition, the <span style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace;">&lt;SEG&gt;</span> token output by the LLM is decoded by the segmentation decoder into segmentation masks.</p>
+            <p><strong>Fig. 1. Overview of X-SAM.</strong> X-SAM consists of dual encoders, dual projectors, a language model, a segmentation connector, and a segmentation decoder. First, the dual encoders encode the image simultaneously, then project them into the same dimension as text embeddings and feed them to the language model along with tokenized text embedding for instruction-guided image understanding. We bridge the SAM encoded feature with a connector to the segmentation decoder. In addition, the <span style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace;">&lt;SEG&gt;</span> token output by the LLM is decoded by the segmentation decoder into segmentation masks.</p>
           </div>
         </div>
       </div>
@@ -491,12 +571,90 @@
         <div class="card-enhanced">
           <h2 class="title is-3">📊 Benchmark Results</h2>
                      <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
+            <!-- Main Results -->
             <p><strong>Table 1. Comprehensive Performance Comparison.</strong> We compare X-SAM with other methods, including segmentation-specific models (<span style="color:gray;">Gray</span>) and MLLMs. A "-" indicates that the method does not support this task, while a "?" indicates that the method does not report results for this dataset. X-SAM achieves state-of-the-art performance across all image segmentation tasks with one model. The best performance is highlighted in <strong>bold</strong>, and the second-best performance is highlighted with <span style="text-decoration: underline;">underline</span>.</p>
           </div>
-          
           <div class="image-container">
             <img src="images/main_results.png" alt="Benchmark Results">
           </div>
+          
+          <!-- More Results Collapsible Section -->
+          <details class="more-results-section" style="margin-top: 2rem;">
+            <summary class="more-results-toggle">
+              <span class="more-results-text">📊 More Results</span>
+              <span class="more-results-icon">▼</span>
+            </summary>
+            <div class="more-results-content">
+              <!-- Ref. Seg. Results -->
+              <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
+                <p><strong>Table 2. Comparison of Referring Segmentation.</strong> We compare different methods on referring segmentation benchmarks, regarding their LLM types or MLLM types.</p>
+              </div>
+              <div class="image-container">
+                <img src="images/refseg_results.png" alt="Benchmark Results">
+              </div>
+
+              <!-- Gen. Seg. & OV. Seg. Results -->
+              <div class="columns">
+                <div class="column" style="width: 70%;">
+                  <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
+                    <p><strong>Table 3. Comparison of Generic Segmentation.</strong> We compare different methods on the generic segmentation benchmarks.</p>
+                  </div>
+                  <div class="image-container">
+                    <img src="images/genseg_results.png" alt="Generic Segmentation Results">
+                  </div>
+                </div>
+                <div class="column" style="width: 20%;">
+                  <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
+                    <p><strong>Table 4. Comparison of OV Segmentation.</strong> We compare different methods on the OV segmentation benchmarks.</p>
+                  </div>
+                  <div class="image-container">
+                    <img src="images/ovseg_results.png" alt="OV Segmentation Results">
+                  </div>
+                </div>
+              </div>
+
+              <!-- GCG Seg. Results -->
+              <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
+                <p><strong>Table 5. Comparison of GCG Segmentation.</strong> We compare different methods on the GCG segmentation benchmark. &dagger; indicates that the method used the GranD dataset for pretraining.</p>
+              </div>
+              <div class="image-container">
+                <img src="images/gcgseg_results.png" alt="Benchmark Results">
+              </div>
+
+              <!-- Rea. Seg. Results -->
+              <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
+                <p><strong>Table 6. Comparison of Reasoning Segmentation.</strong> We compare X-SAM with other methods on the reasoning segmentation benchmark.</p>
+              </div>
+              <div class="image-container">
+                <img src="images/reaseg_results.png" alt="Benchmark Results">
+              </div>
+
+              <!-- Inter. Seg. Results -->
+              <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
+                <p><strong>Table 7. Comparison of Interactive Segmentation.</strong> We compare X-SAM with other methods on the interactive segmentation benchmark.</p>
+              </div>
+              <div class="image-container">
+                <img src="images/interseg_results.png" alt="Interactive Segmentation Results">
+              </div>
+
+              <!-- VGD Seg. Results -->
+              <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
+                <p><strong>Table 8. Comparison of VGD Segmentation.</strong> We compare different methods on the VGD segmentation benchmark. &dagger; indicates our evaluation results following X-SAM setting.</p>
+              </div>
+              <div class="image-container">
+                <img src="images/vgdseg_results.png" alt="Benchmark Results">
+              </div>
+
+              <!-- Img Conv Results -->
+              <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
+                <p><strong>Table 9. Comparison of Image-level Benchmarks.</strong> We compare X-SAM with other methods on the image-level benchmarks, including MME, MMBench, SEED-Bench, POPE, and AI2D.</p>
+              </div>
+              <div class="image-container">
+                <img src="images/imgconv_results.png" alt="Benchmark Results">
+              </div>
+            </div>
+          </details>
+
         </div>
       </div>
     </div>
