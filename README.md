@@ -53,7 +53,11 @@ This project provides awesome code for the research of segmentation MLLMs:
 * If you have any questions, please feel free to open an issue.
 * If this project gets over 500 🌟, we’ll release all code ASAP.
 
-## :page_facing_up: Overview
+## :page_facing_up: Abstract
+
+The Segment Anything Model (SAM) has emerged as a pivotal advancement in computer vision, particularly within the context of visual-prompt-driven segmentation. However, SAM is constrained by intrinsic limitations in multi-mask prediction and category-specific image segmentation tasks. Concurrently, Large Language Models (LLMs) have exhibited remarkable proficiency in comprehensive knowledge representation across a wide range of domains, yet they inherently lack the capacity for pixel-level perceptual understanding. To bridge these complementary gaps, we present X-SAM, a streamlined Multimodal Large Language Model (MLLM) framework that seamlessly integrates SAM with LLMs, thereby extending SAM's capabilities from *segment anything* to *any segmentation*. Specifically, we introduce a novel approach for integrating SAM with MLLMs, which facilitates more advanced dense, pixel-level perceptual comprehension within MLLMs. Furthermore, we propose a new segmentation paradigm, termed **V**isual **G**roun**D**ed (VGD) segmentation, which empowers MLLMs with visual grounded, pixel-wise interpretative capabilities. To enable effective training of MLLMs on diverse data sources, we devise a unified training strategy that supports co-training across multiple datasets. Experimental results demonstrate that X-SAM achieves state-of-the-art performance on a wide range of image segmentation benchmarks, highlighting its efficiency for multimodal pixel-level visual understanding.
+
+## :mag: Overview
 
 <img src="docs/images/xsam_framework.png">
 
