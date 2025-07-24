@@ -73,7 +73,7 @@ Please refer to the [benchmark results](docs/benchmark_results.md) for more deta
 This project has referenced some excellent open-sourced repos ([xtuner](https://github.com/InternLM/xtuner), [VLMEvalKit](https://github.com/open-compass/VLMEvalKit), [Sa2VA](https://github.com/magic-research/Sa2VA)). Thanks for their wonderful works and contributions to the community.
 
 ## :pushpin: Citation
-If you find X-SAM is helpful for your research or applications, please consider giving us a star 🌟 and citing it by the following BibTex entry.
+If you find X-SAM helpful for your research or applications, please consider giving us a star 🌟 and citing it using the following BibTeX entry.
 
 ```bibtex
 
