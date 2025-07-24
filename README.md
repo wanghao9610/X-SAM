@@ -6,9 +6,9 @@
 
 [Qingfang Zheng](https://openreview.net/profile?id=%7EZheng_Qingfang1)<sup>1</sup>, [Lin Ma](https://forestlinma.com/)<sup>3</sup>, [Xiangyuan Lan](https://scholar.google.com/citations?user=c3iwWRcAAAAJ&hl)<sup>2</sup><sup>:email:</sup>, [Xiaodan Liang](https://scholar.google.com/citations?user=voxznZAAAAAJ&hl)<sup>1,2</sup><sup>:email:</sup>
 
-<sup>1</sup> Sun Yat-sen University, <sup>2</sup> PengCheng Lab, <sup>3</sup> Meituan Inc
+<sup>1</sup> Sun Yat-sen University, <sup>2</sup> Pengcheng Lab, <sup>3</sup> Meituan Inc
 
-<sup>:email:</sup> corresponding author.
+<sup>:email:</sup> Corresponding author.
 </div>
 
 <div align="center" style="display: flex; justify-content: center; align-items: center;">
