@@ -62,8 +62,8 @@ Please refer to the [benchmark results](docs/benchmark_results.md) for more deta
 
 ## :white_check_mark: TODO
 - [x] Release the Online Demo.
-- [ ] Release the model weight of X-SAM.
-- [ ] Release the code and instructions for demo of X-SAM.
+- [ ] Release the model weight.
+- [ ] Release the code and instructions for demo.
 - [ ] Release the code for evaluation on all segmentation benchmarks.
 - [ ] Release the code for evaluation on all VLM Benchmarks.
 - [ ] Release the code for training LLaVA-based MLLMs.
