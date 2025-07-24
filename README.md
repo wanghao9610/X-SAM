@@ -56,7 +56,9 @@ The Segment Anything Model (SAM) has emerged as a pivotal advancement in compute
 
 ## :mag: Overview
 
+
 <img src="docs/images/xsam_framework.png">
+
 
 ## :bar_chart: Benchmark Results
 
