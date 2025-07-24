@@ -9,6 +9,7 @@
 <sup>1</sup> Sun Yat-sen University, <sup>2</sup> PengCheng Lab, <sup>3</sup> Meituan Inc
 
 <sup>:email:</sup> corresponding author.
+</div>
 
 <div style="display: flex; justify-content: center; align-items: center;">
   <a href="" style="margin: 0 2px;">
