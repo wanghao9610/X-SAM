@@ -41,16 +41,17 @@ This project provides the official PyTorch implementation, pre-trained models, t
 
 * X-SAM co-trains on multi data sources via a effective multi-stage training strategy, achieving the robust performance across all tasks.
 
-Notably, this project provides a unified and effective code of training, evaluation, visualization for segmentation MLLMs, even including the LLaVA-based MLLMs.
+This project provides awesome code for the research of segmentation MLLMs:
+* Training code for segmentation MLLMs.
+* Evaluation code for all image segmentation benchmarks.
+* Visualization code for segmentation MLLMs.
+* Training code for LLaVA-based MLLMs (based on [XTuner](https://github.com/InternLM/xtuner)).
+* Evaluation code for all VLM benchmarks (based on [VLMEvalKit](https://github.com/open-compass/VLMEvalKit)).
 
-Hope this project will promote the research of MLLMs.
+**NOTE:**
 
-<details>
-<summary>ℹ️ More Information</summary>
-
-* If this project gets over 500 stars, we’ll release all code ASAP; otherwise, code will be released after paper acceptance. If you find this project meaningful, please let me know (🌟).
-* If you have any questions, please feel free to open an issue or contact me via email.
-</details>
+* If you have any questions, please feel free to open an issue.
+* If this project gets over 500 🌟, we’ll release all code ASAP.
 
 ## :page_facing_up: Overview
 
@@ -61,8 +62,8 @@ Hope this project will promote the research of MLLMs.
 Please refer to the [benchmark results](docs/benchmark_results.md) for more details.
 
 ## :white_check_mark: TODO
-- [x] Release the Online Demo.
-- [ ] Release the model weight.
+- [x] Release the [Demo](http://47.115.200.157:7861).
+- [ ] Release the [weight](https://huggingface.co/wanghao9610/X-SAM).
 - [ ] Release the code and instructions for demo.
 - [ ] Release the code for evaluation on all segmentation benchmarks.
 - [ ] Release the code for evaluation on all VLM Benchmarks.
