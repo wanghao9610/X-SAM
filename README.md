@@ -32,7 +32,7 @@
 ## :fire: Updates
 - **`2025-07-24`**: We release the [Demo](http://47.115.200.157:7861) of X-SAM.
 
-## :rocket: Highlight
+## :rocket: Introduction
 This project provides the official PyTorch implementation, pre-trained models, training code, and demo code of X-SAM.
 
 * X-SAM is novel unified segmentation MLLMs, which offers superior performance on all image segmentation benchmarks.
@@ -41,7 +41,9 @@ This project provides the official PyTorch implementation, pre-trained models, t
 
 * X-SAM co-trains on multi data sources via a effective multi-stage training strategy, achieving the robust performance across all tasks.
 
-Notably, this project provides a unified and effective code of training, evaluation, visualization for segmentation MLLMs, even including the LLaVA-based MLLMs. Hope this project will promote the research of MLLMs.
+Notably, this project provides a unified and effective code of training, evaluation, visualization for segmentation MLLMs, even including the LLaVA-based MLLMs.
+
+Hope this project will promote the research of MLLMs.
 
 <details>
 <summary>ℹ️ More Information</summary>
