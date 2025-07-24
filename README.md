@@ -47,11 +47,11 @@ This repository provides the official PyTorch implementation, pre-trained models
 
 ## :page_facing_up: Overview
 
-<img src="xsam/docs/xsam_framework.png" width="800">
+<img src="docs/xsam_framework.png" width="800">
 
 ## :sparkles: Benchmark Results
 
-Please refer to the [benchmark results](xsam/docs/benchmark_results.md) for more details.
+Please refer to the [benchmark results](docs/benchmark_results.md) for more details.
 
 ## :white_check_mark: TODO
 - [x] Release the Online Demo.
