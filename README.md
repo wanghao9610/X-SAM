@@ -32,8 +32,8 @@
 ## :fire: Updates
 - **`2025-07-24`**: We release the [Demo](http://47.115.200.157:7861) of X-SAM.
 
-## :rocket: Introduction
-This repository provides the official PyTorch implementation, pre-trained models, training code, and demo code of X-SAM.
+## :rocket: Highlight
+This project provides the official PyTorch implementation, pre-trained models, training code, and demo code of X-SAM.
 
 * X-SAM is novel unified segmentation MLLMs, which offers superior performance on all image segmentation benchmarks.
 
@@ -41,13 +41,18 @@ This repository provides the official PyTorch implementation, pre-trained models
 
 * X-SAM co-trains on multi data sources via a effective multi-stage training strategy, achieving the robust performance across all tasks.
 
-💡*HIGHLIGHT*: This repository provides a unified and effective code of training, evaluation, visualization for segmentation MLLMs, even including the LLaVA-based MLLMs. Hope this repository will promote the research of MLLMs.
+Notably, this project provides a unified and effective code of training, evaluation, visualization for segmentation MLLMs, even including the LLaVA-based MLLMs. Hope this project will promote the research of MLLMs.
 
-‼️*NOTE*: If this repository obtains more than 500 stars, we will release all code ASAP. Otherwise, we will release all code after this paper been accepted. And if you consider this repository is meaningful, please let me know(🌟).
+<details>
+<summary>ℹ️ More Information</summary>
+
+* If this project gets over 500 stars, we’ll release all code ASAP; otherwise, code will be released after paper acceptance. If you find this project meaningful, please let me know (🌟).
+* If you have any questions, please feel free to open an issue or contact me via email.
+</details>
 
 ## :page_facing_up: Overview
 
-<img src="docs/xsam_framework.png" width="800">
+<img src="docs/images/xsam_framework.png">
 
 ## :sparkles: Benchmark Results
 

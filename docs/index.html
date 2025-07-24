@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="description"
+        content="X-SAM: From Segment Anything to Any Segmentation">
+  <meta name="keywords" content="X-SAM">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>X-SAM: From Segment Anything to Any Segmentation</title>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-PYVRSFMDRL"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() {
+      dataLayer.push(arguments);
+    }
+    gtag('js', new Date());
+    gtag('config', 'G-PYVRSFMDRL');
+  </script>
+
+
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro"
+        rel="stylesheet">
+  <link rel="stylesheet" href="static/css/bulma.min.css">
+  <link rel="stylesheet" href="static/css/bulma-carousel.min.css">
+  <link rel="stylesheet" href="static/css/bulma-slider.min.css">
+  <link rel="stylesheet" href="static/css/fontawesome.all.min.css">
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="static/css/index.css">
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script defer src="static/js/fontawesome.all.min.js"></script>
+  <script src="static/js/bulma-carousel.min.js"></script>
+  <script src="static/js/bulma-slider.min.js"></script>
+  <script src="static/js/index.js"></script>
+</head>
+<body>
+
+<section class="hero">
+  <div class="hero-body" align="center">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered">
+        <div class="column has-text-centered">
+          <h2 class="title is-2 publication-title">X-SAM </h2>
+          <h3 class="title is-4"> From Segment Anything to Any Segmentation </h3>
+          <div class="is-size-5 publication-authors">
+            <span class="author-block">
+              <a href="https://github.com/wanghao9610">Hao Wang</a><sup>1,2</sup>,</span>
+            <span class="author-block">
+              <a href="https://scholar.google.com/citations?user=3PFZAg0AAAAJ&hl=en">Limeng Qiao</a><sup>3</sup>,</span>
+            <span class="author-block">
+              <a href="https://scholar.google.com/citations?user=4sKGNB0AAAAJ&hl=en">Zequn Jie</a><sup>3</sup>,</span>
+            <span class="author-block">
+              <a href="https://zhijian11.github.io/">Zhijian Huang</a><sup>1</sup>,</span>
+            <span class="author-block">
+              <a href="https://fcjian.github.io/">Chengjian Feng</a><sup>3</sup>,</span><br>
+            <span class="author-block">
+              <a href="https://openreview.net/profile?id=%7EZheng_Qingfang1">Qingfang Zheng</a><sup>1</sup>,</span>
+            <span class="author-block">
+              <a href="https://forestlinma.com/">Lin Ma</a><sup>3</sup>,</span>
+            <span class="author-block">
+              <a href="https://scholar.google.com/citations?user=c3iwWRcAAAAJ&hl=en">Xiangyuan Lan</a><sup>2</sup><sup>📧</sup>,</span>
+            <span class="author-block">
+              <a href="https://scholar.google.com/citations?user=voxznZAAAAAJ&hl=en">Xiaodan Liang</a><sup>1,2</sup><sup>📧</sup>
+            </span>
+          </div>
+          <div class="is-size-5 publication-authors">
+            <span class="author-block"><sup>1</sup> Sun Yat-sen University,</span>
+            <span class="author-block"><sup>2</sup> Pengcheng Lab,</span>
+            <span class="author-block"><sup>3</sup> Meituan Inc</span>
+          </div>
+          <div class="is-size-5 publication-authors">
+            <span class="author-block"><sup>📧</sup> Corresponding author.</span>
+          </div>
+
+          <div class="column has-text-centered">
+            <div class="publication-links">
+              <!-- PDF Link. -->
+              <span class="link-block">
+                <a href="https://arxiv.org/pdf/"
+                    class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                      <i class="fas fa-file-pdf"></i>
+                  </span>
+                  <span>Paper </span>
+                </a>
+              </span>
+              <!--  Arxiv Link. -->
+              <span class="link-block">
+                <a href="https://arxiv.org/abs/"
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                      <i class="ai ai-arxiv"></i>
+                  </span>
+                  <span>arXiv </span>
+                </a>
+              </span>
+              <!--  Demo Link. -->
+              <span class="link-block">
+                <a href="http://47.115.200.157:7861"
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                      <i class="fas fa-gamepad"></i>
+                  </span>
+                  <span>Demo</span>
+                  </a>
+              </span>
+              <!-- HF Link. -->
+              <span class="link-block">
+                <a href="https://huggingface.co/hao9610/X-SAM"
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                    <i class="fas fa-cube"></i>
+                  </span>
+                  <span>HuggingFace </span>
+                </a>
+              </span>
+              <!-- Code Link. -->
+              <span class="link-block">
+                <a href="https://github.com/wanghao9610/X-SAM"
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                      <i class="fab fa-github"></i>
+                  </span>
+                  <span>Code </span>
+                  </a>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <!-- Highlight -->
+  <div class="container is-max-desktop">
+    <div class="columns is-centered has-text-centered">
+    <div class="column is-four-fifths">
+        <h2 class="title is-3">Highlight</h2>
+        <div class="content has-text-justified">
+        <ul>
+          <li> X-SAM is a novel unified segmentation MLLMs, which offers superior performance on all image segmentation benchmarks.</li>
+  
+          <li> X-SAM integrates the SAM into MLLMs via a unified formulation adapted to all image segmentation, extending the SAM's capability from <i>segment anything</i> to <i>any segmentation</i>.</li>
+          
+          <li> X-SAM co-trains on multi data sources via a effective multi-stage training strategy, achieving the robust performance across all tasks.</li>
+        </ul>
+        </div>
+        </div>
+    </div>
+    </div>
+    <!--/ Overview -->
+  </div>
+</section>
+
+<section class="section">
+  <!-- Abstract -->
+  <div class="container is-max-desktop">
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Abstract</h2>
+        <div class="content has-text-justified">
+          <p>The Segment Anything Model (SAM) has emerged as a pivotal advancement in computer vision, particularly within the context of visual-prompt-driven segmentation. However, SAM is constrained by intrinsic limitations in multi-mask prediction and category-specific image segmentation tasks. Concurrently, Large Language Models (LLMs) have exhibited remarkable proficiency in comprehensive knowledge representation across a wide range of domains, yet they inherently lack the capacity for pixel-level perceptual understanding. To bridge these complementary gaps, we present X-SAM, a streamlined Multimodal Large Language Model (MLLM) framework that seamlessly integrates SAM with LLMs, thereby augmenting SAM's functionality from <i>segment anything</i> to <i>any segmentation</i>. Specifically, we introduce a novel approach for integrating SAM with MLLMs, which facilitates more advanced dense, pixel-level perceptual comprehension within MLLMs. Furthermore, we propose a new segmentation paradigm, termed <b>V</b>isual <b>G</b>roun<b>D</b>ed (VGD) segmentation, which empowers MLLMs with visual grounded, pixel-wise interpretative capabilities. To enable effective training of MLLMs on diverse data sources, we devise a unified training strategy that supports co-training across multiple datasets. Experimental results demonstrate that X-SAM achieves state-of-the-art performance on a wide range of image segmentation benchmarks, highlighting its efficacy for multimodal pixel-level visual understanding.</p>
+        </div>
+      </div>
+    </div>
+    <!--/ Abstract -->
+  </div>
+</section>
+
+<section class="section">
+  <!-- Overview -->
+  <div class="container is-max-desktop">
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+          <h2 class="title is-3">Overview</h2>
+          <div class="content has-text-justified">
+          <img src="images/xsam_framework.png">
+          <div class="content has-text-justified"></div>
+            <p>Figure 1. <strong>Overview of X-SAM.</strong> X-SAM consists of dual encoders, dual projectors, a language model, a segmentation connector, and a segmentation decoder. First, the dual encoders encode the image simultaneously, then project them into the same dimension as text embeddings and feed them to the language model along with tokenized text embedding for instruction-guided image understanding. We bridge the SAM encoded feature with a connector to the segmentation decoder. In addition, the <span>&lt;SEG&gt;</span> token output by the LLM is decoded by the segmentation decoder into segmentation masks.</p>
+          </div>
+        </div>
+      </div>
+      </div>
+        <!--/ Overview -->
+    </div>
+</section>
+
+<section class="section">
+  <div class="container is-max-desktop">
+    <!-- Experiments -->
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <h2 class="title is-3">Benchmark Results</h2>
+      </div>
+    </div>
+
+    <!-- Main Results -->
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+          <h3 class="title is-4"></h3>
+          <div class="content has-text-justified">
+            <p><strong>Table 1. Comprehensive Performance Comparison.</strong> We compare X-SAM with other methods, including segmentation-specific models (<span style="color:gray;">Gray</span>) and MLLMs. A "-" indicates that the method does not support this task, while a "?" indicates that the method does not report results for this dataset. X-SAM achieves state-of-the-art performance across all image segmentation tasks with one model. The best performance is highlighted in <strong>bold</strong>, and the second-best performance is highlighted with <span style="text-decoration: underline;">underline</span>.</p>
+          </div>
+          <img src="images/main_results.png">
+      </div>
+    </div>
+
+    <!-- Demo -->
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <h2 class="title is-3">Demo</h2>
+        <div class="content has-text-justified">
+          <p>
+            We provide the <a href="http://47.115.200.157:7861">Demo</a> of X-SAM.
+          </p>
+          <img src="images/xsam_demo.png">
+        </div>
+      </div>
+    </div>
+
+    <!-- Acknowledgement -->
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <h2 class="title is-3">Acknowledgement</h2>
+        <div class="content has-text-justified">
+          <p>
+            This project has referenced some excellent open-sourced repos <a href="https://github.com/InternLM/xtuner">xtuner</a>, <a href="https://github.com/open-compass/VLMEvalKit">VLMEvalKit</a>, <a href="https://github.com/magic-research/Sa2VA">Sa2VA</a>. Thanks for their wonderful works and contributions to the community.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- BibTeX -->
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <h2 class="title is-3">BibTeX</h2>
+        <pre><code>
+        </code></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+
+<footer class="footer">
+  <div class="container">
+    <div class="content has-text-centered">
+      <a class="icon-link" href="https://arxiv.org/abs/" class="external-link" disabled>
+        <i class="ai ai-arxiv"></i>
+      </a>
+      <a class="icon-link" href="https://arxiv.org/pdf/">
+        <i class="fas fa-file-pdf"></i>
+      </a>
+      <a class="icon-link" href="http://47.115.200.157:7861" class="external-link" disabled>
+        <i class="fas fa-gamepad"></i>
+      </a>
+      <a class="icon-link" href="https://huggingface.co/hao9610/X-SAM" class="external-link" disabled>
+        <i class="fas fa-cube"></i>
+      </a>
+      <a class="icon-link" href="https://github.com/wanghao9610/X-SAM" class="external-link" disabled>
+        <i class="fab fa-github"></i>
+      </a>
+    </div>
+    <div class="columns is-centered">
+      <div class="column is-8">
+        <div class="content">
+          <p>
+            This website is modified from <a href="https://nerfies.github.io/">Nerfies</a>. Thanks for the great work!
+            Their source code is available on <a href="https://github.com/nerfies/nerfies.github.io">GitHub</a>.
+         </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
