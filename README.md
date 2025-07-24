@@ -11,7 +11,7 @@
 <sup>:email:</sup> corresponding author.
 </div>
 
-<div style="display: flex; justify-content: center; align-items: center;">
+<div align="center" style="display: flex; justify-content: center; align-items: center;">
   <a href="" style="margin: 0 2px;">
     <img src='https://img.shields.io/badge/arXiv-paper_id-red?style=flat&logo=arXiv&logoColor=red' alt='arxiv'>
   </a>
