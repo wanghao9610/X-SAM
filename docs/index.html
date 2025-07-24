@@ -241,7 +241,22 @@
       font-family: 'JetBrains Mono', monospace;
       color: #e2e8f0;
       position: relative;
-      overflow: hidden;
+      overflow: auto;
+      max-width: 100%;
+    }
+
+    .bibtex-container pre {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      margin: 0;
+      max-width: 100%;
+      overflow-x: auto;
+    }
+
+    .bibtex-container code {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      max-width: 100%;
     }
 
     .bibtex-container::before {
@@ -416,7 +431,7 @@
     <div class="container is-max-desktop">
       <div class="columns is-centered">
         <div class="column has-text-centered">
-          <h2 class="title is-2 publication-title">X-SAM ✨</h2>
+          <h2 class="title is-2 publication-title">X-SAM</h2>
           <h3 class="title is-4"> From Segment Anything to Any Segmentation </h3>
           <div class="is-size-5 publication-authors">
             <span class="author-block">
@@ -512,7 +527,7 @@
   <!-- Highlight -->
   <div class="container is-max-desktop">
     <div class="columns is-centered">
-      <div class="column is-four-fifths">
+      <div class="column is-full-width">
         <div class="card-enhanced">
           <h2 class="title is-3" style="text-align: center;"> 🚀 Highlights</h2>
           <div class="highlight-box">
@@ -532,7 +547,7 @@
   <!-- Abstract -->
   <div class="container is-max-desktop">
     <div class="columns is-centered has-text-centered">
-      <div class="column is-four-fifths">
+      <div class="column is-full-width">
         <div class="card-enhanced">
           <h2 class="title is-3">📄 Abstract</h2>
           <div class="content has-text-justified" style="font-size: 1.1rem; line-height: 1.8;">
@@ -548,7 +563,7 @@
   <!-- Overview -->
   <div class="container is-max-desktop">
     <div class="columns is-centered has-text-centered">
-      <div class="column is-four-fifths">
+      <div class="column is-full-width">
         <div class="card-enhanced">
           <h2 class="title is-3">🔍 Overview</h2>
           <div class="image-container">

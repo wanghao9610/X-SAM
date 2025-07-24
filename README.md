@@ -56,7 +56,7 @@ Hope this project will promote the research of MLLMs.
 
 <img src="docs/images/xsam_framework.png">
 
-## :sparkles: Benchmark Results
+## :bar_chart: Benchmark Results
 
 Please refer to the [benchmark results](docs/benchmark_results.md) for more details.
 
