@@ -31,12 +31,7 @@
 
 ## :boom: Updates
 
-- **`2025-08-10`**: We release the code for training LLaVA-based models.
-- **`2025-08-09`**: We release the code for evaluation on several segmentation benchmarks, VLM benchmarks.
-- **`2025-08-08`**: We release demo code and instructions.
-- **`2025-08-07`**: We release the model weight on HuggingFace🤗.
-- **`2025-08-06`**: We release the paper of X-SAM on the [arXiv](https://arxiv.org/abs/2508.00000).
-- **`2025-07-26`**: We provide the [Online Demo](http://47.115.200.157:7861).
+- **`2025-07-26`**: Provided the [Online Demo](http://47.115.200.157:7861).
 
 ## :rocket: Introduction
 This repository provides the official PyTorch implementation, pre-trained models, training, evaluation, visualization, and demo code of X-SAM:
