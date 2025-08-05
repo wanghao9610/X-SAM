@@ -1,14 +1,14 @@
 <div align="center">
-<h1>X-SAM </h1>
+<h1>✨X-SAM </h1>
 <h3>From Segment Anything to Any Segmentation</h3>
 
 [Hao Wang](https://github.com/wanghao9610)<sup>1,2</sup>,[Limeng Qiao](https://scholar.google.com/citations?user=3PFZAg0AAAAJ&hl=en)<sup>3</sup>,[Zequn Jie](https://scholar.google.com/citations?user=4sKGNB0AAAAJ&hl)<sup>3</sup>, [Zhijian Huang](https://zhijian11.github.io/)<sup>1</sup>, [Chengjian Feng](https://fcjian.github.io/)<sup>3</sup>, 
 
 [Qingfang Zheng](https://openreview.net/profile?id=%7EZheng_Qingfang1)<sup>1</sup>, [Lin Ma](https://forestlinma.com/)<sup>3</sup>, [Xiangyuan Lan](https://scholar.google.com/citations?user=c3iwWRcAAAAJ&hl)<sup>2</sup><sup>:email:</sup>, [Xiaodan Liang](https://scholar.google.com/citations?user=voxznZAAAAAJ&hl)<sup>1,2</sup><sup>:email:</sup>
 
-<sup>1</sup> Sun Yat-sen University, <sup>2</sup> Pengcheng Lab, <sup>3</sup> Meituan Inc
+<sup>1</sup> Sun Yat-sen University, <sup>2</sup> Peng Cheng Laboratory, <sup>3</sup> Meituan Inc
 
-<sup>:email:</sup> Corresponding author.
+<sup>:email:</sup> corresponding author.
 </div>
 
 <div align="center" style="display: flex; justify-content: center; align-items: center;">
@@ -29,56 +29,190 @@
   </a>
 </div>
 
-## :fire: Updates
-- **`2025-07-24`**: We release the [Demo](http://47.115.200.157:7861) of X-SAM.
+## :boom: Updates
+
+- **`2025-08-10`**: We release the code for training LLaVA-based models.
+- **`2025-08-09`**: We release the code for evaluation on several segmentation benchmarks, VLM benchmarks.
+- **`2025-08-08`**: We release demo code and instructions.
+- **`2025-08-07`**: We release the model weight on HuggingFace🤗.
+- **`2025-08-06`**: We release the paper of X-SAM on the [arXiv](https://arxiv.org/abs/2508.00000).
+- **`2025-07-26`**: We provide the [Online Demo](http://47.115.200.157:7861).
 
 ## :rocket: Introduction
-This project provides the official PyTorch implementation of X-SAM.
+This repository provides the official PyTorch implementation, pre-trained models, training, evaluation, visualization, and demo code of X-SAM:
 
-* X-SAM is novel unified segmentation MLLMs, which offers superior performance on all image segmentation benchmarks.
+* X-SAM introduces a unified multimodal large language model (MLLM) framework, extending the segmentation paradigm from *segment anything* to *any segmentation*, thereby enhancing pixel-level perceptual understanding.
 
-* X-SAM integrates the SAM into MLLMs via a unified formulation adapted to all image segmentation, extending the SAM's capability from *segment anything* to *any segmentation*.
+* X-SAM proposes a novel Visual GrounDed (VGD) segmentation task, which segments all instance objects using interactive visual prompts, empowering the model with visually grounded, pixel-wise interpretative capabilities.
 
-* X-SAM co-trains on multi data sources via a effective multi-stage training strategy, achieving the robust performance across all tasks.
+* X-SAM presents a unified training strategy that enables co-training across multiple datasets. Experimental results demonstrate that X-SAM achieves state-of-the-art performance on various image segmentation benchmarks, highlighting its efficiency in multimodal, pixel-level visual understanding.
 
-This project provides awesome code for segmentation MLLMs:
-* Training code for segmentation MLLMs.
-* Evaluation code for all image segmentation benchmarks.
-* Visualization code for segmentation MLLMs.
-* Training code for LLaVA-based MLLMs (based on [XTuner](https://github.com/InternLM/xtuner)).
-* Evaluation code for all VLM benchmarks (based on [VLMEvalKit](https://github.com/open-compass/VLMEvalKit)).
+:sparkles: **HIGHLIGHT**: This repository provides unified and effective code for training, evaluation, and visualization of segmentation MLLMs, including LLaVA-based MLLMs. We hope this repository will promote further research on MLLMs.
 
-*If you have any questions, please feel free to open an issue.*
+*If you have any questions, please feel free to open an issue or contact us.*
 
-## :page_facing_up: Abstract
+## :bookmark: Abstract
 
-The Segment Anything Model (SAM) has emerged as a pivotal advancement in computer vision, particularly within the context of visual-prompt-driven segmentation. However, SAM is constrained by intrinsic limitations in multi-mask prediction and category-specific image segmentation tasks. Concurrently, Large Language Models (LLMs) have exhibited remarkable proficiency in comprehensive knowledge representation across a wide range of domains, yet they inherently lack the capacity for pixel-level perceptual understanding. To bridge these complementary gaps, we present X-SAM, a streamlined Multimodal Large Language Model (MLLM) framework that seamlessly integrates SAM with LLMs, thereby extending SAM's capabilities from *segment anything* to *any segmentation*. Specifically, we introduce a novel approach for integrating SAM with MLLMs, which facilitates more advanced dense, pixel-level perceptual comprehension within MLLMs. Furthermore, we propose a new segmentation paradigm, termed **V**isual **G**roun**D**ed (VGD) segmentation, which empowers MLLMs with visual grounded, pixel-wise interpretative capabilities. To enable effective training of MLLMs on diverse data sources, we devise a unified training strategy that supports co-training across multiple datasets. Experimental results demonstrate that X-SAM achieves state-of-the-art performance on a wide range of image segmentation benchmarks, highlighting its efficiency for multimodal pixel-level visual understanding.
+Large Language Models (LLMs) demonstrate strong capabilities in broad knowledge representation, yet they are inherently deficient in pixel-level perceptual understanding. Although the Segment Anything Model (SAM) represents a significant advancement in visual-prompt-driven image segmentation, it exhibits notable limitations in multi-mask prediction and category-specific segmentation tasks, and it cannot integrate all segmentation tasks within a unified model architecture. To address these limitations, we present X-SAM, a streamlined Multimodal Large Language Model (MLLM) framework that extends the segmentation paradigm from *segment anything* to *any segmentation*. Specifically, we introduce a novel unified framework that enables more advanced pixel-level perceptual comprehension for MLLMs. Furthermore, we propose a new segmentation task, termed Visual GrounDed (VGD) segmentation, which segments all instance objects with interactive visual prompts and empowers MLLMs with visual grounded, pixel-wise interpretative capabilities. To enable effective training on diverse data sources, we present a unified training strategy that supports co-training across multiple datasets. Experimental results demonstrate that X-SAM achieves state-of-the-art performance on a wide range of image segmentation benchmarks, highlighting its efficiency for multimodal, pixel-level visual understanding.
 
 ## :mag: Overview
 
-
-<img src="docs/images/xsam_framework.png">
-
+<img src="docs/images/xsam_framework.png" width="800">
 
 ## :bar_chart: Benchmark Results
 
-Please refer to the [benchmark results](docs/benchmark_results.md) for more details.
+Please refer to the [Benchmark Results](docs/benchmark_results.md) for more details.
+
+## :checkered_flag: Getting Started
+### 1. Project Structure
+```
+X-SAM
+├── datas
+│   ├── gcg_seg_data
+│   ├── gen_seg_data
+│   ├── img_conv_data
+│   ├── inter_seg_data
+│   ├── LMUData
+│   ├── ov_seg_data
+│   ├── rea_seg_data
+│   ├── ref_seg_data
+│   └── vgd_seg_data
+├── inits
+│   ├── huggingface
+│   ├── mask2former-swin-large-coco-panoptic
+│   ├── Phi-3-mini-4k-instruct
+│   ├── sam-vit-large
+│   └── xsam
+├── xsam
+│   ├── docs
+│   ├── requirements
+│   ├── xsam
+│   │   ├── configs
+│   │   ├── dataset
+│   │   ├── demo
+│   │   ├── engine
+│   │   ├── evaluation
+│   │   ├── model
+│   │   ├── structures
+│   │   ├── tools
+│   │   └── utils
+├── wkdrs
+│   ├── s1_seg_finetune
+│   │   ├── ...
+│   ├── s2_align_pretrain
+│   │   ├── ...
+│   ├── s2_mixed_finetune
+│   │   ├── ...
+│   ├── ...
+...
+```
+
+### 2. Installation
+```bash
+cd X-SAM
+export root_dir=$(realpath ./)
+cd $root_dir/xsam
+
+# Optional: set CUDA_HOME for cuda12.4.
+# X-SAM utilizes the cuda12.4 default, if your cuda is not cuda12.4, you need first export CUDA_HOME env manually.
+export CUDA_HOME="your_cuda12.4_path"
+export PATH=$CUDA_HOME/bin:$PATH
+export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
+echo -e "cuda version:\n$(nvcc -V)"
+
+# create conda env for X-SAM
+conda create -n xsam python=3.10 -y
+conda activate xsam
+conda install pytorch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 pytorch-cuda=12.4 -c pytorch -c nvidia
+# install gcc11(optional)
+conda install gcc=11 gxx=11 -c conda-forge -y
+# install xtuner0.2.0
+pip install git+https://github.com/InternLM/xtuner.git@v0.2.0
+cd xtuner
+pip install '.[all]'
+# install deepspeed
+pip install -r requirements/deepspeed.txt
+# install xsam requirements
+pip install -r requirements/xsam.txt
+# install flash-attention
+pip install https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.3/flash_attn-2.7.3+cu12torch2.5cxx11abiFALSE-cp310-cp310-linux_x86_64.whl
+
+# install VLMEvalKit for evaluation on VLM benchmarks(optional)
+cd $root_dir
+git clone -b v0.3rc1 https://github.com/open-compass/VLMEvalKit.git
+cd VLMEvalKit
+pip install -e .
+
+# install aria2 for downloading datasets and models(optional)
+pip install aria2
+```
+
+### 2. Data Preparing
+There are many datasets to prepare, please refer to the [Data Preparing](docs/data_preparing.md) for more details.
+
+### 3. Model Preparing
+There are many models to prepare, please refer to the [Model Preparing](docs/model_preparing.md) for more details.
+
+### 4. Training
+:sparkles: **One Script for All !**
+
+#### Stage 1: Segmentor Fine-tuning
+```bash
+cd $root_dir
+bash runs/run.sh --modes train --config xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s1_seg_finetune/xsam_sam_large_m2f_e36_gpu16_seg_finetune.py
+```
+
+#### Stage 2: Alignment Pre-training
+```bash
+cd $root_dir
+bash runs/run.sh --modes train --config xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s2_align_pretrain/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_e1_gpu16_align_pretrain.py
+```
+
+#### Stage 3: Mixed Fine-tuning
+```bash
+# NOTE: Training for Mixed Fine-tuning will be available after the paper is accepted.
+bash runs/run.sh --modes train --config xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py
+```
+
+### 5. Evaluation
+:sparkles: **One Script for All !**
+
+Download the pre-trained model from [HuggingFace🤗](https://huggingface.co/hao9610/X-SAM), and put them on $root_dir/inits/xsam directory.
+
+```bash
+cd $root_dir
+bash runs/run.sh --modes MODES --config CONFIG_FILE --work-dir WORK_DIR --suffix SUFFIX
+```
+
+#### Evaluate on all segmentation benchmarks
+```bash
+cd $root_dir
+# Evaluate on all segmentation benchmarks.
+# NOTE: ONLY generic segmentation and VGD segmentation are supported NOW.
+bash runs/run.sh --modes segeval --config xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py --work-dir $root_dir/inits/xsam
+```
+
+#### Evaluate on all VLM benchmarks
+```bash
+cd $root_dir
+# Evaluate on all VLM benchmarks.
+bash runs/run.sh --modes vlmeval --config xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py --work-dir $root_dir/inits/xsam
+```
 
 ## :white_check_mark: TODO
-- [x] Release the [Demo](http://47.115.200.157:7861).
-- [ ] Release the [weight](https://huggingface.co/wanghao9610/X-SAM).
+- [x] Release the [Online Demo](http://47.115.200.157:7861).
+- [ ] Release the [Model Weight](https://huggingface.co/hao9610/X-SAM).
 - [ ] Release the code and instructions for demo.
-- [ ] Release the code for evaluation on all segmentation benchmarks.
 - [ ] Release the code for evaluation on all VLM Benchmarks.
 - [ ] Release the code for training LLaVA-based MLLMs.
-- [ ] Release the code for training X-SAM (More than 500 🌟).
+- [ ] Release the code for evaluation on all segmentation benchmarks.
+- [ ] Release the code for training X-SAM (more than 500 🌟).
 
 ## :blush: Acknowledge
-
-This project has referenced some excellent open-sourced repositories: [XTuner](https://github.com/InternLM/xtuner), [VLMEvalKit](https://github.com/open-compass/VLMEvalKit), [Sa2VA](https://github.com/magic-research/Sa2VA). Thanks for their wonderful works and contributions to the community.
+This project has referenced some excellent open-sourced repos ([xtuner](https://github.com/InternLM/xtuner), [VLMEvalKit](https://github.com/open-compass/VLMEvalKit), [Sa2VA](https://github.com/magic-research/Sa2VA)). Thanks for their wonderful works and contributions to the community.
 
 ## :pushpin: Citation
-If you find X-SAM helpful for your research or applications, please consider giving us a star 🌟 and citing it using the following BibTeX entry.
+If you find X-SAM is helpful for your research or applications, please consider giving us a star 🌟 and citing it by the following BibTex entry.
 
 ```bibtex
 
