@@ -268,7 +268,7 @@ val_datasets = [
         data_mode="eval",
         tokenizer=tokenizer,
         task_name="genseg",
-        data_name="panoptic_genseg",
+        data_name="panoptic_semantic_genseg",  # semantic_genseg shares panoptic annotations
         output_ids_with_output=output_ids_with_output,
         cond_type=cond_type,
         special_tokens=special_tokens,
@@ -504,7 +504,7 @@ vis_datasets = val_datasets
 
 vis_datasets = deepcopy(val_datasets)
 for dataset in vis_datasets:
-    if dataset["task_name"] in ["ovseg", "vgdseg", "interseg"]:
+    if dataset["task_name"] in ["genseg", "ovseg", "vgdseg", "interseg"]:
         dataset["postprocess_fn"]["threshold"] = 0.5  # type: ignore
 
 #######################################################################

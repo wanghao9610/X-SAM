@@ -44,7 +44,7 @@ This repository provides the official PyTorch implementation, pre-trained models
 
 :sparkles: **HIGHLIGHT**: This repository provides unified and effective code for training, evaluation, and visualization of segmentation MLLMs, including LLaVA-based MLLMs. We hope this repository will promote further research on MLLMs.
 
-*If you have any questions, please feel free to open an issue or contact us.*
+*If you have any questions, please feel free to open an issue or contact me.*
 
 ## :bookmark: Abstract
 

@@ -237,7 +237,51 @@ class GenericSegDataset(BaseDataset):
         cat_ids2names = {cat["id"]: cat["name"] for cat in cats}
 
         rets = []
-        if "semantic" in self.data_name:
+        if "panoptic" in self.data_name:
+            coco_data["images"] = sorted(coco_data["images"], key=lambda x: x["id"])
+            coco_data["annotations"] = sorted(coco_data["annotations"], key=lambda x: x["image_id"])
+            for _img_info, _ann_info in zip(coco_data["images"], coco_data["annotations"]):
+                img_id = _img_info["id"]
+                assert _img_info["id"] == _ann_info["image_id"]
+                seg_map_path = _img_info["file_name"].replace(".jpg", ".png")
+
+                if cap_coco_api is not None:
+                    cap_ann_ids = cap_coco_api.getAnnIds(imgIds=[img_id])
+                    cap_anns = cap_coco_api.loadAnns(cap_ann_ids)
+                    caption = _format_caption(random.choice(cap_anns)["caption"])
+                else:
+                    caption = None
+
+                segments_info = _ann_info["segments_info"]
+                if len(segments_info) == 0:
+                    self.woann_cnt += 1
+                    continue
+
+                # random sample cat_ids to shuffle the order
+                sampled_cat_ids, sampled_segments_info = self._sample_cats(cat_ids, segments_info)
+                sampled_cat_names = [cat_ids2names[cat_id] for cat_id in sampled_cat_ids]
+
+                img_info = {
+                    "file_name": _img_info["file_name"],
+                    "image_id": _img_info["id"],
+                    "height": _img_info["height"],
+                    "width": _img_info["width"],
+                }
+
+                rets.append(
+                    {
+                        "image_id": _img_info["id"],
+                        "image_file": _img_info["file_name"],
+                        "image_size": (_img_info["height"], _img_info["width"]),
+                        "caption": caption,
+                        "seg_map": seg_map_path,
+                        "segments_info": sampled_segments_info,
+                        "sampled_cats": sampled_cat_names,
+                        "sampled_labels": sampled_cat_ids,
+                        "image_info": img_info,
+                    }
+                )
+        elif "semantic" in self.data_name:
             coco_api = COCO(dataset=coco_data)
             img_ids = sorted(coco_api.getImgIds())
             for img_id in img_ids:
@@ -280,7 +324,7 @@ class GenericSegDataset(BaseDataset):
                         "annotations": sampled_anns,
                         "sampled_sents": sampled_cat_names,
                         "sampled_cats": sampled_cat_names,
-                        "sampled_cat_ids": sampled_cat_ids,
+                        "sampled_labels": sampled_cat_ids,
                         "image_info": img_info,
                     }
                 )
@@ -343,49 +387,7 @@ class GenericSegDataset(BaseDataset):
                         "caption": caption,
                         "annotations": sampled_anns,
                         "sampled_cats": sampled_cat_names,
-                        "image_info": img_info,
-                    }
-                )
-        elif "panoptic" in self.data_name:
-            coco_data["images"] = sorted(coco_data["images"], key=lambda x: x["id"])
-            coco_data["annotations"] = sorted(coco_data["annotations"], key=lambda x: x["image_id"])
-            for _img_info, _ann_info in zip(coco_data["images"], coco_data["annotations"]):
-                img_id = _img_info["id"]
-                assert _img_info["id"] == _ann_info["image_id"]
-                seg_map_path = _img_info["file_name"].replace(".jpg", ".png")
-
-                if cap_coco_api is not None:
-                    cap_ann_ids = cap_coco_api.getAnnIds(imgIds=[img_id])
-                    cap_anns = cap_coco_api.loadAnns(cap_ann_ids)
-                    caption = _format_caption(random.choice(cap_anns)["caption"])
-                else:
-                    caption = None
-
-                segments_info = _ann_info["segments_info"]
-                if len(segments_info) == 0:
-                    self.woann_cnt += 1
-                    continue
-
-                # random sample cat_ids to shuffle the order
-                sampled_cat_ids, sampled_segments_info = self._sample_cats(cat_ids, segments_info)
-                sampled_cat_names = [cat_ids2names[cat_id] for cat_id in sampled_cat_ids]
-
-                img_info = {
-                    "file_name": _img_info["file_name"],
-                    "image_id": _img_info["id"],
-                    "height": _img_info["height"],
-                    "width": _img_info["width"],
-                }
-
-                rets.append(
-                    {
-                        "image_id": _img_info["id"],
-                        "image_file": _img_info["file_name"],
-                        "image_size": (_img_info["height"], _img_info["width"]),
-                        "caption": caption,
-                        "seg_map": seg_map_path,
-                        "segments_info": sampled_segments_info,
-                        "sampled_cats": sampled_cat_names,
+                        "sampled_labels": sampled_cat_ids,
                         "image_info": img_info,
                     }
                 )
