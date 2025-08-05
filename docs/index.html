@@ -431,7 +431,7 @@
     <div class="container is-max-desktop">
       <div class="columns is-centered">
         <div class="column has-text-centered">
-          <h2 class="title is-2 publication-title">X-SAM</h2>
+          <h2 class="title is-2 publication-title">✨X-SAM</h2>
           <h3 class="title is-4"> From Segment Anything to Any Segmentation </h3>
           <div class="is-size-5 publication-authors">
             <span class="author-block">
@@ -456,8 +456,8 @@
           </div>
           <div class="is-size-5 publication-authors" style="margin-top: 1rem;">
             <span class="author-block"><sup>1</sup> Sun Yat-sen University,</span>
-            <span class="author-block"><sup>2</sup> Pengcheng Lab,</span>
-            <span class="author-block"><sup>3</sup> Meituan Inc</span>
+            <span class="author-block"><sup>2</sup> Peng Cheng Laboratory,</span>
+            <span class="author-block"><sup>3</sup> Meituan Inc.</span>
           </div>
           <div class="is-size-6 publication-authors" style="margin-top: 0.5rem;">
             <span class="author-block"><sup>📧</sup> Corresponding author.</span>
@@ -532,9 +532,9 @@
           <h2 class="title is-3" style="text-align: center;"> 🚀 Highlight</h2>
           <div class="highlight-box">
             <ul style="list-style: none; padding: 0; text-align: left;">
-              <li>X-SAM is a novel unified segmentation MLLMs, which offers superior performance on all image segmentation benchmarks.</li>
-              <li>X-SAM integrates the SAM into MLLMs via a unified formulation adapted to all image segmentation, extending the SAM's capability from <i>segment anything</i> to <i>any segmentation</i>.</li>
-              <li>X-SAM co-trains on multi data sources via an effective multi-stage training strategy, achieving robust performance across all tasks.</li>
+              <li>X-SAM introduces a unified multimodal large language model (MLLM) framework, extending the segmentation paradigm from <i>segment anything</i> to <i>any segmentation</i>, thereby enhancing pixel-level perceptual understanding.</li>
+              <li>X-SAM proposes a novel Visual GrounDed (VGD) segmentation task, which segments all instance objects using interactive visual prompts, empowering the model with visually grounded, pixel-wise interpretative capabilities.</li>
+              <li>X-SAM presents a unified training strategy that enables co-training across multiple datasets. Experimental results demonstrate that X-SAM achieves state-of-the-art performance on various image segmentation benchmarks, highlighting its efficiency in multimodal, pixel-level visual understanding.</li>
             </ul>
           </div>
         </div>
@@ -549,9 +549,9 @@
     <div class="columns is-centered has-text-centered">
       <div class="column is-full-width">
         <div class="card-enhanced">
-          <h2 class="title is-3">📄 Abstract</h2>
+          <h2 class="title is-3">🔖 Abstract</h2>
           <div class="content has-text-justified" style="font-size: 1.1rem; line-height: 1.8;">
-            <p>The Segment Anything Model (SAM) has emerged as a pivotal advancement in computer vision, particularly within the context of visual-prompt-driven segmentation. However, SAM is constrained by intrinsic limitations in multi-mask prediction and category-specific image segmentation tasks. Concurrently, Large Language Models (LLMs) have exhibited remarkable proficiency in comprehensive knowledge representation across a wide range of domains, yet they inherently lack the capacity for pixel-level perceptual understanding. To bridge these complementary gaps, we present <strong>X-SAM</strong>, a streamlined Multimodal Large Language Model (MLLM) framework that seamlessly integrates SAM with LLMs, thereby augmenting SAM's functionality from <i>segment anything</i> to <i>any segmentation</i>. Specifically, we introduce a novel approach for integrating SAM with MLLMs, which facilitates more advanced dense, pixel-level perceptual comprehension within MLLMs. Furthermore, we propose a new segmentation paradigm, termed <strong>V</strong>isual <strong>G</strong>roun<strong>D</strong>ed (VGD) segmentation, which empowers MLLMs with visual grounded, pixel-wise interpretative capabilities. To enable effective training of MLLMs on diverse data sources, we devise a unified training strategy that supports co-training across multiple datasets. Experimental results demonstrate that X-SAM achieves state-of-the-art performance on a wide range of image segmentation benchmarks, highlighting its efficacy for multimodal pixel-level visual understanding.</p>
+            <p>Large Language Models (LLMs) demonstrate strong capabilities in broad knowledge representation, yet they are inherently deficient in pixel-level perceptual understanding. Although the Segment Anything Model (SAM) represents a significant advancement in visual-prompt-driven image segmentation, it exhibits notable limitations in multi-mask prediction and category-specific segmentation tasks, and it cannot integrate all segmentation tasks within a unified model architecture. To address these limitations, we present X-SAM, a streamlined Multimodal Large Language Model (MLLM) framework that extends the segmentation paradigm from <i>segment anything</i> to <i>any segmentation</i>. Specifically, we introduce a novel unified framework that enables more advanced pixel-level perceptual comprehension for MLLMs. Furthermore, we propose a new segmentation task, termed Visual GrounDed (VGD) segmentation, which segments all instance objects with interactive visual prompts and empowers MLLMs with visual grounded, pixel-wise interpretative capabilities. To enable effective training on diverse data sources, we present a unified training strategy that supports co-training across multiple datasets. Experimental results demonstrate that X-SAM achieves state-of-the-art performance on a wide range of image segmentation benchmarks, highlighting its efficiency for multimodal, pixel-level visual understanding.</p>
           </div>
         </div>
       </div>
@@ -570,7 +570,7 @@
             <img src="images/xsam_framework.png" alt="X-SAM Framework">
           </div>
                      <div class="content has-text-justified" style="margin-top: 0.5rem; font-size: 1rem; line-height: 1.7;">
-            <p><strong>Fig. 1. Overview of X-SAM.</strong> X-SAM consists of dual encoders, dual projectors, a language model, a segmentation connector, and a segmentation decoder. First, the dual encoders encode the image simultaneously, then project them into the same dimension as text embeddings and feed them to the language model along with tokenized text embedding for instruction-guided image understanding. We bridge the SAM encoded feature with a connector to the segmentation decoder. In addition, the <span style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace;">&lt;SEG&gt;</span> token output by the LLM is decoded by the segmentation decoder into segmentation masks.</p>
+            <p>Fig. 1. The Overview of X-SAM. X-SAM comprises dual encoders, dual projectors, a language model, a segmentation connector, and a segmentation decoder. The dual encoders process the image and project features to match text embedding dimensions, which are then input to the language model with tokenized text for instruction-guided understanding. The SAM features are connected to the segmentation decoder, which uses the LLM’s <span style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace;">&lt;SEG&gt;</span> token to generate segmentation masks.</p>
           </div>
         </div>
       </div>
@@ -587,10 +587,10 @@
           <h2 class="title is-3">📊 Benchmark Results</h2>
                      <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
             <!-- Main Results -->
-            <p><strong>Table 1. Comprehensive Performance Comparison.</strong> We compare X-SAM with other methods, including segmentation-specific models (<span style="color:gray;">Gray</span>) and MLLMs. A "-" indicates that the method does not support this task, while a "?" indicates that the method does not report results for this dataset. X-SAM achieves state-of-the-art performance across all image segmentation tasks with one model. The best performance is highlighted in <strong>bold</strong>, and the second-best performance is highlighted with <span style="text-decoration: underline;">underline</span>.</p>
+            <p>Tab. 1. Comprehensive Performance Comparison. We compare X-SAM to segmentation-specific models (<span style="color:gray;">Gray</span>) and MLLMs. <span title="Unsupported tasks">&#10007;</span> denotes unsupported tasks. “-” indicates unreported results. X-SAM achieves state-of-the-art performance across all segmentation tasks with a single model.Best results are in <b>bold</b>, second-best are <u>underlined</u>.</p>
           </div>
           <div class="image-container">
-            <img src="images/main_results.png" alt="Benchmark Results">
+            <img src="results/overall.png" alt="Benchmark Results">
           </div>
           
           <!-- More Results Collapsible Section -->
@@ -602,70 +602,70 @@
             <div class="more-results-content">
               <!-- Ref. Seg. Results -->
               <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
-                <p><strong>Table 2. Comparison of Referring Segmentation.</strong> We compare different methods on referring segmentation benchmarks, regarding their LLM types or MLLM types.</p>
+                <p>Tab. 2. Comparison of Referring Segmentation. We evaluate methods on referring segmentation benchmarks by (M)LLMs.</p>
               </div>
               <div class="image-container">
-                <img src="images/refseg_results.png" alt="Benchmark Results">
+                <img src="results/refseg.png" alt="Benchmark Results">
+              </div>
+
+              <!-- GCG Seg. Results -->
+              <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
+                <p>Tab. 3. Comparison of GCG Segmentation. &dagger; indicates pretraining with the GranD dataset.</p>
+              </div>
+              <div class="image-container">
+                <img src="results/gcgseg.png" alt="Benchmark Results">
+              </div>
+
+              <!-- VGD Seg. Results -->
+              <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
+                <p>Tab. 4. Comparison of VGD Segmentation. &dagger; indicates evaluation results following X-SAM setting.</p>
+              </div>
+              <div class="image-container">
+                <img src="results/vgdseg.png" alt="Benchmark Results">
               </div>
 
               <!-- Gen. Seg. & OV. Seg. Results -->
               <div class="columns">
                 <div class="column" style="flex: 0 0 50% !important; max-width: 50% !important;">
                   <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
-                    <p><strong>Table 3. Comparison of Generic Segmentation.</strong> We compare different methods on the generic segmentation benchmarks.</p>
+                    <p>Tab. 5. Comparison of Generic Segmentation. We compare different methods on the generic segmentation benchmarks.</p>
                   </div>
                   <div class="image-container">
-                    <img src="images/genseg_results.png" alt="Generic Segmentation Results">
+                    <img src="results/genseg.png" alt="Generic Segmentation Results">
                   </div>
                 </div>
                 <div class="column" style="flex: 0 0 40% !important; max-width: 40% !important;">
                   <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
-                    <p><strong>Table 4. Comparison of OV Segmentation.</strong> We compare different methods on the OV segmentation benchmarks.</p>
+                    <p>Tab. 6. Comparison of OV Segmentation. We compare different methods on the A150-OV segmentation benchmarks.</p>
                   </div>
                   <div class="image-container">
-                    <img src="images/ovseg_results.png" alt="OV Segmentation Results">
+                    <img src="results/ovseg.png" alt="OV Segmentation Results">
                   </div>
                 </div>
               </div>
 
-              <!-- GCG Seg. Results -->
-              <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
-                <p><strong>Table 5. Comparison of GCG Segmentation.</strong> We compare different methods on the GCG segmentation benchmark. &dagger; indicates that the method used the GranD dataset for pretraining.</p>
-              </div>
-              <div class="image-container">
-                <img src="images/gcgseg_results.png" alt="Benchmark Results">
-              </div>
-
               <!-- Rea. Seg. Results -->
               <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
-                <p><strong>Table 6. Comparison of Reasoning Segmentation.</strong> We compare X-SAM with other methods on the reasoning segmentation benchmark.</p>
+                <p>Tab. 7. Comparison of Reasoning Segmentation. We compare X-SAM with other methods on the reasoning segmentation benchmark.</p>
               </div>
               <div class="image-container">
-                <img src="images/reaseg_results.png" alt="Benchmark Results">
+                <img src="results/reaseg.png" alt="Benchmark Results">
               </div>
 
               <!-- Inter. Seg. Results -->
               <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
-                <p><strong>Table 7. Comparison of Interactive Segmentation.</strong> We compare X-SAM with other methods on the interactive segmentation benchmark.</p>
+                <p>Tab. 8. Comparison of Interactive Segmentation. We compare X-SAM with other methods on the interactive segmentation benchmark.</p>
               </div>
               <div class="image-container">
-                <img src="images/interseg_results.png" alt="Interactive Segmentation Results">
-              </div>
-
-              <!-- VGD Seg. Results -->
-              <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
-                <p><strong>Table 8. Comparison of VGD Segmentation.</strong> We compare different methods on the VGD segmentation benchmark. &dagger; indicates our evaluation results following X-SAM setting.</p>
-              </div>
-              <div class="image-container">
-                <img src="images/vgdseg_results.png" alt="Benchmark Results">
+                <img src="results/interseg.png" alt="Interactive Segmentation Results">
               </div>
 
               <!-- Img Conv Results -->
               <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
-                <p><strong>Table 9. Comparison of Image-level Benchmarks.</strong> We compare X-SAM with other methods on the image-level benchmarks, including MME, MMBench, SEED-Bench, POPE, and AI2D.</p>
+                <p>Tab. 9. Comparison of Image-level Benchmarks. We compare X-SAM with other methods on the image-level benchmarks, including MME, MMBench, SEED-Bench, POPE, and AI2D.</p>
               </div>
               <div class="image-container">
-                <img src="images/imgconv_results.png" alt="Benchmark Results">
+                <img src="results/imgconv.png" alt="Benchmark Results">
               </div>
             </div>
           </details>
@@ -718,7 +718,7 @@
     <div class="columns is-centered">
       <div class="column is-full-width">
         <div class="card-enhanced">
-          <h2 class="title is-3">📝 Citation</h2>
+          <h2 class="title is-3">📌 Citation</h2>
           <div class="bibtex-container">
             <pre><code>@article{wang2024xsam,
   title={X-SAM: From Segment Anything to Any Segmentation},
