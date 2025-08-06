@@ -8,7 +8,7 @@
 
 <sup>1</sup> Sun Yat-sen University, <sup>2</sup> Peng Cheng Laboratory, <sup>3</sup> Meituan Inc.
 
-<sup>:email:</sup> corresponding author.
+<sup>:email:</sup> Corresponding author
 </div>
 
 <div align="center" style="display: flex; justify-content: center; align-items: center;">
