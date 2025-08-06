@@ -325,7 +325,7 @@
 
     .more-results-toggle {
       display: flex;
-      justify-content: space-between;
+      justify-content: center;
       align-items: center;
       padding: 1rem 2rem;
       background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
@@ -584,11 +584,11 @@
     <div class="columns is-centered">
       <div class="column is-full-width">
         <div class="card-enhanced">
-          <h2 class="title is-3">📊 Benchmark Results</h2>
-                     <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
+          <h2 class="title is-3 has-text-centered">📊 Benchmarks</h2>
+            <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
             <!-- Main Results -->
             <p>Tab. 1. Comprehensive Performance Comparison. We compare X-SAM to segmentation-specific models (<span style="color:gray;">Gray</span>) and MLLMs. <span title="Unsupported tasks">&#10007;</span> denotes unsupported tasks. “-” indicates unreported results. X-SAM achieves state-of-the-art performance across all segmentation tasks with a single model.Best results are in <b>bold</b>, second-best are <u>underlined</u>.</p>
-          </div>
+            </div>
           <div class="image-container">
             <img src="results/overall.png" alt="Benchmark Results">
           </div>
@@ -596,7 +596,7 @@
           <!-- More Results Collapsible Section -->
           <details class="more-results-section" style="margin-top: 2rem;">
             <summary class="more-results-toggle">
-              <span class="more-results-text">📊 More Results</span>
+              <span class="more-results-text">📊 More</span>
               <span class="more-results-icon">▼</span>
             </summary>
             <div class="more-results-content">
@@ -677,13 +677,13 @@
     <!-- Demo -->
     <div class="columns is-centered">
       <div class="column is-full-width">
+        <h2 class="title is-3 has-text-centered">💻 Demo</h2>
         <div class="demo-section">
-          <h2 class="title is-3" style="color: white; margin-bottom: 1rem;">💻 Online Demo</h2>
           <a href="http://47.115.200.157:7861" class="button" target="_blank">
             <span class="icon">
               <i class="fas fa-play"></i>
             </span>
-            <span>Launch Demo</span>
+            <span>Launch</span>
           </a>
           
                      <div class="image-container" style="margin-top: 0.5rem;">
