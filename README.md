@@ -150,27 +150,33 @@ There are many datasets and models to prepare, please refer to [Data Preparing](
 ### 4. Training & Evaluation
 :sparkles: **One Script for All !**
 
-#### Training
+#### 🔥 **Training**
+Prepare the datasets and models, and then run the following command to start training.
 
-**Stage 1: Segmentor Fine-tuning**
+```bash
+cd $root_dir
+bash runs/run.sh --modes MODES --config CONFIG_FILE --work-dir WORK_DIR --suffix WORK_DIR_SUFFIX
+```
+
+##### Stage 1: Segmentor Fine-tuning
 ```bash
 cd $root_dir
 bash runs/run.sh --modes train --config xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s1_seg_finetune/xsam_sam_large_m2f_e36_gpu16_seg_finetune.py
 ```
 
-**Stage 2: Alignment Pre-training**
+##### Stage 2: Alignment Pre-training
 ```bash
 cd $root_dir
 bash runs/run.sh --modes train --config xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s2_align_pretrain/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_e1_gpu16_align_pretrain.py
 ```
 
-**Stage 3: Mixed Fine-tuning**
+##### Stage 3: Mixed Fine-tuning
 ```bash
 # NOTE: Training for Mixed Fine-tuning will be available after the paper is accepted or more than 500 🌟.
 bash runs/run.sh --modes train,segeval,vlmeval,visualize --config xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py
 ```
 
-#### Evaluation
+##### 🧪 **Evaluation**
 
 Download the pre-trained model from [HuggingFace🤗](https://huggingface.co/hao9610/X-SAM) (details in [Model Preparing](docs/model_preparing.md)), and put them on $root_dir/inits directory.
 
@@ -179,7 +185,7 @@ cd $root_dir
 bash runs/run.sh --modes MODES --config CONFIG_FILE --work-dir WORK_DIR --suffix SUFFIX
 ```
 
-**Evaluate on all segmentation benchmarks**
+##### Evaluate on all segmentation benchmarks
 ```bash
 cd $root_dir
 # Evaluate on all segmentation benchmarks.
@@ -187,7 +193,7 @@ cd $root_dir
 bash runs/run.sh --modes segeval --config xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py --work-dir $root_dir/inits/X-SAM/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune
 ```
 
-**Evaluate on all VLM benchmarks**
+##### Evaluate on all VLM benchmarks
 ```bash
 cd $root_dir
 # Evaluate on all VLM benchmarks.
