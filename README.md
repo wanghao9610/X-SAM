@@ -151,7 +151,7 @@ There are many datasets and models to prepare, please refer to [Data Preparing](
 :sparkles: **One Script for All !**
 
 <details>
-<summary>🔥 **Training** (Click to expand)</summary>
+<summary>🔥 Training (Click to expand)</summary>
 
 Prepare the datasets and models, and then run the following command to start training.
 
@@ -182,7 +182,7 @@ bash runs/run.sh --modes train,segeval,vlmeval,visualize --config xsam/configs/x
 
 
 <details>
-<summary>🧪 **Evaluation** (Click to expand)</summary>
+<summary>🧪 Evaluation (Click to expand)</summary>
 
 Download the pre-trained model from [HuggingFace🤗](https://huggingface.co/hao9610/X-SAM) (details in [Model Preparing](docs/model_preparing.md)), and put them on $root_dir/inits directory.
 
