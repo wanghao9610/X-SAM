@@ -195,14 +195,16 @@ cd $root_dir
 # Evaluate on all VLM benchmarks.
 bash runs/run.sh --modes vlmeval --config xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py --work-dir $root_dir/inits/X-SAM/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune
 ```
+## :computer: Demo
+Coming soon...
 
 ## :white_check_mark: TODO
 - [x] Release the [Online Demo](http://47.115.200.157:7861).
 - [x] Release the [Model Weights](https://huggingface.co/hao9610/X-SAM).
 - [x] Release the [Technical Report](https://arxiv.org/abs/2508.04655).
-- [ ] Release the code and instructions for demo.
-- [ ] Release the code for evaluation on all VLM Benchmarks.
 - [ ] Release the code for training LLaVA-based MLLMs.
+- [ ] Release the code for evaluation on all VLM Benchmarks.
+- [ ] Release the code and instructions for demo deployment.
 - [ ] Release the code for evaluation on all segmentation benchmarks.
 - [ ] Release the code for training X-SAM (paper accepted or more than 500 🌟).
 
