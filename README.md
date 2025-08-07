@@ -61,8 +61,8 @@ Large Language Models (LLMs) demonstrate strong capabilities in broad knowledge 
 Please refer to the [Benchmark Results](docs/benchmark_results.md) for more details.
 
 ## :checkered_flag: Getting Started
-### 1. Project
-We provide a detailed project structure for X-SAM, please follow the following structure to organize the project.
+### 1. Structure
+We provide a detailed project structure for X-SAM. Please follow this structure to organize the project.
 
 <details>
 <summary>📁 Structure (Click to expand)</summary>
