@@ -166,7 +166,7 @@ There are many datasets and models to prepare, please refer to [Data Preparing](
 <details>
 <summary>🔥 Training (Click to expand)</summary>
 
-Prepare the [Datasets](docs/data_preparing.md) and [Models](docs/model_preparing.md), and then run the following command to start training.
+Prepare the [Datasets](docs/data_preparing.md) and [Models](docs/model_preparing.md), and then refer to the following command to start training.
 
 ```bash
 cd $root_dir
