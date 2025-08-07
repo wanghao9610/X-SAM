@@ -25,7 +25,7 @@
     <img src='https://img.shields.io/badge/Demo-Gradio-gold?style=flat&logo=Gradio&logoColor=red' alt='Demo'>
   </a>
   <a href='https://wanghao9610.github.io/X-SAM/' style="margin: 0 2px;">
-    <img src='https://img.shields.io/badge/Webpage-Project-silver?style=flat&logo=&logoColor=orange' alt='webpage'>
+    <img src='https://img.shields.io/badge/🌐_Project-Webpage-blue?style=flat&logoColor=white' alt='webpage'>
   </a>
 </div>
 
