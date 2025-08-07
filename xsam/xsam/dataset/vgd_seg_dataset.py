@@ -192,7 +192,7 @@ class VGDSegDataset(BaseDataset):
 
         num_workers = min(16, max(1, mp.cpu_count() // 2))
         print_log(
-            f"Creating {self.data_name} gt_json, which will take a while, you can download the gt_json from https://github.com/USER/X-SAM",
+            f"Creating {self.data_name} gt_json, which will take a while, you can download the gt_json from https://huggingface.co/hao9610/X-SAM/resolve/main/vgdseg_annotations",
             logger="current",
         )
         print_log(f"Processing {len(img_ids)} images with {num_workers} workers...", logger="current")

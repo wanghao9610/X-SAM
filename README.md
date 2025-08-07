@@ -12,10 +12,10 @@
 </div>
 
 <div align="center" style="display: flex; justify-content: center; align-items: center;">
-  <a href="" style="margin: 0 2px;">
-    <img src='https://img.shields.io/badge/arXiv-paper_id-red?style=flat&logo=arXiv&logoColor=red' alt='arxiv'>
+  <a href="https://arxiv.org/abs/2508.04655" style="margin: 0 2px;">
+    <img src='https://img.shields.io/badge/arXiv-2508.04655-red?style=flat&logo=arXiv&logoColor=red' alt='arxiv'>
   </a>
-  <a href='' style="margin: 0 2px;">
+  <a href='https://huggingface.co/hao9610/X-SAM' style="margin: 0 2px;">
     <img src='https://img.shields.io/badge/Hugging Face-ckpts-orange?style=flat&logo=HuggingFace&logoColor=orange' alt='huggingface'>
   </a>
   <a href="https://github.com/wanghao9610/X-SAM" style="margin: 0 2px;">
@@ -31,7 +31,9 @@
 
 ## :boom: Updates
 
-- **`2025-07-26`**: Provided the [Online Demo](http://47.115.200.157:7861).
+- **`2025-08-06`**: Released the [Technical Report](https://arxiv.org/abs/2508.04655).
+- **`2025-08-05`**: Released the [Model Weights](https://huggingface.co/hao9610/X-SAM).
+- **`2025-07-26`**: Released the [Online Demo](http://47.115.200.157:7861).
 
 ## :rocket: Introduction
 This repository provides the official PyTorch implementation, pre-trained models, training, evaluation, visualization, and demo code of X-SAM:
@@ -44,7 +46,7 @@ This repository provides the official PyTorch implementation, pre-trained models
 
 :sparkles: **HIGHLIGHT**: This repository provides unified and effective code for training, evaluation, and visualization of segmentation MLLMs, including LLaVA-based MLLMs. We hope this repository will promote further research on MLLMs.
 
-*If you have any questions, please feel free to open an issue or contact me.*
+*If you have any questions, please feel free to open an issue or [contact me](mailto:wanghao9610@gmail.com).*
 
 ## :bookmark: Abstract
 
@@ -172,7 +174,7 @@ bash runs/run.sh --modes train --config xsam/configs/xsam/phi3_mini_4k_instruct_
 ### 5. Evaluation
 :sparkles: **One Script for All !**
 
-Download the pre-trained model from [HuggingFace🤗](https://huggingface.co/hao9610/X-SAM), and put them on $root_dir/inits/xsam directory.
+Download the pre-trained model from [HuggingFace🤗](https://huggingface.co/hao9610/X-SAM), and put them on $root_dir/inits directory.
 
 ```bash
 cd $root_dir
@@ -184,19 +186,20 @@ bash runs/run.sh --modes MODES --config CONFIG_FILE --work-dir WORK_DIR --suffix
 cd $root_dir
 # Evaluate on all segmentation benchmarks.
 # NOTE: ONLY generic segmentation and VGD segmentation are supported NOW.
-bash runs/run.sh --modes segeval --config xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py --work-dir $root_dir/inits/xsam
+bash runs/run.sh --modes segeval --config xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py --work-dir $root_dir/inits/X-SAM/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune
 ```
 
 #### Evaluate on all VLM benchmarks
 ```bash
 cd $root_dir
 # Evaluate on all VLM benchmarks.
-bash runs/run.sh --modes vlmeval --config xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py --work-dir $root_dir/inits/xsam
+bash runs/run.sh --modes vlmeval --config xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py --work-dir $root_dir/inits/X-SAM/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune
 ```
 
 ## :white_check_mark: TODO
 - [x] Release the [Online Demo](http://47.115.200.157:7861).
-- [ ] Release the [Model Weight](https://huggingface.co/hao9610/X-SAM).
+- [x] Release the [Model Weights](https://huggingface.co/hao9610/X-SAM).
+- [x] Release the [Technical Report](https://arxiv.org/abs/2508.04655).
 - [ ] Release the code and instructions for demo.
 - [ ] Release the code for evaluation on all VLM Benchmarks.
 - [ ] Release the code for training LLaVA-based MLLMs.
@@ -210,5 +213,13 @@ This project has referenced some excellent open-sourced repos ([xtuner](https://
 If you find X-SAM is helpful for your research or applications, please consider giving us a star 🌟 and citing it by the following BibTex entry.
 
 ```bibtex
-
+@misc{wang2025xsamsegmentsegmentation,
+      title={X-SAM: From Segment Anything to Any Segmentation}, 
+      author={Hao Wang and Limeng Qiao and Zequn Jie and Zhijian Huang and Chengjian Feng and Qingfang Zheng and Lin Ma and Xiangyuan Lan and Xiaodan Liang},
+      year={2025},
+      eprint={2508.04655},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2508.04655}, 
+}
 ```

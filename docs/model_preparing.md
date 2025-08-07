@@ -3,7 +3,14 @@
 We provide an awesome [script](hfd.sh) to download models, thanks to [hfd](https://gist.github.com/padeoe/697678ab8e528b85a2a7bddafea1fa4f).
 
 ## X-SAM
-The pre-trained models are not released due to the *anonymous review* process and will be made available afterward.
+```bash
+cd $root_dir/docs
+mkdir -p $root_dir/inits
+chmod +x hfd.sh
+alias hfd="$PWD/hfd.sh"
+
+hfd hao9610/X-SAM --tools aria2c -x 8 --save_dir $root_dir/inits
+```
 
 ## Phi-3-mini-4k-instruct
 ```bash
