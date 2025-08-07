@@ -61,8 +61,13 @@ Large Language Models (LLMs) demonstrate strong capabilities in broad knowledge 
 Please refer to the [Benchmark Results](docs/benchmark_results.md) for more details.
 
 ## :checkered_flag: Getting Started
-### 1. Project Structure
-```
+### 1. Project
+We provide a detailed project structure for X-SAM, please follow the following structure to organize the project.
+
+<details>
+<summary>📁 Structure (Click to expand)</summary>
+
+```bash
 X-SAM
 ├── datas
 │   ├── gcg_seg_data
@@ -103,8 +108,14 @@ X-SAM
 │   ├── ...
 ...
 ```
+</details>
 
 ### 2. Installation
+We provide a detailed installation guide to create a environment for X-SAM, please refer to the following steps.
+
+<details>
+<summary>⚙️ Guide (Click to expand)</summary>
+
 ```bash
 cd X-SAM
 export root_dir=$(realpath ./)
@@ -143,6 +154,8 @@ pip install -e .
 # install aria2 for downloading datasets and models(optional)
 pip install aria2
 ```
+
+</details>
 
 ### 3. Preparing
 There are many datasets and models to prepare, please refer to [Data Preparing](docs/data_preparing.md) and [Model Preparing](docs/model_preparing.md) for more details.
