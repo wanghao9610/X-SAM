@@ -213,13 +213,10 @@ This project has referenced some excellent open-sourced repos ([xtuner](https://
 If you find X-SAM is helpful for your research or applications, please consider giving us a star 🌟 and citing it by the following BibTex entry.
 
 ```bibtex
-@misc{wang2025xsamsegmentsegmentation,
-      title={X-SAM: From Segment Anything to Any Segmentation}, 
-      author={Hao Wang and Limeng Qiao and Zequn Jie and Zhijian Huang and Chengjian Feng and Qingfang Zheng and Lin Ma and Xiangyuan Lan and Xiaodan Liang},
-      year={2025},
-      eprint={2508.04655},
-      archivePrefix={arXiv},
-      primaryClass={cs.CV},
-      url={https://arxiv.org/abs/2508.04655}, 
+@article{wang2025xsam,
+  title={X-SAM: From Segment Anything to Any Segmentation},
+  author={Wang, Hao and Qiao, Limeng and Jie, Zequn and Huang, Zhijian and Feng, Chengjian and Zheng, Qingfang and Ma, Lin and Lan, Xiangyuan and Liang, Xiaodan},
+  journal={arXiv preprint arXiv:2508.04655},
+  year={2025}
 }
 ```
