@@ -92,7 +92,7 @@ unset temp_data_dir
 ```
 
 ### 4. Reasoning Segmentation Dataset
-Download the [dataset](https://drive.google.com/drive/folders/125mewyg5Ao6tZ3ZdJ-1-E3n04LGVELqy)(train.zip, val.zip, test.zip, explanatory/train.json) from Google Drive and put it in $root_dir/datas/rea_seg_data.
+Download the [Dataset](https://drive.google.com/drive/folders/125mewyg5Ao6tZ3ZdJ-1-E3n04LGVELqy) (train.zip, val.zip, test.zip, explanatory/train.json) from Google Drive and put it in $root_dir/datas/rea_seg_data.
 ```bash
 cd $root_dir
 mkdir -p datas/rea_seg_data
@@ -116,7 +116,7 @@ unset temp_data_dir
 ```
 
 ### 5. GCG Segmentation Dataset
-Download the [dataset](https://drive.usercontent.google.com/download?id=1abdxVhrbNQhjJQ8eAcuPrOUBzhGaFsF_&export=download&authuser=0&confirm=t&uuid=bb3fe3db-b08c-48f0-9280-2e56c0910987&at=AN8xHooqlXNOUCiIJYVHFMBLtmVn%3A1754293785835)(GranDf_HA_images.zip) from Google Drive and put it in $root_dir/datas/gcg_seg_data.
+Download the [Dataset](https://drive.usercontent.google.com/download?id=1abdxVhrbNQhjJQ8eAcuPrOUBzhGaFsF_&export=download&authuser=0&confirm=t&uuid=bb3fe3db-b08c-48f0-9280-2e56c0910987&at=AN8xHooqlXNOUCiIJYVHFMBLtmVn%3A1754293785835)(GranDf_HA_images.zip) from Google Drive and put it in $root_dir/datas/gcg_seg_data.
 ```bash
 cd $root_dir
 mkdir -p datas/gcg_seg_data datas/gcg_seg_data/images
@@ -142,7 +142,7 @@ unset temp_data_dir
 ```
 
 ### 6. Interactive Segmentation Dataset
-Download the [dataset](https://drive.usercontent.google.com/download?id=1EcC1tl1OQRgIqqy7KFG7JZz2KHujAQB3&export=download&authuser=0)(PSALM_data.zip) from Google Drive and put it in $root_dir/datas/inter_seg_data.
+Download the [Dataset](https://drive.usercontent.google.com/download?id=1EcC1tl1OQRgIqqy7KFG7JZz2KHujAQB3&export=download&authuser=0) (PSALM_data.zip) from Google Drive and put it in $root_dir/datas/inter_seg_data.
 ```bash
 cd $root_dir
 mkdir -p datas/inter_seg_data datas/inter_seg_data/annotations
@@ -161,7 +161,7 @@ unset temp_data_dir
 ```
 
 ### 7. VGD Segmentation Dataset
-Download the [dataset]()(vgd_seg_annotations.zip) from Google Drive and put it in $root_dir/datas/vgd_seg_data.
+Download the [Dataset](https://huggingface.co/hao9610/X-SAM/tree/main/vgdseg_annotations) (vgdseg_annotations) from HuggingFace and put it in $root_dir/datas/vgd_seg_data.
 ```bash
 cd $root_dir
 mkdir -p datas/vgd_seg_data
@@ -169,7 +169,10 @@ export temp_data_dir=$root_dir/datas/vgd_seg_data
 mkdir -p $temp_data_dir/images
 # suppose you have downloaded the dataset and put them in $temp_data_dir as below structure
 # vgd_seg_data
-# └── vgd_seg_annotations.zip
+# ├── annotations
+# |   ├──coco_vgdseg_train.json
+# |   └──coco_vgdseg_val.json
+# └── coco2017
 
 # unzip dataset
 unzip $temp_data_dir/vgd_seg_annotations.zip -d $temp_data_dir
