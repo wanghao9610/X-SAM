@@ -31,7 +31,7 @@
 
 ## :boom: Updates
 
-- **`2025-08-06`**: Released the [Technical Report](https://arxiv.org/abs/2508.04655).
+- **`2025-08-06`**: Released the [Technical Report](https://arxiv.org/pdf/2508.04655).
 - **`2025-08-05`**: Released the [Model Weights](https://huggingface.co/hao9610/X-SAM).
 - **`2025-07-26`**: Released the [Online Demo](http://47.115.200.157:7861).
 
