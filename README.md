@@ -167,8 +167,8 @@ bash runs/run.sh --modes train --config xsam/configs/xsam/phi3_mini_4k_instruct_
 
 #### Stage 3: Mixed Fine-tuning
 ```bash
-# NOTE: Training for Mixed Fine-tuning will be available after the paper is accepted.
-bash runs/run.sh --modes train --config xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py
+# NOTE: Training for Mixed Fine-tuning will be available after the paper is accepted or more than 500 🌟.
+bash runs/run.sh --modes train,segeval,vlmeval,visualize --config xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py
 ```
 
 ### 5. Evaluation
@@ -204,7 +204,7 @@ bash runs/run.sh --modes vlmeval --config xsam/configs/xsam/phi3_mini_4k_instruc
 - [ ] Release the code for evaluation on all VLM Benchmarks.
 - [ ] Release the code for training LLaVA-based MLLMs.
 - [ ] Release the code for evaluation on all segmentation benchmarks.
-- [ ] Release the code for training X-SAM (more than 500 🌟).
+- [ ] Release the code for training X-SAM (paper accepted or more than 500 🌟).
 
 ## :blush: Acknowledge
 This project has referenced some excellent open-sourced repos ([xtuner](https://github.com/InternLM/xtuner), [VLMEvalKit](https://github.com/open-compass/VLMEvalKit), [Sa2VA](https://github.com/magic-research/Sa2VA)). Thanks for their wonderful works and contributions to the community.
