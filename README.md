@@ -150,7 +150,9 @@ There are many datasets and models to prepare, please refer to [Data Preparing](
 ### 4. Training & Evaluation
 :sparkles: **One Script for All !**
 
-#### 🔥 **Training**
+<details>
+<summary>🔥 **Training** (Click to expand)</summary>
+
 Prepare the datasets and models, and then run the following command to start training.
 
 ```bash
@@ -176,7 +178,11 @@ bash runs/run.sh --modes train --config xsam/configs/xsam/phi3_mini_4k_instruct_
 bash runs/run.sh --modes train,segeval,vlmeval,visualize --config xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py
 ```
 
-##### 🧪 **Evaluation**
+</details>
+
+
+<details>
+<summary>🧪 **Evaluation** (Click to expand)</summary>
 
 Download the pre-trained model from [HuggingFace🤗](https://huggingface.co/hao9610/X-SAM) (details in [Model Preparing](docs/model_preparing.md)), and put them on $root_dir/inits directory.
 
@@ -199,6 +205,9 @@ cd $root_dir
 # Evaluate on all VLM benchmarks.
 bash runs/run.sh --modes vlmeval --config xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py --work-dir $root_dir/inits/X-SAM/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune
 ```
+
+</details>
+
 ## :computer: Demo
 Coming soon...
 
