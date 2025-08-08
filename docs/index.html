@@ -234,6 +234,23 @@
       background: #f8f9fa;
     }
 
+    /* Video custom controls */
+    .video-controls {
+      max-width: 800px;
+      margin: 0.5rem auto 0;
+      text-align: left;
+    }
+    .video-time {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      color: rgba(255, 255, 255, 0.9);
+      margin-bottom: 0.25rem;
+    }
+    .video-slider {
+      width: 100%;
+    }
+
     .bibtex-container {
       background: #1a202c;
       border-radius: 15px;
@@ -686,9 +703,24 @@
             <span>Launch</span>
           </a>
           
-                     <div class="image-container" style="margin-top: 0.5rem;">
+          <div class="image-container" style="margin-top: 0.5rem;">
             <img src="images/xsam_demo.png" alt="X-SAM Demo Screenshot">
           </div>
+          
+          <!-- <div class="video-container" style="margin-top: 1rem;">
+            <video id="xsamDemoVideo" controls style="width: 100%; max-width: 800px; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+              <source src="images/xsam_demo.mp4" type="video/mp4">
+            </video>
+          </div>
+
+          <div class="video-controls">
+            <div class="video-time">
+              <span id="videoCurrentTime">0:00</span>
+              <span id="videoDuration">0:00</span>
+            </div>
+            <input id="videoSeek" class="slider is-fullwidth is-success video-slider" type="range" min="0" max="1" step="0.01" value="0" />
+          </div> -->
+
         </div>
       </div>
     </div>
@@ -792,6 +824,64 @@ document.querySelectorAll('.card-enhanced').forEach(card => {
   card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
   observer.observe(card);
 });
+
+// Video seek slider controls
+(function() {
+  const video = document.getElementById('xsamDemoVideo');
+  const seek = document.getElementById('videoSeek');
+  const currentEl = document.getElementById('videoCurrentTime');
+  const durationEl = document.getElementById('videoDuration');
+  if (!video || !seek || !currentEl || !durationEl) return;
+
+  function formatTime(seconds) {
+    if (!isFinite(seconds)) return '0:00';
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  }
+
+  let isSeeking = false;
+
+  function updateUI() {
+    if (isSeeking) return;
+    const duration = isFinite(video.duration) ? video.duration : 1;
+    if (seek.max !== String(duration)) {
+      seek.max = String(duration);
+    }
+    seek.value = String(video.currentTime || 0);
+    currentEl.textContent = formatTime(video.currentTime || 0);
+    durationEl.textContent = formatTime(duration);
+  }
+
+  video.addEventListener('loadedmetadata', updateUI);
+  video.addEventListener('timeupdate', updateUI);
+
+  seek.addEventListener('pointerdown', () => {
+    isSeeking = true;
+  });
+
+  function commitSeek() {
+    const target = Number(seek.value);
+    if (isFinite(target)) {
+      video.currentTime = target;
+    }
+    isSeeking = false;
+  }
+
+  seek.addEventListener('input', () => {
+    // update preview time while dragging
+    currentEl.textContent = formatTime(Number(seek.value));
+  });
+  seek.addEventListener('change', commitSeek);
+  seek.addEventListener('pointerup', commitSeek);
+
+  // Initialize once DOM is ready
+  if (video.readyState >= 1) {
+    updateUI();
+  } else {
+    video.addEventListener('loadeddata', updateUI, { once: true });
+  }
+})();
 </script>
 
 </body>

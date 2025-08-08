@@ -71,11 +71,16 @@ body {
 }
 
 .publication-authors a {
-   color: hsl(204, 86%, 53%) !important;
+   color: #fff !important;
+   text-decoration: none !important;
+   font-weight: 400;
+   text-underline-offset: 2px;
+   transition: color .2s ease, text-decoration-color .2s ease;
 }
 
 .publication-authors a:hover {
-    text-decoration: underline;
+    color: #e6fffa !important;
+    text-decoration: underline !important;
 }
 
 .author-block {
