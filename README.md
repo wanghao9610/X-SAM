@@ -114,7 +114,7 @@ X-SAM
 We provide a detailed installation guide to create a environment for X-SAM, please refer to the following steps.
 
 <details>
-<summary>⚙️ Guide (Click to expand)</summary>
+<summary>⚙️ Installation (Click to expand)</summary>
 
 ```bash
 cd X-SAM
