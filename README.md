@@ -222,7 +222,62 @@ bash runs/run.sh --modes vlmeval --config xsam/configs/xsam/phi3_mini_4k_instruc
 </details>
 
 ## :computer: Demo
-Coming soon...
+
+<details>
+<summary>🎥 Demo (Click to expand)</summary>
+
+<table>
+  <tr>
+    <td align="center">
+      <img src="docs/videos/genseg_sem.gif" width="400"><br/>
+      <em>GenSeg (Semantic)</em>
+    </td>
+    <td align="center">
+      <img src="docs/videos/genseg_ins.gif" width="400"><br/>
+      <em>GenSeg (Instance)</em>
+    </td>
+    <td align="center">
+      <img src="docs/videos/genseg_pan.gif" width="400"><br/>
+      <em>GenSeg (Panoptic)</em>
+    </td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td align="center">
+      <img src="docs/videos/refseg.gif" width="400"><br/>
+      <em>RefSeg</em>
+    </td>
+    <td align="center">
+      <img src="docs/videos/reaseg.gif" width="400"><br/>
+      <em>ReaSeg</em>
+    </td>
+    <td align="center">
+      <img src="docs/videos/interseg.gif" width="400"><br/>
+      <em>InterSeg</em>
+    </td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td align="center">
+      <img src="docs/videos/vgdseg0.gif" width="400"><br/>
+      <em>VGDSeg (Single-Class)</em>
+    </td>
+    <td align="center">
+      <img src="docs/videos/vgdseg1.gif" width="400"><br/>
+      <em>VGDSeg (Multi-Class)</em>
+    </td>
+    <td align="center">
+      <img src="docs/videos/imgconv.gif" width="400"><br/>
+      <em>ImgConv</em>
+    </td>
+  </tr>
+</table>
+
+</details>
 
 ## :white_check_mark: TODO
 - [x] Release the [Online Demo](http://47.115.200.157:7861).
