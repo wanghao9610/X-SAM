@@ -248,7 +248,7 @@ We provide detalied instructions for demo deployment.
 
 <details>
 <summary>🛠️ Deployment (Click to expand)</summary>
-
+Coming soon...
 
 </details>
 
