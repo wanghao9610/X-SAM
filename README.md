@@ -31,9 +31,9 @@
 
 ## :boom: Updates
 
-- **`2025-08-10`**: Released the code of [demo deployment](#computer-demo).
-- **`2025-08-09`**: Released the code of [training in LLaVA-based MLLMs](#llava).
-- **`2025-08-08`**: Released the code of [evaluation on all VLM benchmarks](#evaluate-on-all-vlm-benchmarks).
+- **`2025-08-10`**: Released the code for [demo deployment](#computer-demo).
+- **`2025-08-09`**: Released the code for [training in LLaVA-based MLLMs](#llava).
+- **`2025-08-08`**: Released the code for [evaluation on all VLM benchmarks](#evaluate-on-all-vlm-benchmarks).
 - **`2025-08-06`**: Released the [Technical Report](https://arxiv.org/pdf/2508.04655).
 - **`2025-08-05`**: Released the [Model Weights](https://huggingface.co/hao9610/X-SAM).
 - **`2025-07-26`**: Released the [Online Demo](http://47.115.200.157:7861).
@@ -270,7 +270,7 @@ bash runs/run.sh --modes demo --config xsam/configs/xsam/phi3_mini_4k_instruct_s
 - [x] Release the [Model Weights](https://huggingface.co/hao9610/X-SAM).
 - [x] Release the [Technical Report](https://arxiv.org/abs/2508.04655).
 - [x] Release the code for training LLaVA-based MLLMs.
-- [x] Release the code for evaluation on all VLM Benchmarks.
+- [x] Release the code for evaluation on all VLM benchmarks.
 - [x] Release the code and instructions for demo deployment.
 - [ ] Release the code for evaluation on all segmentation benchmarks.
 - [ ] Release the code for training X-SAM (more than 500 🌟).
