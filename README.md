@@ -276,7 +276,7 @@ bash runs/run.sh --modes demo --config xsam/configs/xsam/phi3_mini_4k_instruct_s
 - [x] Release the code for [Evaluation on All VLM Benchmarks](#evaluate-on-all-vlm-benchmarks).
 - [x] Release the code for [Demo Deployment](#computer-demo).
 - [ ] Release the code for [Evaluation on All Segmentation Benchmarks](#evaluate-on-all-segmentation-benchmarks).
-- [ ] Release the code for training X-SAM (more than 500 🌟).
+- [ ] Release the code for [Training X-SAM](#stage-3-mixed-fine-tuning) (more than 500 🌟).
 
 ## :blush: Acknowledge
 This project has referenced some excellent open-sourced repos ([xtuner](https://github.com/InternLM/xtuner), [VLMEvalKit](https://github.com/open-compass/VLMEvalKit), [Sa2VA](https://github.com/magic-research/Sa2VA)). Thanks for their wonderful works and contributions to the community.
