@@ -124,7 +124,7 @@ cd X-SAM
 export root_dir=$(realpath ./)
 cd $root_dir/xsam
 
-# Optional: set CUDA_HOME for cuda12.4.
+# set CUDA_HOME for cuda12.4(optional).
 # X-SAM utilizes the cuda12.4 default, if your cuda is not cuda12.4, you need first export CUDA_HOME env manually.
 export CUDA_HOME="your_cuda12.4_path"
 export PATH=$CUDA_HOME/bin:$PATH
