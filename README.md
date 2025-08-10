@@ -254,7 +254,10 @@ Coming soon...
 
 <details>
 <summary>🎥 Demo (Click to expand)</summary>
-<video src="docs/videos/xsam_demo.mp4" width="800" controls></video>
+<video src="https://github.com/user-attachments/assets/406b689b-5ab0-4877-8a51-150023a5d120"
+  controls
+  muted
+  style="max-width:100%;"></video>
 </details>
 
 ## :white_check_mark: TODO
