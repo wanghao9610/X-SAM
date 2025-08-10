@@ -272,10 +272,10 @@ bash runs/run.sh --modes demo --config xsam/configs/xsam/phi3_mini_4k_instruct_s
 - [x] Release the [Online Demo](http://47.115.200.157:7861).
 - [x] Release the [Model Weights](https://huggingface.co/hao9610/X-SAM).
 - [x] Release the [Technical Report](https://arxiv.org/abs/2508.04655).
-- [x] Release the code for training LLaVA-based MLLMs.
-- [x] Release the code for evaluation on all VLM benchmarks.
-- [x] Release the code and instructions for demo deployment.
-- [ ] Release the code for evaluation on all segmentation benchmarks.
+- [x] Release the code for [Training LLaVA-based MLLMs](#llava).
+- [x] Release the code for [Evaluation on All VLM Benchmarks](#evaluate-on-all-vlm-benchmarks).
+- [x] Release the code for [Demo Deployment](#computer-demo).
+- [ ] Release the code for [Evaluation on All Segmentation Benchmarks](#evaluate-on-all-segmentation-benchmarks).
 - [ ] Release the code for training X-SAM (more than 500 🌟).
 
 ## :blush: Acknowledge
