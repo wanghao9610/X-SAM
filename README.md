@@ -193,9 +193,11 @@ bash runs/run.sh --modes train --config xsam/configs/xsam/phi3_mini_4k_instruct_
 ```
 
 ##### Stage 3: Mixed Fine-tuning
+```bash
 Coming soon...
 
-*NOTE*: Training for Mixed Fine-tuning will be available with more than 500 🌟.
+# ‼️NOTE: Training for Mixed Fine-tuning will be available with more than 500 🌟.
+```
 </details>
 
 <details open>
