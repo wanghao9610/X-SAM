@@ -183,7 +183,6 @@ def visualize_dataset(
     """Visualize model predictions on a single dataset."""
     data_name = dataset.data_name
     metadata = dataset.metadata
-    use_cross_image = model.use_cross_image
     output_ids_with_output = dataset.output_ids_with_output
     mode = "tensor" if output_ids_with_output else "predict"
     os.makedirs(output_dir, exist_ok=True)
@@ -205,8 +204,6 @@ def visualize_dataset(
 
         # Draw predictions
         image_infos = data["data_samples"].metainfo["image_infos"]
-        if use_cross_image:
-            assert len(image_infos) == 2
 
         for i, (image_info, segmentation_output) in enumerate(zip(image_infos, seg_outputs)):
             file_name = image_info["file_name"]
@@ -214,9 +211,8 @@ def visualize_dataset(
             image = mmcv.imconvert(image, "bgr", "rgb")
 
             aux_image = None
-            if use_cross_image:
-                aux_image = mmcv.imread(osp.join(dataset.image_folder, image_infos[1 - i]["file_name"]))
-                aux_image = mmcv.imconvert(aux_image, "bgr", "rgb")
+            aux_image = mmcv.imread(osp.join(dataset.image_folder, image_infos[1 - i]["file_name"]))
+            aux_image = mmcv.imconvert(aux_image, "bgr", "rgb")
 
             sample_id = image_info.get("sample_id", "")
             if "phrases" not in image_info:

@@ -86,7 +86,6 @@ class XSamModel(BaseModel):
         sampler_type="naive",
         sampler_input_feat="seg_pixel_values",
         cond_type: Literal["phrase", "cls", "all"] = "phrase",
-        use_cross_image=False,
         use_dual_encoder=False,
         use_vision_sampler=False,
         use_activation_checkpointing=True,
@@ -241,7 +240,6 @@ class XSamModel(BaseModel):
         self.visual_select_indx = visual_select_indx
         self.seg_select_layers = seg_select_layers
         self.extract_seg_embeds = extract_seg_embeds
-        self.use_cross_image = use_cross_image
         self.sampler_input_feat = sampler_input_feat
         self.cond_type = cond_type
         self.llm_loss_weight = llm_loss_weight
@@ -385,34 +383,18 @@ class XSamModel(BaseModel):
 
             for i, target_label in enumerate(batch_contiguous_labels):
                 # Find matching positions across all batches
-                if not self.use_cross_image:
-                    pos_matches = [
-                        (b_idx, pos)
-                        for b_idx, batch_labels in enumerate(class_labels)
-                        for pos, label in enumerate(batch_labels)
-                        if label == target_label and (b_idx, pos) not in used_poses
-                    ]
-                    neg_matches = [
-                        (b_idx, pos)
-                        for b_idx, batch_labels in enumerate(class_labels)
-                        for pos, label in enumerate(batch_labels)
-                        if label not in used_labels
-                        and (b_idx, pos) not in used_poses
-                        and label not in batch_class_labels
-                    ]
-                else:
-                    pos_matches = [
-                        (b_idx, pos)
-                        for b_idx, batch_labels in enumerate(class_labels)
-                        for pos, label in enumerate(batch_labels)
-                        if label == target_label and (b_idx, pos) not in used_poses and b_idx != batch_idx
-                    ]
-                    neg_matches = [
-                        (b_idx, pos)
-                        for b_idx, batch_labels in enumerate(class_labels)
-                        for pos, label in enumerate(batch_labels)
-                        if label not in used_labels and (b_idx, pos) not in used_poses and b_idx != batch_idx
-                    ]
+                pos_matches = [
+                    (b_idx, pos)
+                    for b_idx, batch_labels in enumerate(class_labels)
+                    for pos, label in enumerate(batch_labels)
+                    if label == target_label and (b_idx, pos) not in used_poses
+                ]
+                neg_matches = [
+                    (b_idx, pos)
+                    for b_idx, batch_labels in enumerate(class_labels)
+                    for pos, label in enumerate(batch_labels)
+                    if label not in used_labels and (b_idx, pos) not in used_poses and label not in batch_class_labels
+                ]
 
                 matches = pos_matches if pos_matches else neg_matches
 
@@ -513,8 +495,7 @@ class XSamModel(BaseModel):
             )
             data_dict["vprompt_feats"] = vprompt_feats
             kwargs["vprompt_masks"] = vprompt_masks
-            kwargs["sampled_labels"] = new_sampled_labels if self.use_cross_image else sampled_labels
-            kwargs["use_cross_image"] = self.use_cross_image
+            kwargs["sampled_labels"] = sampled_labels
 
         if self.llm is not None:
             data_dict = prepare_inputs_labels_for_multimodal(llm=self.llm, **data_dict)

@@ -36,7 +36,6 @@ def vgd_seg_postprocess_fn(
     num_queries = class_queries_logits.shape[-2]
 
     metadata = kwargs.get("metadata", None)
-    use_cross_image = kwargs.get("use_cross_image", False)
     contiguous_labels = None
     if metadata is not None and hasattr(metadata, "dataset_id_to_contiguous_id"):
         contiguous_labels = list(metadata.dataset_id_to_contiguous_id.keys())
@@ -51,23 +50,13 @@ def vgd_seg_postprocess_fn(
         scaled_size = scaled_sizes[i]
 
         mask_pred = sem_seg_postprocess(mask_pred, scaled_size, image_size[0], image_size[1])
-        if not use_cross_image:
-            vprompt_mask = (
-                sem_seg_postprocess(
-                    vprompt_masks[i], scaled_sizes[i], image_sizes[i][0], image_sizes[i][1], mode="nearest"
-                )
-                if vprompt_masks is not None
-                else None
+        vprompt_mask = (
+            sem_seg_postprocess(
+                vprompt_masks[i], scaled_sizes[i], image_sizes[i][0], image_sizes[i][1], mode="nearest"
             )
-        else:
-            assert batch_size == 2
-            vprompt_mask = (
-                sem_seg_postprocess(
-                    vprompt_masks[i], scaled_sizes[1 - i], image_sizes[1 - i][0], image_sizes[1 - i][1], mode="nearest"
-                )
-                if vprompt_masks is not None
-                else None
-            )
+            if vprompt_masks is not None
+            else None
+        )
 
         scores = F.softmax(mask_cls, dim=-1)[:, :-1]
         labels = torch.arange(num_classes, device=device).unsqueeze(0).repeat(num_queries, 1).flatten(0, 1)
