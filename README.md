@@ -31,7 +31,8 @@
 
 ## :boom: Updates
 
-- **`2025-08-10`**: Released the code of training in LLaVA-based MLLMs.
+- **`2025-08-10`**: Released the code of demo deployment.
+- **`2025-08-09`**: Released the code of training in LLaVA-based MLLMs.
 - **`2025-08-08`**: Released the code of evaluation on all VLM benchmarks.
 - **`2025-08-06`**: Released the [Technical Report](https://arxiv.org/pdf/2508.04655).
 - **`2025-08-05`**: Released the [Model Weights](https://huggingface.co/hao9610/X-SAM).
@@ -248,7 +249,11 @@ We provide detalied instructions for demo deployment.
 
 <details>
 <summary>🛠️ Deployment (Click to expand)</summary>
-Coming soon...
+
+```bash
+cd $root_dir
+bash runs/run.sh --modes demo --config xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py --work-dir $root_dir/inits/X-SAM/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune
+```
 
 </details>
 
@@ -266,7 +271,7 @@ Coming soon...
 - [x] Release the [Technical Report](https://arxiv.org/abs/2508.04655).
 - [x] Release the code for training LLaVA-based MLLMs.
 - [x] Release the code for evaluation on all VLM Benchmarks.
-- [ ] Release the code and instructions for demo deployment.
+- [x] Release the code and instructions for demo deployment.
 - [ ] Release the code for evaluation on all segmentation benchmarks.
 - [ ] Release the code for training X-SAM (more than 500 🌟).
 

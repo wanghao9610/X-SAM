@@ -73,7 +73,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         --help|-h)
             echo "Usage: $0 [--modes MODE1,MODE2,...] --config CONFIG_FILE [--work-dir WORK_DIR] [--suffix SUFFIX] [--help]"
-            echo "Available modes: train, segeval, vlmeval, visualize"
+            echo "Available modes: train, segeval, vlmeval, visualize, demo"
             echo "Arguments:"
             echo "  --modes, -m          Specify modes to run (comma-separated or space-separated)"
             echo "  --config, -c         Specify config file path (REQUIRED)"
@@ -86,6 +86,7 @@ while [[ $# -gt 0 ]]; do
             echo "  $0 --config config.py --modes train,segeval     # Run training and segmentation evaluation"
             echo "  $0 --config config.py --work-dir /path/to/work   # Run with custom work directory"
             echo "  $0 --config config.py --suffix test             # Run with suffix 'test'"
+            echo "  $0 --config config.py --modes demo --work-dir /path/to/work  # Launch local Gradio demo (requires checkpoint in work-dir)"
             exit 0
             ;;
         *)
@@ -135,7 +136,7 @@ fi
 ckpt_file="$work_dir/pytorch_model.bin"
 
 # Validate modes
-valid_modes=("train" "segeval" "vlmeval" "visualize")
+valid_modes=("train" "segeval" "vlmeval" "visualize" "demo")
 for mode in "${modes[@]}"; do
     valid=0
     for valid_mode in "${valid_modes[@]}"; do
@@ -170,10 +171,10 @@ do
         find "$work_dir/$code_name" -type f | xargs chmod 664
         find "$work_dir/$code_name" -type d | xargs chmod 775
     fi
-    # if [ -d "$work_dir/$code_name" ]; then
-    #     code_dir="$work_dir/$code_name"
-    #     cp $(realpath $0) $work_dir
-    # fi
+    if [ -d "$work_dir/$code_name" ]; then
+        code_dir="$work_dir/$code_name"
+        cp $(realpath $0) $work_dir
+    fi
     cd $code_dir
     export CODE_DIR="$code_dir/"
     echo -e "$log_format code_dir: $code_dir"
@@ -245,6 +246,18 @@ do
             --work-dir $work_dir \
             --seed 0 \
             --pth_model latest | { [ $node_rank = "0" ] && tee $work_dir/${mode}-${time}.log || cat; }
+    fi
+    # mode: demo
+    if [ $mode = "demo" ] && [ $trained_flag = 1 ] && [ $node_rank = 0 ]; then
+        echo -e "$log_format Demoing $model_name."
+        PYTHONPATH="$(realpath $code_dir)":$PYTHONPATH OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+            python $code_dir/xsam/demo/app.py \
+            $config_file \
+            --work-dir $work_dir \
+            --log-dir $work_dir/app_logs \
+            --pth_model latest \
+            --seed 0 \
+            --port 7862 | { [ $node_rank = "0" ] && tee $work_dir/${mode}-${time}.log || cat; }
     fi
     rm -rf /tmp/xsam_cache > /dev/null 2>&1
 done
