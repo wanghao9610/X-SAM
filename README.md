@@ -67,7 +67,7 @@ Please refer to the [Benchmark Results](docs/benchmark_results.md) for more deta
 ### 1. Structure
 We provide a detailed project structure for X-SAM. Please follow this structure to organize the project.
 
-<details>
+<details open>
 <summary>📁 Structure (Click to expand)</summary>
 
 ```bash
@@ -116,7 +116,7 @@ X-SAM
 ### 2. Installation
 We provide a detailed installation guide to create a environment for X-SAM, please refer to the following steps.
 
-<details>
+<details open>
 <summary>⚙️ Installation (Click to expand)</summary>
 
 ```bash
@@ -174,7 +174,7 @@ Prepare the [Datasets](docs/dataset_preparing.md) and [Models](docs/model_prepar
 
 #### X-SAM
 
-<details>
+<details open>
 <summary>🔥 Training (Click to expand)</summary>
 
 ##### Stage 1: Segmentor Fine-tuning
@@ -196,7 +196,7 @@ bash runs/run.sh --modes train,segeval,vlmeval,visualize --config xsam/configs/x
 ```
 </details>
 
-<details>
+<details open>
 <summary>🧪 Evaluation (Click to expand)</summary>
 
 ##### Evaluate on all segmentation benchmarks
@@ -218,7 +218,7 @@ bash runs/run.sh --modes vlmeval --config xsam/configs/xsam/phi3_mini_4k_instruc
 
 #### LLaVA
 
-<details>
+<details open>
 <summary>🔥 Training (Click to expand)</summary>
 
 ##### Stage 1: Alignment Pre-training
@@ -234,7 +234,7 @@ bash runs/run.sh --modes train --config xsam/configs/llava/phi3_mini_4k_instruct
 ```
 </details>
 
-<details>
+<details open>
 <summary>🧪 Evaluation (Click to expand)</summary>
 
 ##### Evaluate on all VLM benchmarks
@@ -247,7 +247,7 @@ bash runs/run.sh --modes vlmeval --config xsam/configs/llava/phi3_mini_4k_instru
 ## :computer: Demo
 We provide detalied instructions for demo deployment.
 
-<details>
+<details open>
 <summary>🛠️ Deployment (Click to expand)</summary>
 
 ```bash
@@ -257,7 +257,7 @@ bash runs/run.sh --modes demo --config xsam/configs/xsam/phi3_mini_4k_instruct_s
 
 </details>
 
-<details>
+<details open>
 <summary>🎥 Video (Click to expand)</summary>
 <video src="https://github.com/user-attachments/assets/1a21cf21-c0bb-42cd-91c8-290324b68618"
   controls
