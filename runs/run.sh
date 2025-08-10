@@ -46,7 +46,6 @@ default_modes=("train" "segeval" "vlmeval" "visualize")
 modes=()
 config_file=""
 suffix=""
-vlm_name="xsam-phi3-siglip2-sam-l-mft"
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -121,6 +120,13 @@ if [ ${#modes[@]} -eq 0 ]; then
     modes=("${default_modes[@]}")
 fi
 model_name=$(basename "$config_file" .py)
+
+# Set vlm_name based on config_file content
+if [[ "$config_file" == *"llava"* ]]; then
+    vlm_name="llava-phi3-siglip2-ft"
+else
+    vlm_name="xsam-phi3-siglip2-sam-l-mft"
+fi
 
 if [[ "$work_dir" == "$root_dir/wkdrs"* ]] && [[ "$work_dir" == "$root_dir/wkdrs" ]]; then
     work_dir="$work_dir/$prefix/$model_name$suffix"

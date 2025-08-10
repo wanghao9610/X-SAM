@@ -31,6 +31,8 @@
 
 ## :boom: Updates
 
+- **`2025-08-10`**: Released the code of training in LLaVA-based MLLMs.
+- **`2025-08-08`**: Released the code of evaluation on all VLM benchmarks.
 - **`2025-08-06`**: Released the [Technical Report](https://arxiv.org/pdf/2508.04655).
 - **`2025-08-05`**: Released the [Model Weights](https://huggingface.co/hao9610/X-SAM).
 - **`2025-07-26`**: Released the [Online Demo](http://47.115.200.157:7861).
@@ -158,20 +160,21 @@ pip install aria2
 </details>
 
 ### 3. Preparing
-There are many datasets and models to prepare, please refer to [Data Preparing](docs/data_preparing.md) and [Model Preparing](docs/model_preparing.md) for more details.
+There are many datasets and models to prepare, please refer to [Dataset Preparing](docs/dataset_preparing.md) and [Model Preparing](docs/model_preparing.md) for more details.
 
 ### 4. Training & Evaluation
 :sparkles: **One Script for All !**
-
-<details>
-<summary>🔥 Training (Click to expand)</summary>
-
-Prepare the [Datasets](docs/data_preparing.md) and [Models](docs/model_preparing.md), and then refer to the following command to start training.
-
 ```bash
 cd $root_dir
 bash runs/run.sh --modes MODES --config CONFIG_FILE --work-dir WORK_DIR --suffix WORK_DIR_SUFFIX
 ```
+Prepare the [Datasets](docs/dataset_preparing.md) and [Models](docs/model_preparing.md), and then refer to the following commands to start training and evaluation.
+
+
+#### X-SAM
+
+<details>
+<summary>🔥 Training (Click to expand)</summary>
 
 ##### Stage 1: Segmentor Fine-tuning
 ```bash
@@ -190,19 +193,10 @@ bash runs/run.sh --modes train --config xsam/configs/xsam/phi3_mini_4k_instruct_
 # NOTE: Training for Mixed Fine-tuning will be available with more than 500 🌟.
 bash runs/run.sh --modes train,segeval,vlmeval,visualize --config xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py
 ```
-
 </details>
-
 
 <details>
 <summary>🧪 Evaluation (Click to expand)</summary>
-
-Download the pre-trained model from [HuggingFace🤗](https://huggingface.co/hao9610/X-SAM) (details in [Model Preparing](docs/model_preparing.md)), and put them on $root_dir/inits directory.
-
-```bash
-cd $root_dir
-bash runs/run.sh --modes MODES --config CONFIG_FILE --work-dir WORK_DIR --suffix SUFFIX
-```
 
 ##### Evaluate on all segmentation benchmarks
 ```bash
@@ -221,70 +215,54 @@ bash runs/run.sh --modes vlmeval --config xsam/configs/xsam/phi3_mini_4k_instruc
 
 </details>
 
+#### LLaVA
+
+<details>
+<summary>🔥 Training (Click to expand)</summary>
+
+##### Stage 1: Alignment Pre-training
+```bash
+cd $root_dir
+bash runs/run.sh --modes train --config xsam/configs/llava/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s1_pretrain/llava_phi3_mini_4k_instruct_siglip2_so400m_p14_384_e1_gpu16_pretrain.py
+```
+
+##### Stage 2: Instruction Fine-tuning
+```bash
+cd $root_dir
+bash runs/run.sh --modes train --config xsam/configs/llava/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s2_finetune/llava_phi3_mini_4k_instruct_siglip2_so400m_p14_384_e1_gpu16_finetune.py
+```
+</details>
+
+<details>
+<summary>🧪 Evaluation (Click to expand)</summary>
+
+##### Evaluate on all VLM benchmarks
+```bash
+cd $root_dir
+bash runs/run.sh --modes vlmeval --config xsam/configs/llava/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s2_finetune/llava_phi3_mini_4k_instruct_siglip2_so400m_p14_384_e1_gpu16_finetune.py
+```
+</details>
+
 ## :computer: Demo
+We provide detalied instructions for demo deployment.
+
+<details>
+<summary>🛠️ Deployment (Click to expand)</summary>
+
+
+</details>
 
 <details>
 <summary>🎥 Demo (Click to expand)</summary>
-
-<table>
-  <tr>
-    <td align="center">
-      <img src="docs/videos/genseg_sem.gif" width="400"><br/>
-      <em>GenSeg (Semantic)</em>
-    </td>
-    <td align="center">
-      <img src="docs/videos/genseg_ins.gif" width="400"><br/>
-      <em>GenSeg (Instance)</em>
-    </td>
-    <td align="center">
-      <img src="docs/videos/genseg_pan.gif" width="400"><br/>
-      <em>GenSeg (Panoptic)</em>
-    </td>
-  </tr>
-</table>
-
-<table>
-  <tr>
-    <td align="center">
-      <img src="docs/videos/refseg.gif" width="400"><br/>
-      <em>RefSeg</em>
-    </td>
-    <td align="center">
-      <img src="docs/videos/reaseg.gif" width="400"><br/>
-      <em>ReaSeg</em>
-    </td>
-    <td align="center">
-      <img src="docs/videos/interseg.gif" width="400"><br/>
-      <em>InterSeg</em>
-    </td>
-  </tr>
-</table>
-
-<table>
-  <tr>
-    <td align="center">
-      <img src="docs/videos/vgdseg0.gif" width="400"><br/>
-      <em>VGDSeg (Single-Class)</em>
-    </td>
-    <td align="center">
-      <img src="docs/videos/vgdseg1.gif" width="400"><br/>
-      <em>VGDSeg (Multi-Class)</em>
-    </td>
-    <td align="center">
-      <img src="docs/videos/imgconv.gif" width="400"><br/>
-      <em>ImgConv</em>
-    </td>
-  </tr>
-</table>
-
+<video src="docs/videos/xsam_demo.mp4" width="800" controls></video>
 </details>
 
 ## :white_check_mark: TODO
 - [x] Release the [Online Demo](http://47.115.200.157:7861).
 - [x] Release the [Model Weights](https://huggingface.co/hao9610/X-SAM).
 - [x] Release the [Technical Report](https://arxiv.org/abs/2508.04655).
-- [ ] Release the code for training LLaVA-based MLLMs.
-- [ ] Release the code for evaluation on all VLM Benchmarks.
+- [x] Release the code for training LLaVA-based MLLMs.
+- [x] Release the code for evaluation on all VLM Benchmarks.
 - [ ] Release the code and instructions for demo deployment.
 - [ ] Release the code for evaluation on all segmentation benchmarks.
 - [ ] Release the code for training X-SAM (more than 500 🌟).
