@@ -32,7 +32,7 @@
 ## :boom: Updates
 
 - **`2025-08-10`**: Released the code for [demo deployment](#computer-demo).
-- **`2025-08-09`**: Released the code for [training in LLaVA-based MLLMs](#llava).
+- **`2025-08-09`**: Released the code for [training LLaVA-based MLLMs](#llava).
 - **`2025-08-08`**: Released the code for [evaluation on all VLM benchmarks](#evaluate-on-all-vlm-benchmarks).
 - **`2025-08-06`**: Released the [Technical Report](https://arxiv.org/pdf/2508.04655).
 - **`2025-08-05`**: Released the [Model Weights](https://huggingface.co/hao9610/X-SAM).
