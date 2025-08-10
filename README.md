@@ -218,7 +218,7 @@ bash runs/run.sh --modes vlmeval --config xsam/configs/xsam/phi3_mini_4k_instruc
 
 #### LLaVA
 
-<details open>
+<details>
 <summary>🔥 Training (Click to expand)</summary>
 
 ##### Stage 1: Alignment Pre-training
@@ -234,7 +234,7 @@ bash runs/run.sh --modes train --config xsam/configs/llava/phi3_mini_4k_instruct
 ```
 </details>
 
-<details open>
+<details>
 <summary>🧪 Evaluation (Click to expand)</summary>
 
 ##### Evaluate on all VLM benchmarks
