@@ -33,7 +33,7 @@ custom_css = """
 /* 全局样式 */
 .gradio-container {
     font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
-    background: linear-gradient(135deg, #1B5E20 50%, #2E7D32 100%);
+    background: #1B5E20;
     min-height: 100vh;
 }
 
@@ -50,7 +50,7 @@ custom_css = """
 /* 主标题样式 */
 .main-header {
     text-align: center;
-    background: linear-gradient(to right, #1B5E20 0%, #2E7D32 50%, #1B5E20 100%);
+    background: #1B5E20;
     color: white;
     padding: 3rem 2rem;
     border-radius: 20px;
