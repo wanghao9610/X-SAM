@@ -253,7 +253,7 @@ Coming soon...
 </details>
 
 <details>
-<summary>🎥 Demo (Click to expand)</summary>
+<summary>🎥 Video (Click to expand)</summary>
 <video src="https://github.com/user-attachments/assets/1a21cf21-c0bb-42cd-91c8-290324b68618"
   controls
   muted
