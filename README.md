@@ -249,7 +249,7 @@ bash runs/run.sh --modes vlmeval --config xsam/configs/llava/phi3_mini_4k_instru
 </details>
 
 ## :computer: Demo
-We provide detalied instructions for demo deployment.
+We provide detalied instructions for demo deployment, and a demo video is shown below.
 
 <details open>
 <summary>🛠️ Deployment (Click to collapse)</summary>
