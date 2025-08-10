@@ -254,7 +254,7 @@ Coming soon...
 
 <details>
 <summary>🎥 Demo (Click to expand)</summary>
-<video src="https://github.com/user-attachments/assets/406b689b-5ab0-4877-8a51-150023a5d120"
+<video src="https://github.com/user-attachments/assets/1a21cf21-c0bb-42cd-91c8-290324b68618"
   controls
   muted
   style="max-width:100%;"></video>
