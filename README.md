@@ -169,8 +169,8 @@ There are many datasets and models to prepare, please refer to [Dataset Preparin
 cd $root_dir
 bash runs/run.sh --modes MODES --config CONFIG_FILE --work-dir WORK_DIR --suffix WORK_DIR_SUFFIX
 # MODES: train, segeval, vlmeval, visualize, demo
-# bash runs/run.sh -h # echo help
-# Read the runs/run.sh for more details
+# bash runs/run.sh -h # echo help.
+# Read the runs/run.sh for more details.
 ```
 Prepare the [Datasets](docs/dataset_preparing.md) and [Models](docs/model_preparing.md), and then refer to the following commands to start training and evaluation.
 
