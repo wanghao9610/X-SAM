@@ -68,7 +68,7 @@ Please refer to the [Benchmark Results](docs/benchmark_results.md) for more deta
 We provide a detailed project structure for X-SAM. Please follow this structure to organize the project.
 
 <details open>
-<summary>📁 Structure (Click to expand)</summary>
+<summary>📁 Structure (Click to collapse)</summary>
 
 ```bash
 X-SAM
@@ -117,7 +117,7 @@ X-SAM
 We provide a detailed installation guide to create a environment for X-SAM, please refer to the following steps.
 
 <details open>
-<summary>⚙️ Installation (Click to expand)</summary>
+<summary>⚙️ Installation (Click to collapse)</summary>
 
 ```bash
 cd X-SAM
@@ -168,6 +168,9 @@ There are many datasets and models to prepare, please refer to [Dataset Preparin
 ```bash
 cd $root_dir
 bash runs/run.sh --modes MODES --config CONFIG_FILE --work-dir WORK_DIR --suffix WORK_DIR_SUFFIX
+# MODES: train, segeval, vlmeval, visualize, demo
+# bash runs/run.sh -h # echo help.
+# Read the runs/run.sh for more details.
 ```
 Prepare the [Datasets](docs/dataset_preparing.md) and [Models](docs/model_preparing.md), and then refer to the following commands to start training and evaluation.
 
@@ -175,7 +178,7 @@ Prepare the [Datasets](docs/dataset_preparing.md) and [Models](docs/model_prepar
 #### X-SAM
 
 <details open>
-<summary>🔥 Training (Click to expand)</summary>
+<summary>🔥 Training (Click to collapse)</summary>
 
 ##### Stage 1: Segmentor Fine-tuning
 ```bash
@@ -197,7 +200,7 @@ bash runs/run.sh --modes train,segeval,vlmeval,visualize --config xsam/configs/x
 </details>
 
 <details open>
-<summary>🧪 Evaluation (Click to expand)</summary>
+<summary>🧪 Evaluation (Click to collapse)</summary>
 
 ##### Evaluate on all segmentation benchmarks
 ```bash
@@ -248,7 +251,7 @@ bash runs/run.sh --modes vlmeval --config xsam/configs/llava/phi3_mini_4k_instru
 We provide detalied instructions for demo deployment.
 
 <details open>
-<summary>🛠️ Deployment (Click to expand)</summary>
+<summary>🛠️ Deployment (Click to collapse)</summary>
 
 ```bash
 cd $root_dir
@@ -258,7 +261,7 @@ bash runs/run.sh --modes demo --config xsam/configs/xsam/phi3_mini_4k_instruct_s
 </details>
 
 <details open>
-<summary>🎥 Video (Click to expand)</summary>
+<summary>🎥 Video (Click to collapse)</summary>
 <video src="https://github.com/user-attachments/assets/1a21cf21-c0bb-42cd-91c8-290324b68618"
   controls
   muted

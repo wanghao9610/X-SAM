@@ -23,9 +23,8 @@ export DATA_DIR="$data_dir/"
 export INIT_DIR="$init_dir/"
 export WORK_DIR="$work_dir/"
 export LMUData="$data_dir/LMUData"
-echo LMUData: $LMUData
 export HF_HOME="$init_dir/hgfc"
-export TRANSFORMERS_OFFLINE=1
+export TRANSFORMERS_OFFLINE="${TRANSFORMERS_OFFLINE:-1}"
 export TRANSFORMERS_VERBOSITY=error
 export TOKENIZERS_PARALLELISM=false
 export XTUNER_DATASET_TIMEOUT=120
@@ -52,6 +51,10 @@ while [[ $# -gt 0 ]]; do
         --modes|-m)
             shift
             # Parse modes from comma-separated string or space-separated arguments
+            if [[ -z "${1:-}" || "$1" == -* ]]; then
+                echo "Error: --modes requires a value (comma-separated or space-separated)."
+                exit 1
+            fi
             if [[ $1 == *","* ]]; then
                 IFS=',' read -ra modes <<< "$1"
             else
@@ -129,8 +132,16 @@ else
     vlm_name="xsam-phi3-siglip2-sam-l-mft"
 fi
 
-if [[ "$work_dir" == "$root_dir/wkdrs"* ]] && [[ "$work_dir" == "$root_dir/wkdrs" ]]; then
-    work_dir="$work_dir/$prefix/$model_name$suffix"
+if [[ "$work_dir" == "$root_dir/wkdrs" || "$work_dir" == "$root_dir/wkdrs/" ]]; then
+    suffix_norm=""
+    if [[ -n "$suffix" ]]; then
+        if [[ "$suffix" == -* ]]; then
+            suffix_norm="$suffix"
+        else
+            suffix_norm="-$suffix"
+        fi
+    fi
+    work_dir="$work_dir/$prefix/$model_name$suffix_norm"
 fi
 
 ckpt_file="$work_dir/pytorch_model.bin"
@@ -153,10 +164,18 @@ done
 
 echo -e "$log_format Running modes: ${modes[*]}"
 
-gpu_per_node=$(nvidia-smi -L | wc -l)
-master_addr=localhost
-master_port=29500
-node_rank=0
+gpu_per_node="${GPU_PER_NODE:-}"
+if [[ -z "$gpu_per_node" ]]; then
+    if command -v nvidia-smi >/dev/null 2>&1; then
+        gpu_per_node=$(nvidia-smi -L | wc -l | tr -d ' ')
+        [[ -z "$gpu_per_node" || "$gpu_per_node" -lt 1 ]] && gpu_per_node=1
+    else
+        gpu_per_node=1
+    fi
+fi
+master_addr="${MASTER_ADDR:-localhost}"
+master_port="${MASTER_PORT:-29500}"
+node_rank="${NODE_RANK:-0}"
 
 # Run
 for mode in "${modes[@]}"
@@ -168,8 +187,8 @@ do
         mkdir -p $work_dir
         cp -rf $(realpath $0) $code_dir $work_dir
         find "$work_dir/$code_name" -name "*.crc" -type f -delete
-        find "$work_dir/$code_name" -type f | xargs chmod 664
-        find "$work_dir/$code_name" -type d | xargs chmod 775
+        find "$work_dir/$code_name" -type f -exec chmod 664 {} +
+        find "$work_dir/$code_name" -type d -exec chmod 775 {} +
     fi
     if [ -d "$work_dir/$code_name" ]; then
         code_dir="$work_dir/$code_name"
@@ -219,9 +238,9 @@ do
                 $code_dir/$config_file \
                 $work_dir
         fi
-        # Remove existing symlink if it exists
-        [ -L "$init_dir/$vlm_name" ] && rm "$init_dir/$vlm_name"
-        ln -s $work_dir/xtuner_model $init_dir/$vlm_name
+        # Remove existing target and create/refresh symlink safely
+        rm -rf "$init_dir/$vlm_name"
+        ln -sfn "$work_dir/xtuner_model" "$init_dir/$vlm_name"
         while [ ! -d "$work_dir/xtuner_model" ]; do
             echo -e "$log_format Waiting for $model_name to be converted to HF format."
             sleep 5
@@ -250,6 +269,7 @@ do
     # mode: demo
     if [ $mode = "demo" ] && [ $trained_flag = 1 ] && [ $node_rank = 0 ]; then
         echo -e "$log_format Demoing $model_name."
+        mkdir -p "$work_dir/app_logs"
         PYTHONPATH="$(realpath $code_dir)":$PYTHONPATH OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 \
             python $code_dir/xsam/demo/app.py \
             $config_file \
