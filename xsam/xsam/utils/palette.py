@@ -1,4 +1,3 @@
-# Copyright (c) OpenMMLab. All rights reserved.
 from enum import Enum
 from typing import List, Tuple, Union
 

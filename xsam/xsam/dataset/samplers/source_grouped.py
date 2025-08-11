@@ -1,4 +1,3 @@
-# Copyright (c) OpenMMLab. All rights reserved.
 import math
 import random
 from typing import Iterator, Optional, Sized

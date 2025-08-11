@@ -1,4 +1,3 @@
-# Copyright (c) OpenMMLab. All rights reserved.
 from mmengine.hooks import Hook
 from tabulate import tabulate
 from torch.utils.data import ConcatDataset as TorchConcatDataset

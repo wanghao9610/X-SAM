@@ -1,4 +1,3 @@
-# Copyright (c) OpenMMLab. All rights reserved.
 from functools import partial
 
 from mmengine.utils.misc import get_object_from_string

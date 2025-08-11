@@ -1,4 +1,3 @@
-# Copyright (c) OpenMMLab. All rights reserved.
 from .connector import ConnectorConfig, ConnectorModel
 from .projector import DynamicProjectorConfig, DynamicProjectorModel
 from .sampler import SamplerConfig, SamplerModel

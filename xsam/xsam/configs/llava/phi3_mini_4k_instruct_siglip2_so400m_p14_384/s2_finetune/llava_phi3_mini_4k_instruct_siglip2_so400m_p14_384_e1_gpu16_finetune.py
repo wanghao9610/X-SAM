@@ -1,4 +1,3 @@
-# Copyright (c) OpenMMLab. All rights reserved.
 from os import getenv
 
 import torch
@@ -36,7 +35,7 @@ s1_pretrained_pth = (
 )  # noqa: E501
 
 # Data
-data_root = data_dir + "llava_data/"
+data_root = data_dir + "img_conv_data/"
 prompt_template = PROMPT_TEMPLATE.phi3_chat
 max_length = int(4096 - (384 / 14) ** 2)
 

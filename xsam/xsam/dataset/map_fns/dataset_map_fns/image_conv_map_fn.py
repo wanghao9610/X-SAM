@@ -1,4 +1,3 @@
-# Copyright (c) OpenMMLab. All rights reserved.
 from xtuner.utils import DEFAULT_IMAGE_TOKEN
 
 

@@ -1,4 +1,3 @@
-# Copyright (c) OpenMMLab. All rights reserved.
 from copy import deepcopy
 from os import getenv
 

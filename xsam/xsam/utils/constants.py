@@ -1,4 +1,3 @@
-# Copyright (c) OpenMMLab. All rights reserved.
 from xtuner.utils.constants import DEFAULT_IMAGE_TOKEN, IMAGE_TOKEN_INDEX
 
 DEFAULT_SEG_TOKEN = "<SEG>"

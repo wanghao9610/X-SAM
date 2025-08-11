@@ -1,4 +1,3 @@
-# Copyright (c) OpenMMLab. All rights reserved.
 import math
 
 from torch.utils.data import ConcatDataset as TorchConcatDataset

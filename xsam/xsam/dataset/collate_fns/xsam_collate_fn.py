@@ -1,4 +1,3 @@
-# Copyright (c) OpenMMLab. All rights reserved.
 from dataclasses import dataclass
 from typing import Callable, Dict, Sequence
 

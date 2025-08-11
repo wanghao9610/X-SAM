@@ -1,4 +1,3 @@
-# Copyright (c) OpenMMLab. All rights reserved.
 import torch.nn as nn
 from transformers import PreTrainedModel
 from transformers.activations import ACT2FN

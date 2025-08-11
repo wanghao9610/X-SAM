@@ -1,4 +1,3 @@
-# Copyright (c) OpenMMLab. All rights reserved.
 from transformers import AutoConfig, AutoModel
 
 from .configuration_projector import DynamicProjectorConfig

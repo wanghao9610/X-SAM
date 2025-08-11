@@ -1,4 +1,3 @@
-# Copyright (c) OpenMMLab. All rights reserved.
 from os import getenv
 
 import torch
@@ -29,7 +28,7 @@ llm_name_or_path = init_dir + "Phi-3-mini-4k-instruct"
 visual_encoder_name_or_path = init_dir + "siglip2-so400m-patch14-384"
 
 # Data
-data_root = data_dir + "llava_data/"
+data_root = data_dir + "img_conv_data/"
 data_path = data_root + "LLaVA-Pretrain/blip_laion_cc_sbu_558k.json"
 image_folder = data_root + "LLaVA-Pretrain/images"
 prompt_template = PROMPT_TEMPLATE.phi3_chat
