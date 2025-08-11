@@ -31,6 +31,7 @@
 
 ## :boom: Updates
 
+- **`2025-08-11`**: Released the code for [Evaluation on All Segmentation Benchmarks](#evaluate-on-all-segmentation-benchmarks).
 - **`2025-08-10`**: Released the code for [Demo Deployment](#computer-demo).
 - **`2025-08-09`**: Released the code for [Training LLaVA-based MLLMs](#llava).
 - **`2025-08-08`**: Released the code for [Evaluation on All VLM Benchmarks](#evaluate-on-all-vlm-benchmarks).
@@ -276,7 +277,7 @@ bash runs/run.sh --modes demo --config xsam/configs/xsam/phi3_mini_4k_instruct_s
 - [x] Release the code for [Training LLaVA-based MLLMs](#llava).
 - [x] Release the code for [Evaluation on All VLM Benchmarks](#evaluate-on-all-vlm-benchmarks).
 - [x] Release the code for [Demo Deployment](#computer-demo).
-- [ ] Release the code for [Evaluation on All Segmentation Benchmarks](#evaluate-on-all-segmentation-benchmarks).
+- [x] Release the code for [Evaluation on All Segmentation Benchmarks](#evaluate-on-all-segmentation-benchmarks).
 - [ ] Release the code for [Training X-SAM](#stage-3-mixed-fine-tuning) (more than 500 🌟).
 
 ## :blush: Acknowledge
