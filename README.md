@@ -35,7 +35,7 @@ X-SAM is under active development, and we will continue to update the code and d
 
 We recommend that everyone use English to communicate in issues, as this helps developers from around the world discuss, share experiences, and answer questions together.
 
-*If you have any questions or want to collaborate, don't hesitate to open an issue or [contact](mailto:wanghao9610@gmail.com) `wanghao9610@gmail.com`.*
+*If you have any questions or want to collaborate, please don't hesitate to open an issue or [contact](mailto:wanghao9610@gmail.com) `wanghao9610@gmail.com`.*
 
 ## :boom: Updates
 
