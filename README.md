@@ -35,11 +35,11 @@ X-SAM is under active development, and we will continue to update the code and d
 
 We recommend that everyone use English to communicate in issues, as this helps developers from around the world discuss, share experiences, and answer questions together.
 
-*If you have any questions or want to collaborate, please feel free to open an issue or don't hesitate to [contact](mailto:wanghao9610@gmail.com) `wanghao9610@gmail.com`.*
+*If you have any questions or want to collaborate, please feel free to open an issue and don't hesitate to [contact](mailto:wanghao9610@gmail.com) `wanghao9610@gmail.com`.*
 
 ## :boom: Updates
 
-- **`2025-08-11`**: We released the effective code for [Evaluation on All Segmentation Benchmarks](#evaluate-on-all-segmentation-benchmarks).
+- **`2025-08-11`**: We released the effective code for [Evaluation on All Segmentation Benchmarks](#evaluate-on-all-segmentation-benchmarks). So far, we have updated all code except for the [Training X-SAM](#stage-3-mixed-fine-tuning).
 - **`2025-08-10`**: We released the detailed instructions for [Demo Deployment](#computer-demo).
 - **`2025-08-09`**: We released the awesome code for [Training LLaVA-based MLLMs](#llava).
 - **`2025-08-08`**: We released the simple code for [Evaluation on All VLM Benchmarks](#evaluate-on-all-vlm-benchmarks).
