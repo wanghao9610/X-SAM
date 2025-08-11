@@ -16,7 +16,7 @@
     <img src='https://img.shields.io/badge/arXiv-2508.04655-red?style=flat&logo=arXiv&logoColor=red' alt='arxiv'>
   </a>
   <a href='https://huggingface.co/hao9610/X-SAM' style="margin: 0 2px;">
-    <img src='https://img.shields.io/badge/Hugging Face-ckpts-orange?style=flat&logo=HuggingFace&logoColor=orange' alt='huggingface'>
+    <img src='https://img.shields.io/badge/HuggingFace-ckpts-orange?style=flat&logo=HuggingFace&logoColor=orange' alt='huggingface'>
   </a>
   <a href="https://github.com/wanghao9610/X-SAM" style="margin: 0 2px;">
     <img src='https://img.shields.io/badge/GitHub-Repo-blue?style=flat&logo=GitHub' alt='GitHub'>
@@ -29,15 +29,23 @@
   </a>
 </div>
 
+## :eyes: Notice
+
+X-SAM is under active development, and we will continue to update the code and documentation.
+
+We recommend that everyone use English to communicate in issues, as this helps developers from around the world discuss, share experiences, and answer questions together.
+
+*If you have any questions or want to collaborate, please feel free to open an issue or [contact me](mailto:wanghao9610@gmail.com)[wanghao9610@gmail.com].*
+
 ## :boom: Updates
 
-- **`2025-08-11`**: Released the code for [Evaluation on All Segmentation Benchmarks](#evaluate-on-all-segmentation-benchmarks).
-- **`2025-08-10`**: Released the code for [Demo Deployment](#computer-demo).
-- **`2025-08-09`**: Released the code for [Training LLaVA-based MLLMs](#llava).
-- **`2025-08-08`**: Released the code for [Evaluation on All VLM Benchmarks](#evaluate-on-all-vlm-benchmarks).
-- **`2025-08-06`**: Released the [Technical Report](https://arxiv.org/pdf/2508.04655).
-- **`2025-08-05`**: Released the [Model Weights](https://huggingface.co/hao9610/X-SAM).
-- **`2025-07-26`**: Released the [Online Demo](http://47.115.200.157:7861).
+- **`2025-08-11`**: We released the effective code for [Evaluation on All Segmentation Benchmarks](#evaluate-on-all-segmentation-benchmarks).
+- **`2025-08-10`**: We released the detailed instructions for [Demo Deployment](#computer-demo).
+- **`2025-08-09`**: We released the awesome code for [Training LLaVA-based MLLMs](#llava).
+- **`2025-08-08`**: We released the simple code for [Evaluation on All VLM Benchmarks](#evaluate-on-all-vlm-benchmarks).
+- **`2025-08-06`**: We are excited to publish the [Technical Report](https://arxiv.org/pdf/2508.04655), please check it out for more technical details.
+- **`2025-08-05`**: We provided the [Model Weights](https://huggingface.co/hao9610/X-SAM) on the HuggingFace🤗.
+- **`2025-07-26`**: We deployed the [Online Demo](http://47.115.200.157:7861), you can try it now!
 
 ## :rocket: Introduction
 This repository provides the official PyTorch implementation, pre-trained models, training, evaluation, visualization, and demo code of X-SAM:
@@ -49,8 +57,6 @@ This repository provides the official PyTorch implementation, pre-trained models
 * X-SAM presents a unified training strategy that enables co-training across multiple datasets. Experimental results demonstrate that X-SAM achieves state-of-the-art performance on various image segmentation benchmarks, highlighting its efficiency in multimodal, pixel-level visual understanding.
 
 :sparkles: **HIGHLIGHT**: This repository provides unified and effective code for training, evaluation, and visualization of segmentation MLLMs, including LLaVA-based MLLMs. We hope this repository will promote further research on MLLMs.
-
-*If you have any questions, please feel free to open an issue or [contact me](mailto:wanghao9610@gmail.com).*
 
 ## :bookmark: Abstract
 

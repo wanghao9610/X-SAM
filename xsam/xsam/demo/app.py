@@ -412,7 +412,7 @@ class GradioApp:
                             <img src='https://img.shields.io/badge/arXiv-2508.04655-red?style=flat&logo=arXiv&logoColor=red' alt='arxiv' style="display: block;">
                         </div>
                         <div onclick="window.open('https://huggingface.co/hao9610/X-SAM', '_blank')" style="margin: 0 2px; cursor: pointer; display: inline-block;">
-                            <img src='https://img.shields.io/badge/Hugging Face-ckpts-orange?style=flat&logo=HuggingFace&logoColor=orange' alt='huggingface' style="display: block;">
+                            <img src='https://img.shields.io/badge/HuggingFace-ckpts-orange?style=flat&logo=HuggingFace&logoColor=orange' alt='huggingface' style="display: block;">
                         </div>
                         <div onclick="window.open('https://github.com/wanghao9610/X-SAM', '_blank')" style="margin: 0 2px; cursor: pointer; display: inline-block;">
                             <img src='https://img.shields.io/badge/GitHub-Repo-blue?style=flat&logo=GitHub' alt='GitHub' style="display: block;">

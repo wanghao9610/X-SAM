@@ -16,15 +16,15 @@ Usage:
   hfd <model_id> [--include include_pattern] [--exclude exclude_pattern] [--hf_username username] [--hf_token token] [--tool wget|aria2c] [-x threads] [--dataset]
 
 Description:
-  Downloads a model or dataset from Hugging Face using the provided model ID.
+  Downloads a model or dataset from HuggingFace using the provided model ID.
 
 Parameters:
-  model_id        The Hugging Face model ID in the format 'repo/model_name'.
+  model_id        The HuggingFace model ID in the format 'repo/model_name'.
   --include       (Optional) Flag to specify a string pattern to include files for downloading.
   --exclude       (Optional) Flag to specify a string pattern to exclude files from downloading.
   exclude_pattern The pattern to match against filenames for exclusion.
-  --hf_username   (Optional) Hugging Face username for authentication.
-  --hf_token      (Optional) Hugging Face token for authentication.
+  --hf_username   (Optional) HuggingFace username for authentication.
+  --hf_token      (Optional) HuggingFace token for authentication.
   --tool          (Optional) Download tool to use. Can be wget or aria2c (default).
   -x              (Optional) Number of download threads for aria2c.
   --save_dir     (Optional) Flag to specify a string path to download files.
