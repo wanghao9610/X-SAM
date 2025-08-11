@@ -22,7 +22,10 @@
     <img src='https://img.shields.io/badge/GitHub-Repo-blue?style=flat&logo=GitHub' alt='GitHub'>
   </a>
   <a href="http://47.115.200.157:7861" style="margin: 0 2px;">
-    <img src='https://img.shields.io/badge/Demo-Gradio-gold?style=flat&logo=Gradio&logoColor=red' alt='Demo'>
+    <img src='https://img.shields.io/badge/Demo-Gradio-gold?style=flat&logo=Gradio&logoColor=red' alt='Demo1'>
+  </a>
+  <a href="http://121.43.252.12:7862/" style="margin: 0 2px;">
+    <img src='https://img.shields.io/badge/Demo-Gradio-gold?style=flat&logo=Gradio&logoColor=red' alt='Demo2'>
   </a>
   <a href='https://wanghao9610.github.io/X-SAM/' style="margin: 0 2px;">
     <img src='https://img.shields.io/badge/🌐_Project-Webpage-green?style=flat&logoColor=white' alt='webpage'>
