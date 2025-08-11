@@ -24,6 +24,9 @@
   <a href="http://47.115.200.157:7861" style="margin: 0 2px;">
     <img src='https://img.shields.io/badge/Demo-Gradio-gold?style=flat&logo=Gradio&logoColor=red' alt='Demo'>
   </a>
+  <a href="http://121.43.252.12:7862" style="margin: 0 2px;">
+    <img src='https://img.shields.io/badge/Demo-Gradio-gold?style=flat&logo=Gradio&logoColor=red' alt='Demo'>
+  </a>
   <a href='https://wanghao9610.github.io/X-SAM/' style="margin: 0 2px;">
     <img src='https://img.shields.io/badge/🌐_Project-Webpage-green?style=flat&logoColor=white' alt='webpage'>
   </a>
@@ -39,6 +42,7 @@ We recommend that everyone use English to communicate in issues, as this helps d
 
 ## :boom: Updates
 
+- **`2025-08-11`**: Thanks for your great attention to our work! We have released another [Online Demo2](http://121.43.252.12:7862). You can also try this demo if [Online Demo1](http://47.115.200.157:7861) is not available.
 - **`2025-08-11`**: We released the effective code for [Evaluation on All Segmentation Benchmarks](#evaluate-on-all-segmentation-benchmarks). We have updated all code except for [Training X-SAM](#stage-3-mixed-fine-tuning).
 - **`2025-08-10`**: We released the detailed instructions for [Demo Deployment](#computer-demo).
 - **`2025-08-09`**: We released the code for [Training LLaVA-based MLLMs](#llava).
