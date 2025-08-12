@@ -33,7 +33,7 @@ seg_encoder_name_or_path = init_dir + "sam-vit-large"
 seg_decoder_name_or_path = init_dir + "mask2former-swin-large-coco-panoptic"
 
 # Data
-data_root = data_dir + "generic_seg_data/"
+data_root = data_dir + "gen_seg_data/"
 data_path = data_root + "coco/annotations/panoptic_train2017.json"
 image_folder = data_root + "coco/train2017"
 panseg_map_folder = data_root + "coco/panoptic_train2017"
