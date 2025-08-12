@@ -682,8 +682,8 @@ val_datasets = [
     ),
     dict(
         type=ReasonSegDataset,
-        data_root=reaseg_data_root + "lisa",
-        image_folder=reaseg_data_root + "lisa/val",
+        data_root=reaseg_data_root,
+        image_folder=reaseg_data_root + "val",
         data_split="val",
         data_mode="eval",
         tokenizer=tokenizer,
@@ -712,8 +712,8 @@ val_datasets = [
     ),
     dict(
         type=ReasonSegDataset,
-        data_root=reaseg_data_root + "lisa",
-        image_folder=reaseg_data_root + "lisa/test",
+        data_root=reaseg_data_root,
+        image_folder=reaseg_data_root + "test",
         data_split="test",
         data_mode="eval",
         tokenizer=tokenizer,
@@ -743,8 +743,8 @@ val_datasets = [
     ),
     dict(
         type=ReasonSegDataset,
-        data_root=reaseg_data_root + "lisa",
-        image_folder=reaseg_data_root + "lisa/test",
+        data_root=reaseg_data_root,
+        image_folder=reaseg_data_root + "test",
         data_split="test",
         data_mode="eval",
         tokenizer=tokenizer,
@@ -774,8 +774,8 @@ val_datasets = [
     ),
     dict(
         type=ReasonSegDataset,
-        data_root=reaseg_data_root + "lisa",
-        image_folder=reaseg_data_root + "lisa/test",
+        data_root=reaseg_data_root,
+        image_folder=reaseg_data_root + "test",
         data_split="test",
         data_mode="eval",
         tokenizer=tokenizer,
