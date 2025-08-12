@@ -3,18 +3,69 @@
 ## Dataset Structure
 
 ```
-X-SAM
-├── datas
-│   ├── gcg_seg_data
-│   ├── gen_seg_data
-│   ├── img_conv_data
-│   ├── inter_seg_data
-│   ├── LMUData
-│   ├── ov_seg_data
-│   ├── rea_seg_data
-│   ├── ref_seg_data
-│   └── vgd_seg_data
-...
+datas
+├── gcg_seg_data
+│   ├── annotations
+│   │   ├── train
+│   │   └── val_test
+│   └── images
+│       ├── coco2014
+│       ├── coco2017
+│       ├── flickr30k
+│       └── GranDf_HA_images
+├── gen_seg_data
+│   ├── ade20k
+│   │   ├── ade20k_panoptic_train
+│   │   ├── ade20k_panoptic_val
+│   │   ├── annotations
+│   │   ├── annotations_detectron2
+│   │   └── images
+│   ├── coco2017
+│   │   ├── annotations
+│   │   ├── panoptic_train2017
+│   │   ├── panoptic_val2017
+│   │   ├── train2017
+│   │   └── val2017
+├── img_conv_data
+│   ├── llava_images
+│   │   ├── coco
+│   │   ├── gqa
+│   │   ├── ocr_vqa
+│   │   ├── textvqa
+│   │   └── vg
+│   ├── LLaVA-Instruct-150K
+│   └── LLaVA-Pretrain
+│       └── 558k_images
+├── inter_seg_data
+│   ├── annotations
+│   └── coco2017
+├── LMUData
+│   └── images
+│       ├── AI2D_TEST
+│       ├── MMBench
+│       ├── MME
+│       ├── POPE
+│       └── SEEDBench_IMG
+├── ov_seg_data
+│   └── ade20k
+├── rea_seg_data
+│   └── lisa
+│       ├── explanatory
+│       ├── test
+│       ├── train
+│       └── val
+├── ref_seg_data
+│   ├── annotations
+│   ├── images
+│   │   ├── train2014
+│   │   └── val2014
+│   ├── refclef
+│   ├── refcoco
+│   ├── refcoco+
+│   └── refcocog
+└── vgd_seg_data
+    ├── annotations
+    └── coco2017
 ```
 
 ## Image Segmentation Dataset
