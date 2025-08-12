@@ -98,7 +98,7 @@ X-SAM
 │   ├── mask2former-swin-large-coco-panoptic
 │   ├── Phi-3-mini-4k-instruct
 │   ├── sam-vit-large
-│   └── xsam
+│   └── X-SAM
 ├── xsam
 │   ├── docs
 │   ├── requirements
