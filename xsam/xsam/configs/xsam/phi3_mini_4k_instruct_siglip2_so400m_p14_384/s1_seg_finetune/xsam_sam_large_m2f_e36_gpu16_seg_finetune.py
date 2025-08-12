@@ -34,9 +34,9 @@ seg_decoder_name_or_path = init_dir + "mask2former-swin-large-coco-panoptic"
 
 # Data
 data_root = data_dir + "gen_seg_data/"
-data_path = data_root + "coco/annotations/panoptic_train2017.json"
-image_folder = data_root + "coco/train2017"
-panseg_map_folder = data_root + "coco/panoptic_train2017"
+data_path = data_root + "coco2017/annotations/panoptic_train2017.json"
+image_folder = data_root + "coco2017/train2017"
+panseg_map_folder = data_root + "coco2017/panoptic_train2017"
 
 # Scheduler & Optimizer
 batch_size = 4  # per_device
@@ -144,10 +144,10 @@ train_dataloader = dict(
 val_datasets = [
     dict(
         type=GenericSegDataset,
-        data_path=data_root + "coco/annotations/panoptic_val2017.json",
-        image_folder=data_root + "coco/val2017",
-        panseg_map_folder=data_root + "coco/panoptic_val2017",
-        semseg_map_folder=data_root + "coco/panoptic_semseg_val2017",
+        data_path=data_root + "coco2017/annotations/panoptic_val2017.json",
+        image_folder=data_root + "coco2017/val2017",
+        panseg_map_folder=data_root + "coco2017/panoptic_val2017",
+        semseg_map_folder=data_root + "coco2017/panoptic_semseg_val2017",
         task_name="genseg",
         data_name="panoptic_genseg",
         data_mode="eval",
@@ -157,10 +157,10 @@ val_datasets = [
     ),
     dict(
         type=GenericSegDataset,
-        data_path=data_root + "coco/annotations/panoptic_val2017.json",
-        image_folder=data_root + "coco/val2017",
-        panseg_map_folder=data_root + "coco/panoptic_val2017",
-        semseg_map_folder=data_root + "coco/panoptic_semseg_val2017",
+        data_path=data_root + "coco2017/annotations/panoptic_val2017.json",
+        image_folder=data_root + "coco2017/val2017",
+        panseg_map_folder=data_root + "coco2017/panoptic_val2017",
+        semseg_map_folder=data_root + "coco2017/panoptic_semseg_val2017",
         task_name="genseg",
         data_name="panoptic_genseg",
         data_mode="eval",
@@ -170,8 +170,8 @@ val_datasets = [
     ),
     dict(
         type=GenericSegDataset,
-        data_path=data_root + "coco/annotations/instances_val2017.json",
-        image_folder=data_root + "coco/val2017",
+        data_path=data_root + "coco2017/annotations/instances_val2017.json",
+        image_folder=data_root + "coco2017/val2017",
         task_name="genseg",
         data_name="instance_genseg",
         data_mode="eval",
