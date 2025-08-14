@@ -133,7 +133,6 @@ We provide a detailed installation guide to create a environment for X-SAM, plea
 ```bash
 # clone X-SAM
 git clone --depth=1 https://github.com/wanghao9610/X-SAM.git
-cd X-SAM
 
 # set root_dir
 cd X-SAM
