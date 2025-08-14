@@ -154,8 +154,10 @@ conda install pytorch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 pytorch-cuda=
 conda install gcc=11 gxx=11 -c conda-forge -y
 # install xtuner0.2.0
 pip install git+https://github.com/InternLM/xtuner.git@v0.2.0
-cd xtuner
-pip install '.[all]'
+# or install xtuner0.2.0 from source code
+# git clone -b v0.2.0 https://github.com/InternLM/xtuner.git
+# cd xtuner
+# pip install '.[all]'
 # install deepspeed
 pip install -r requirements/deepspeed.txt
 # install xsam requirements
