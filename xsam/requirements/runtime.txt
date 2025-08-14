@@ -1,0 +1,15 @@
+bitsandbytes
+datasets>=3.2.0
+einops
+loguru
+mmengine==0.10.6
+openpyxl
+peft>=0.14.0
+scikit-image
+scipy
+SentencePiece
+tiktoken
+torch
+torchvision
+transformers
+transformers_stream_generator

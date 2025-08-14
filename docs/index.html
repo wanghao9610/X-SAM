@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="description"
+        content="X-SAM: From Segment Anything to Any Segmentation">
+  <meta name="keywords" content="X-SAM">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>X-SAM: From Segment Anything to Any Segmentation</title>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-PYVRSFMDRL"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() {
+      dataLayer.push(arguments);
+    }
+    gtag('js', new Date());
+    gtag('config', 'G-PYVRSFMDRL');
+  </script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="static/css/bulma.min.css">
+  <link rel="stylesheet" href="static/css/bulma-carousel.min.css">
+  <link rel="stylesheet" href="static/css/bulma-slider.min.css">
+  <link rel="stylesheet" href="static/css/fontawesome.all.min.css">
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="static/css/index.css">
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script defer src="static/js/fontawesome.all.min.js"></script>
+  <script src="static/js/bulma-carousel.min.js"></script>
+  <script src="static/js/bulma-slider.min.js"></script>
+  <script src="static/js/index.js"></script>
+
+  <style>
+    :root {
+      --primary-color: #2E7D32;
+      --secondary-color: #388E3C;
+      --accent-color: #66BB6A;
+      --text-primary: #2d3748;
+      --text-secondary: #4a5568;
+      --background-gradient: linear-gradient(135deg, #2E7D32 0%, #388E3C 100%);
+      --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      transition: var(--transition);
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      line-height: 1.6;
+      color: var(--text-primary);
+    }
+
+    .hero {
+      background: var(--background-gradient);
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+      opacity: 0.3;
+    }
+
+    .hero-body {
+      position: relative;
+      z-index: 1;
+      padding: 4rem 1.5rem;
+    }
+
+    .publication-title {
+      font-weight: 700;
+      color: white !important;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      margin-bottom: 1rem;
+      animation: fadeInUp 0.8s ease-out;
+    }
+
+    .hero .title.is-4 {
+      color: white !important;
+      opacity: 0.95;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .publication-authors {
+      animation: fadeInUp 0.8s ease-out 0.2s both;
+    }
+
+    .publication-links {
+      animation: fadeInUp 0.8s ease-out 0.4s both;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .link-block .button {
+      background: rgba(255, 255, 255, 0.15);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      color: white;
+      backdrop-filter: blur(10px);
+      margin: 0.25rem 0.5rem;
+      transition: var(--transition);
+      font-weight: 500;
+    }
+
+    .link-block .button:hover {
+      background: rgba(255, 255, 255, 0.25);
+      border-color: rgba(255, 255, 255, 0.5);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    }
+
+    .section {
+      padding: 1.5rem 1.5rem;
+    }
+
+    .card-enhanced {
+      background: white;
+      border-radius: 20px;
+      box-shadow: var(--card-shadow);
+      padding: 2rem;
+      margin: 0.5rem 0;
+      transition: var(--transition);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .card-enhanced:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+    }
+
+    .title.is-3 {
+      color: var(--primary-color);
+      font-weight: 600;
+      position: relative;
+      margin-bottom: 1rem;
+    }
+
+    .title.is-3::after {
+      content: '';
+      position: absolute;
+      bottom: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 4px;
+      background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+      border-radius: 2px;
+    }
+
+    .highlight-box {
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+      border-radius: 15px;
+      padding: 1.5rem;
+      border-left: 5px solid var(--primary-color);
+      margin: 0.5rem 0;
+    }
+
+    .highlight-box ul li {
+      margin-bottom: 1rem;
+      position: relative;
+      padding-left: 1.5rem;
+    }
+
+    .highlight-box ul li::before {
+      content: '✨';
+      position: absolute;
+      left: 0;
+      top: 0;
+    }
+
+    .image-container {
+      border-radius: 15px;
+      overflow: hidden;
+      box-shadow: var(--card-shadow);
+      margin: 0.5rem 0;
+      transition: var(--transition);
+    }
+
+    .image-container:hover {
+      transform: scale(1.02);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+    }
+
+    .image-container img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .demo-section {
+      background: linear-gradient(135deg, #2E7D32 0%, #388E3C 100%);
+      color: white;
+      border-radius: 20px;
+      padding: 1.5rem;
+      margin: 0.5rem 0;
+      text-align: center;
+    }
+
+    .demo-section .button {
+      background: white;
+      color: var(--primary-color);
+      font-weight: 600;
+      border-radius: 25px;
+      padding: 0.75rem 2rem;
+      border: none;
+      font-size: 1.1rem;
+      margin: 1rem;
+      transition: var(--transition);
+    }
+
+    .demo-section .button:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      background: #f8f9fa;
+    }
+
+    /* Video custom controls */
+    .video-controls {
+      max-width: 800px;
+      margin: 0.5rem auto 0;
+      text-align: left;
+    }
+    .video-time {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      color: rgba(255, 255, 255, 0.9);
+      margin-bottom: 0.25rem;
+    }
+    .video-slider {
+      width: 100%;
+    }
+
+    .bibtex-container {
+      background: #1a202c;
+      border-radius: 15px;
+      padding: 1.5rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: #e2e8f0;
+      position: relative;
+      overflow: auto;
+      max-width: 100%;
+    }
+
+    .bibtex-container pre {
+      white-space: pre;
+      word-wrap: normal;
+      margin: 0;
+      max-width: 100%;
+      overflow-x: auto;
+    }
+
+    .bibtex-container code {
+      white-space: pre;
+      word-wrap: normal;
+      max-width: 100%;
+    }
+
+    .bibtex-container::before {
+      content: 'BibTeX';
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: var(--primary-color);
+      color: white;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+    .footer {
+      background: #2d3748;
+      color: white;
+      margin-top: 1rem;
+    }
+
+    .footer .icon-link {
+      color: white;
+      transition: var(--transition);
+      margin: 0 0.5rem;
+      padding: 0.5rem;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .footer .icon-link:hover {
+      color: var(--accent-color);
+      background: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .scroll-indicator {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.2);
+      z-index: 9999;
+    }
+
+    .scroll-progress {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+      width: 0%;
+      transition: width 0.1s ease;
+    }
+
+    /* More Results Collapsible Styles */
+    .more-results-section {
+      margin: 2rem 0;
+      border: 2px solid rgba(46, 125, 50, 0.1);
+      border-radius: 15px;
+      overflow: hidden;
+      transition: var(--transition);
+    }
+
+    .more-results-section:hover {
+      border-color: rgba(46, 125, 50, 0.2);
+    }
+
+    .more-results-toggle {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 1rem 2rem;
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      color: white;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 1.2rem;
+      transition: var(--transition);
+      border: none;
+      outline: none;
+      list-style: none;
+    }
+
+    .more-results-toggle:hover {
+      background: linear-gradient(135deg, var(--secondary-color), var(--accent-color));
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(46, 125, 50, 0.3);
+    }
+
+    .more-results-toggle::marker {
+      display: none;
+    }
+
+    .more-results-text {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .more-results-icon {
+      font-size: 1rem;
+      transition: transform 0.3s ease;
+    }
+
+    .more-results-section[open] .more-results-icon {
+      transform: rotate(180deg);
+    }
+
+    .more-results-content {
+      padding: 2rem;
+      background: #fafafa;
+      animation: slideDown 0.3s ease-out;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Responsive enhancements */
+    @media (max-width: 768px) {
+      .hero-body {
+        padding: 1.5rem 1rem;
+      }
+      
+      .card-enhanced {
+        padding: 1rem;
+        margin: 0.25rem 0;
+      }
+      
+      .link-block .button {
+        margin: 0.25rem 0.25rem;
+        font-size: 0.9rem;
+      }
+
+      .section {
+        padding: 1rem 0.75rem;
+      }
+
+      .highlight-box {
+        padding: 1rem;
+      }
+
+      .demo-section {
+        padding: 1rem;
+      }
+
+      .more-results-toggle {
+        padding: 1rem 1.5rem;
+        font-size: 1.1rem;
+      }
+
+      .more-results-content {
+        padding: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="scroll-indicator">
+  <div class="scroll-progress" id="scrollProgress"></div>
+</div>
+
+<section class="hero">
+  <div class="hero-body" align="center">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered">
+        <div class="column has-text-centered">
+          <h2 class="title is-2 publication-title">✨X-SAM</h2>
+          <h3 class="title is-4"> From Segment Anything to Any Segmentation </h3>
+          <div class="is-size-5 publication-authors">
+            <span class="author-block">
+              <a href="https://github.com/wanghao9610" style="color: white; text-decoration: underline;">Hao Wang</a><sup>1,2</sup>,</span>
+            <span class="author-block">
+              <a href="https://scholar.google.com/citations?user=3PFZAg0AAAAJ&hl=en" style="color: white; text-decoration: underline;">Limeng Qiao</a><sup>3</sup>,</span>
+            <span class="author-block">
+              <a href="https://scholar.google.com/citations?user=4sKGNB0AAAAJ&hl=en" style="color: white; text-decoration: underline;">Zequn Jie</a><sup>3</sup>,</span>
+            <span class="author-block">
+              <a href="https://zhijian11.github.io/" style="color: white; text-decoration: underline;">Zhijian Huang</a><sup>1</sup>,</span>
+            <span class="author-block">
+              <a href="https://fcjian.github.io/" style="color: white; text-decoration: underline;">Chengjian Feng</a><sup>3</sup>,</span><br>
+            <span class="author-block">
+              <a href="https://openreview.net/profile?id=%7EZheng_Qingfang1" style="color: white; text-decoration: underline;">Qingfang Zheng</a><sup>2</sup>,</span>
+            <span class="author-block">
+              <a href="https://forestlinma.com/" style="color: white; text-decoration: underline;">Lin Ma</a><sup>3</sup>,</span>
+            <span class="author-block">
+              <a href="https://scholar.google.com/citations?user=c3iwWRcAAAAJ&hl=en" style="color: white; text-decoration: underline;">Xiangyuan Lan</a><sup>2</sup><sup>📧</sup>,</span>
+            <span class="author-block">
+              <a href="https://scholar.google.com/citations?user=voxznZAAAAAJ&hl=en" style="color: white; text-decoration: underline;">Xiaodan Liang</a><sup>1,2</sup><sup>📧</sup>
+            </span>
+          </div>
+          <div class="is-size-5 publication-authors" style="margin-top: 1rem;">
+            <span class="author-block"><sup>1</sup> Sun Yat-sen University,</span>
+            <span class="author-block"><sup>2</sup> Peng Cheng Laboratory,</span>
+            <span class="author-block"><sup>3</sup> Meituan Inc.</span>
+          </div>
+          <div class="is-size-6 publication-authors" style="margin-top: 0.5rem;">
+            <span class="author-block"><sup>📧</sup> Corresponding author.</span>
+          </div>
+
+          <div class="column has-text-centered">
+                         <div class="publication-links" style="margin-top: 1rem;">
+              <!--  Arxiv Link. -->
+              <span class="link-block">
+                <a href="https://arxiv.org/abs/2508.04655"
+                   class="external-link button is-normal is-rounded">
+                  <span class="icon">
+                      <i class="ai ai-arxiv"></i>
+                  </span>
+                  <span>arXiv</span>
+                </a>
+              </span>
+              <!-- PDF Link. -->
+              <span class="link-block">
+                <a href="https://arxiv.org/pdf/2508.04655"
+                    class="external-link button is-normal is-rounded">
+                  <span class="icon">
+                      <i class="fas fa-file-pdf"></i>
+                  </span>
+                  <span>Paper</span>
+                </a>
+              </span>
+              <!--  Demo Link. -->
+              <span class="link-block">
+                <a href="http://47.115.200.157:7861"
+                   class="external-link button is-normal is-rounded">
+                  <span class="icon">
+                      <i class="fas fa-gamepad"></i>
+                  </span>
+                  <span>Demo</span>
+                  </a>
+              </span>
+              <!-- HF Link. -->
+              <span class="link-block">
+                <a href="https://huggingface.co/hao9610/X-SAM"
+                   class="external-link button is-normal is-rounded">
+                  <span class="icon">
+                    <i class="fas fa-cube"></i>
+                  </span>
+                  <span>HuggingFace</span>
+                </a>
+              </span>
+              <!-- Code Link. -->
+              <span class="link-block">
+                <a href="https://github.com/wanghao9610/X-SAM"
+                   class="external-link button is-normal is-rounded">
+                  <span class="icon">
+                      <i class="fab fa-github"></i>
+                  </span>
+                  <span>Code</span>
+                  </a>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <!-- Highlight -->
+  <div class="container is-max-desktop">
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <div class="card-enhanced">
+          <h2 class="title is-3" style="text-align: center;"> 🚀 Highlight</h2>
+          <div class="highlight-box">
+            <ul style="list-style: none; padding: 0; text-align: left;">
+              <li>X-SAM introduces a unified multimodal large language model (MLLM) framework, extending the segmentation paradigm from <i>segment anything</i> to <i>any segmentation</i>, thereby enhancing pixel-level perceptual understanding.</li>
+              <li>X-SAM proposes a novel Visual GrounDed (VGD) segmentation task, which segments all instance objects using interactive visual prompts, empowering the model with visually grounded, pixel-wise interpretative capabilities.</li>
+              <li>X-SAM presents a unified training strategy that enables co-training across multiple datasets. Experimental results demonstrate that X-SAM achieves state-of-the-art performance on various image segmentation benchmarks, highlighting its efficiency in multimodal, pixel-level visual understanding.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <!-- Abstract -->
+  <div class="container is-max-desktop">
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-full-width">
+        <div class="card-enhanced">
+          <h2 class="title is-3">🔖 Abstract</h2>
+          <div class="content has-text-justified" style="font-size: 1.1rem; line-height: 1.8;">
+            <p>Large Language Models (LLMs) demonstrate strong capabilities in broad knowledge representation, yet they are inherently deficient in pixel-level perceptual understanding. Although the Segment Anything Model (SAM) represents a significant advancement in visual-prompt-driven image segmentation, it exhibits notable limitations in multi-mask prediction and category-specific segmentation tasks, and it cannot integrate all segmentation tasks within a unified model architecture. To address these limitations, we present X-SAM, a streamlined Multimodal Large Language Model (MLLM) framework that extends the segmentation paradigm from <i>segment anything</i> to <i>any segmentation</i>. Specifically, we introduce a novel unified framework that enables more advanced pixel-level perceptual comprehension for MLLMs. Furthermore, we propose a new segmentation task, termed Visual GrounDed (VGD) segmentation, which segments all instance objects with interactive visual prompts and empowers MLLMs with visual grounded, pixel-wise interpretative capabilities. To enable effective training on diverse data sources, we present a unified training strategy that supports co-training across multiple datasets. Experimental results demonstrate that X-SAM achieves state-of-the-art performance on a wide range of image segmentation benchmarks, highlighting its efficiency for multimodal, pixel-level visual understanding.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <!-- Overview -->
+  <div class="container is-max-desktop">
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-full-width">
+        <div class="card-enhanced">
+          <h2 class="title is-3">🔍 Overview</h2>
+          <div class="image-container">
+            <img src="images/xsam_framework.png" alt="X-SAM Framework">
+          </div>
+            <div class="content has-text-justified" style="margin-top: 0.5rem; font-size: 1rem; line-height: 1.7;">
+            <p>Fig. 1. The Overview of X-SAM. X-SAM comprises dual encoders, dual projectors, a language model, a segmentation connector, and a segmentation decoder. The dual encoders process the image and project features to match text embedding dimensions, which are then input to the language model with tokenized text for instruction-guided understanding. The SAM features are connected to the segmentation decoder, which uses the LLM’s <span style="padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace;">&lt;SEG&gt;</span> token to generate segmentation masks.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container is-max-desktop">
+    <!-- Experiments -->
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <div class="card-enhanced">
+          <h2 class="title is-3 has-text-centered">📊 Benchmarks</h2>
+            <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
+            <!-- Main Results -->
+            <p>Tab. 1. Comprehensive Performance Comparison. We compare X-SAM to segmentation-specific models (<span style="color:gray;">Gray</span>) and MLLMs. <span title="Unsupported tasks">&#10007;</span> denotes unsupported tasks. “-” indicates unreported results. X-SAM achieves state-of-the-art performance across all segmentation tasks with a single model.Best results are in <b>bold</b>, second-best are <u>underlined</u>.</p>
+            </div>
+          <div class="image-container">
+            <img src="results/overall.png" alt="Benchmark Results">
+          </div>
+          
+          <!-- More Results Collapsible Section -->
+          <details class="more-results-section" style="margin-top: 2rem;">
+            <summary class="more-results-toggle">
+              <span class="more-results-text">📊 More</span>
+              <span class="more-results-icon">▼</span>
+            </summary>
+            <div class="more-results-content">
+              <!-- Ref. Seg. Results -->
+              <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
+                <p>Tab. 2. Comparison of Referring Segmentation. We evaluate methods on referring segmentation benchmarks by (M)LLMs.</p>
+              </div>
+              <div class="image-container">
+                <img src="results/refseg.png" alt="Benchmark Results">
+              </div>
+
+              <!-- GCG Seg. Results -->
+              <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
+                <p>Tab. 3. Comparison of GCG Segmentation. &dagger; indicates pretraining with the GranD dataset.</p>
+              </div>
+              <div class="image-container">
+                <img src="results/gcgseg.png" alt="Benchmark Results">
+              </div>
+
+              <!-- VGD Seg. Results -->
+              <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
+                <p>Tab. 4. Comparison of VGD Segmentation. &dagger; indicates evaluation results following X-SAM setting.</p>
+              </div>
+              <div class="image-container">
+                <img src="results/vgdseg.png" alt="Benchmark Results">
+              </div>
+
+              <!-- Gen. Seg. & OV. Seg. Results -->
+              <div class="columns">
+                <div class="column" style="flex: 0 0 50% !important; max-width: 50% !important;">
+                  <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
+                    <p>Tab. 5. Comparison of Generic Segmentation. We compare different methods on the generic segmentation benchmarks.</p>
+                  </div>
+                  <div class="image-container">
+                    <img src="results/genseg.png" alt="Generic Segmentation Results">
+                  </div>
+                </div>
+                <div class="column" style="flex: 0 0 40% !important; max-width: 40% !important;">
+                  <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
+                    <p>Tab. 6. Comparison of OV Segmentation. We compare different methods on the A150-OV segmentation benchmarks.</p>
+                  </div>
+                  <div class="image-container">
+                    <img src="results/ovseg.png" alt="OV Segmentation Results">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rea. Seg. Results -->
+              <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
+                <p>Tab. 7. Comparison of Reasoning Segmentation. We compare X-SAM with other methods on the reasoning segmentation benchmark.</p>
+              </div>
+              <div class="image-container">
+                <img src="results/reaseg.png" alt="Benchmark Results">
+              </div>
+
+              <!-- Inter. Seg. Results -->
+              <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
+                <p>Tab. 8. Comparison of Interactive Segmentation. We compare X-SAM with other methods on the interactive segmentation benchmark.</p>
+              </div>
+              <div class="image-container">
+                <img src="results/interseg.png" alt="Interactive Segmentation Results">
+              </div>
+
+              <!-- Img Conv Results -->
+              <div class="content has-text-justified" style="margin-bottom: 0.5rem;">
+                <p>Tab. 9. Comparison of Image-level Benchmarks. We compare X-SAM with other methods on the image-level benchmarks, including MME, MMBench, SEED-Bench, POPE, and AI2D.</p>
+              </div>
+              <div class="image-container">
+                <img src="results/imgconv.png" alt="Benchmark Results">
+              </div>
+            </div>
+          </details>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Demo -->
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <h2 class="title is-3 has-text-centered">💻 Demo</h2>
+        <div class="demo-section">
+          <a href="http://47.115.200.157:7861" class="button" target="_blank">
+            <span class="icon">
+              <i class="fas fa-play"></i>
+            </span>
+            <span>Launch</span>
+          </a>
+          
+          <div class="video-container" style="margin-top: 1rem;">
+            <video id="xsamDemoVideo" controls style="width: 100%; max-width: 800px; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+              <source src="https://github.com/wanghao9610/X-SAM/releases/download/v0.0.1/xsam_demo.mp4" type="video/mp4">
+            </video>
+          </div>
+
+          <div class="video-controls">
+            <div class="video-time">
+              <span id="videoCurrentTime">0:00</span>
+              <span id="videoDuration">0:00</span>
+            </div>
+            <input id="videoSeek" class="slider is-fullwidth is-success video-slider" type="range" min="0" max="1" step="0.01" value="0" />
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- BibTeX -->
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <div class="card-enhanced">
+          <h2 class="title is-3 has-text-centered">📌 Citation</h2>
+          <div class="bibtex-container">
+            <pre><code>@article{wang2025xsam,
+  title={X-SAM: From Segment Anything to Any Segmentation},
+  author={Wang, Hao and Qiao, Limeng and Jie, Zequn and Huang, Zhijian and Feng, Chengjian and Zheng, Qingfang and Ma, Lin and Lan, Xiangyuan and Liang, Xiaodan},
+  journal={arXiv preprint arXiv:2508.04655},
+  year={2025}
+}</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container">
+    <div class="content has-text-centered">
+             <div style="margin-bottom: 0.5rem;">
+        <a class="icon-link" href="https://arxiv.org/abs/2508.04655">
+          <i class="ai ai-arxiv"></i>
+        </a>
+        <a class="icon-link" href="https://arxiv.org/pdf/2508.04655">
+          <i class="fas fa-file-pdf"></i>
+        </a>
+        <a class="icon-link" href="http://47.115.200.157:7861">
+          <i class="fas fa-gamepad"></i>
+        </a>
+        <a class="icon-link" href="https://huggingface.co/hao9610/X-SAM">
+          <i class="fas fa-cube"></i>
+        </a>
+        <a class="icon-link" href="https://github.com/wanghao9610/X-SAM">
+          <i class="fab fa-github"></i>
+        </a>
+      </div>
+      
+      <div class="columns is-centered">
+        <div class="column is-8">
+          <div class="content">
+            <p style="opacity: 0.8;">
+              This website is modified from <a href="https://nerfies.github.io/" style="color: var(--accent-color);">Nerfies</a>. Thanks for the great work!
+              Their source code is available on <a href="https://github.com/nerfies/nerfies.github.io" style="color: var(--accent-color);">GitHub</a>.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+// Scroll progress indicator
+window.addEventListener('scroll', function() {
+  const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+  const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+  const scrolled = (winScroll / height) * 100;
+  document.getElementById('scrollProgress').style.width = scrolled + '%';
+});
+
+// Smooth scrolling for anchor links
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+  anchor.addEventListener('click', function (e) {
+    e.preventDefault();
+    const target = document.querySelector(this.getAttribute('href'));
+    if (target) {
+      target.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+  });
+});
+
+// Add animation on scroll
+const observerOptions = {
+  threshold: 0.1,
+  rootMargin: '0px 0px -50px 0px'
+};
+
+const observer = new IntersectionObserver(function(entries) {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.style.opacity = '1';
+      entry.target.style.transform = 'translateY(0)';
+    }
+  });
+}, observerOptions);
+
+// Observe all card elements
+document.querySelectorAll('.card-enhanced').forEach(card => {
+  card.style.opacity = '0';
+  card.style.transform = 'translateY(30px)';
+  card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+  observer.observe(card);
+});
+
+// Video seek slider controls
+(function() {
+  const video = document.getElementById('xsamDemoVideo');
+  const seek = document.getElementById('videoSeek');
+  const currentEl = document.getElementById('videoCurrentTime');
+  const durationEl = document.getElementById('videoDuration');
+  if (!video || !seek || !currentEl || !durationEl) return;
+
+  function formatTime(seconds) {
+    if (!isFinite(seconds)) return '0:00';
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  }
+
+  let isSeeking = false;
+
+  function updateUI() {
+    if (isSeeking) return;
+    const duration = isFinite(video.duration) ? video.duration : 1;
+    if (seek.max !== String(duration)) {
+      seek.max = String(duration);
+    }
+    seek.value = String(video.currentTime || 0);
+    currentEl.textContent = formatTime(video.currentTime || 0);
+    durationEl.textContent = formatTime(duration);
+  }
+
+  video.addEventListener('loadedmetadata', updateUI);
+  video.addEventListener('timeupdate', updateUI);
+
+  seek.addEventListener('pointerdown', () => {
+    isSeeking = true;
+  });
+
+  function commitSeek() {
+    const target = Number(seek.value);
+    if (isFinite(target)) {
+      video.currentTime = target;
+    }
+    isSeeking = false;
+  }
+
+  seek.addEventListener('input', () => {
+    // update preview time while dragging
+    currentEl.textContent = formatTime(Number(seek.value));
+  });
+  seek.addEventListener('change', commitSeek);
+  seek.addEventListener('pointerup', commitSeek);
+
+  // Initialize once DOM is ready
+  if (video.readyState >= 1) {
+    updateUI();
+  } else {
+    video.addEventListener('loadeddata', updateUI, { once: true });
+  }
+})();
+</script>
+
+</body>
+</html>

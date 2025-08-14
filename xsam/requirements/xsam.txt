@@ -1,0 +1,6 @@
+pycocotools
+git+https://github.com/cocodataset/panopticapi.git
+textwrap3
+tabulate
+scikit-learn
+pycocoevalcap
