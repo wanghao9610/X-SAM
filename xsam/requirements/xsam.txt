@@ -4,3 +4,4 @@ textwrap3
 tabulate
 scikit-learn
 pycocoevalcap
+gradio>=5.41.1

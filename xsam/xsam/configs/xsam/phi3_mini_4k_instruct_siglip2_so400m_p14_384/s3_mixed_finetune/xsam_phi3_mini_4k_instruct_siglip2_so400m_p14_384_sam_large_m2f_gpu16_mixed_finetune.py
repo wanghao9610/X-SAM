@@ -54,7 +54,7 @@ from xsam.model import XSamModel
 from xsam.model.segmentors import XSegmentor
 from xsam.model.segmentors.mask2former import Mask2FormerConfig, Mask2FormerModel
 from xsam.model.segmentors.sam import SamModel
-from xsam.xsam.utils.visualize import Visualizer
+from xsam.utils.visualize import Visualizer
 
 #######################################################################
 #                          PART 1  Settings                           #
