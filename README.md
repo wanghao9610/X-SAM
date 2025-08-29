@@ -294,6 +294,7 @@ bash runs/run.sh --modes demo --config xsam/configs/xsam/phi3_mini_4k_instruct_s
 - [x] Release the code for [Evaluation on All VLM Benchmarks](#evaluate-on-all-vlm-benchmarks).
 - [x] Release the code for [Demo Deployment](#computer-demo).
 - [x] Release the code for [Evaluation on All Segmentation Benchmarks](#evaluate-on-all-segmentation-benchmarks).
+- [ ] Relaese the inference and demo code supporting transformers.
 - [ ] Release the code for [Training X-SAM](#stage-3-mixed-fine-tuning) (more than 500 🌟).
 
 ## :blush: Acknowledge
