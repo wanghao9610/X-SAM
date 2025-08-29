@@ -72,11 +72,16 @@ seg_encoder_name_or_path = init_dir + "sam-vit-large"
 seg_decoder_name_or_path = init_dir + "mask2former-swin-large-coco-panoptic"
 
 # Specify the pretrained pth
-s1_pretrained_pth = work_dir + "s1_seg_finetune/xsam_sam_large_m2f_e36_gpu16_seg_finetune/pytorch_model.bin"
-s2_pretrained_pth = (
-    work_dir
-    + "s2_align_pretrain/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_e1_gpu16_align_pretrain/pytorch_model.bin"
-)  # noqa: E501
+# Case1: Comment the following for training from scratch
+# s1_pretrained_pth = work_dir + "s1_seg_finetune/xsam_sam_large_m2f_e36_gpu16_seg_finetune/pytorch_model.bin"
+# s2_pretrained_pth = (
+#     work_dir
+#     + "s2_align_pretrain/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_e1_gpu16_align_pretrain/pytorch_model.bin"
+# )  # noqa: E501
+
+# Case2: Uncomment the following for evaluating from our pretrained model
+s1_pretrained_pth = None
+s2_pretrained_pth = None
 
 # Prompt
 prompt_template = PROMPT_TEMPLATE.phi3_chat
