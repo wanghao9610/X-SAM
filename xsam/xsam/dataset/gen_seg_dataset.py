@@ -321,7 +321,6 @@ class GenericSegDataset(BaseDataset):
                         "image_size": (_img_info["height"], _img_info["width"]),
                         "caption": caption,
                         "annotations": sampled_anns,
-                        "sampled_sents": sampled_cat_names,
                         "sampled_cats": sampled_cat_names,
                         "sampled_labels": sampled_cat_ids,
                         "image_info": img_info,
@@ -410,64 +409,7 @@ class GenericSegDataset(BaseDataset):
         return rets
 
     def _decode_mask(self, data_dict):
-        if "semantic" in self.data_name:
-            sampled_cat_ids = data_dict["sampled_cat_ids"]
-            height, width = data_dict["image_size"]
-            annotations = data_dict["annotations"]
-            mask_labels = []
-            class_labels = []
-
-            semseg_map = None
-            if self.semseg_map_folder is not None:
-                semseg_map = Image.open(
-                    os.path.join(self.semseg_map_folder, data_dict["image_file"].replace(".jpg", self.semseg_sufix))
-                ).convert("RGB")
-                semseg_map = np.array(semseg_map)
-                if self.label_shift != 0:
-                    semseg_map = semseg_map + self.label_shift
-                    semseg_map[semseg_map == self.label_shift] = self.ignore_label
-
-            for ann in annotations:
-                segmentation = ann.get("segmentation", None)
-                if segmentation is not None:
-                    binary_mask = decode_mask(segmentation, height, width)
-                elif segmentation is None:
-                    assert semseg_map is not None
-                    binary_mask = semseg_map == sampled_cat_ids[ann["category_id"]]
-
-                mask_labels.append(binary_mask)
-                class_labels.append(ann["category_id"])
-
-            mask_labels = torch.stack([torch.from_numpy(np.ascontiguousarray(x.copy())) for x in mask_labels])
-            class_labels = torch.tensor(np.array(class_labels), dtype=torch.int64)
-
-            data_dict.update(
-                {
-                    "mask_labels": mask_labels,
-                    "class_labels": class_labels,
-                }
-            )
-        elif "instance" in self.data_name:
-            height, width = data_dict["image_size"]
-            annotations = data_dict["annotations"]
-            mask_labels = []
-            class_labels = []
-            for ann in annotations:
-                segmentation = ann["segmentation"]
-                binary_mask = decode_mask(segmentation, height, width)
-                mask_labels.append(binary_mask)
-                class_labels.append(ann["category_id"])
-
-            mask_labels = torch.stack([torch.from_numpy(np.ascontiguousarray(x.copy())) for x in mask_labels])
-            class_labels = torch.tensor(np.array(class_labels), dtype=torch.int64)
-
-            data_dict.update(
-                {
-                    "mask_labels": mask_labels,
-                    "class_labels": class_labels,
-                }
-            )
-        elif "panoptic" in self.data_name:
+        if "panoptic" in self.data_name:
             segments_info = data_dict.get("segments_info", None)
             seg_map_path = data_dict.get("seg_map", None)
             if seg_map_path is None:
@@ -496,6 +438,63 @@ class GenericSegDataset(BaseDataset):
 
             del data_dict["segments_info"]
             del data_dict["seg_map"]
+            data_dict.update(
+                {
+                    "mask_labels": mask_labels,
+                    "class_labels": class_labels,
+                }
+            )
+        elif "semantic" in self.data_name:
+            sampled_labels = data_dict["sampled_labels"]
+            height, width = data_dict["image_size"]
+            annotations = data_dict["annotations"]
+            mask_labels = []
+            class_labels = []
+
+            semseg_map = None
+            if self.semseg_map_folder is not None:
+                semseg_map = Image.open(
+                    os.path.join(self.semseg_map_folder, data_dict["image_file"].replace(".jpg", self.semseg_sufix))
+                ).convert("RGB")
+                semseg_map = np.array(semseg_map)
+                if self.label_shift != 0:
+                    semseg_map = semseg_map + self.label_shift
+                    semseg_map[semseg_map == self.label_shift] = self.ignore_label
+
+            for ann in annotations:
+                segmentation = ann.get("segmentation", None)
+                if segmentation is not None:
+                    binary_mask = decode_mask(segmentation, height, width)
+                elif segmentation is None:
+                    assert semseg_map is not None
+                    binary_mask = semseg_map == sampled_labels[ann["category_id"]]
+
+                mask_labels.append(binary_mask)
+                class_labels.append(ann["category_id"])
+
+            mask_labels = torch.stack([torch.from_numpy(np.ascontiguousarray(x.copy())) for x in mask_labels])
+            class_labels = torch.tensor(np.array(class_labels), dtype=torch.int64)
+
+            data_dict.update(
+                {
+                    "mask_labels": mask_labels,
+                    "class_labels": class_labels,
+                }
+            )
+        elif "instance" in self.data_name:
+            height, width = data_dict["image_size"]
+            annotations = data_dict["annotations"]
+            mask_labels = []
+            class_labels = []
+            for ann in annotations:
+                segmentation = ann["segmentation"]
+                binary_mask = decode_mask(segmentation, height, width)
+                mask_labels.append(binary_mask)
+                class_labels.append(ann["category_id"])
+
+            mask_labels = torch.stack([torch.from_numpy(np.ascontiguousarray(x.copy())) for x in mask_labels])
+            class_labels = torch.tensor(np.array(class_labels), dtype=torch.int64)
+
             data_dict.update(
                 {
                     "mask_labels": mask_labels,
