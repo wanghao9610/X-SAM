@@ -312,7 +312,7 @@ If you find X-SAM is helpful for your research or applications, please consider 
 }
 ```
 
-## Star History
+## :star2: Star History
 
 <a href="https://www.star-history.com/#wanghao9610/X-SAM&Date">
  <picture>
