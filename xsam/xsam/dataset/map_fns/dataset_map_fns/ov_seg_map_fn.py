@@ -1,4 +1,4 @@
-from .generic_seg_map_fn import generic_seg_map_fn
+from .gen_seg_map_fn import generic_seg_map_fn
 
 
 def ov_seg_map_fn(*args, **kwargs):

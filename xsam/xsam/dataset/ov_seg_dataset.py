@@ -12,7 +12,7 @@ from pycocotools import mask as mask_utils
 from ..structures import BoxMode
 from ..utils.logging import print_log
 from ..utils.palette import get_palette
-from .generic_seg_dataset import GenericSegDataset
+from .gen_seg_dataset import GenericSegDataset
 from .utils.catalog import MetadataCatalog
 from .utils.coco import COCO
 
