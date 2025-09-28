@@ -268,8 +268,9 @@ bash runs/run.sh --modes vlmeval --config xsam/configs/llava/phi3_mini_4k_instru
 ## :computer: Demo
 We provide detalied instructions for local demo inference and web demo deployment, and a demo video is shown below.
 
+### Local Demo
 <details open>
-<summary>🛠️ Local Demo Inference (Click to collapse)</summary>
+<summary>🏞️ Inference(Click to collapse)</summary>
 
 ```bash
 cd $root_dir
@@ -280,10 +281,12 @@ python xsam/xsam/demo/demo.py xsam/xsam/configs/xsam/phi3_mini_4k_instruct_sigli
 python xsam/xsam/demo/demo.py xsam/xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py --pth_model $root_dir/inits/X-SAM/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune/pytorch_model.bin --image xsam/xsam/demo/images/genseg.jpg --prompt "ins: person, bird, boat; sem: water, sky" --task_name genseg
 # more examples please refer to the web demo examples.
 ```
+
+### Web Demo 
 </details>
 
 <details open>
-<summary>🛠️ Web Demo Deployment (Click to collapse)</summary>
+<summary>🛠️ Deployment (Click to collapse)</summary>
 
 ```bash
 cd $root_dir
