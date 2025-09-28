@@ -1,7 +1,8 @@
 #!/usr/bin/env python
-
+# Copyright (c) OpenMMLab. All rights reserved.
 
 import argparse
+import os
 import os.path as osp
 import random
 import re
@@ -9,6 +10,7 @@ import traceback
 import warnings
 from typing import List
 
+import cv2
 import numpy as np
 import torch
 import torch.nn as nn
@@ -45,6 +47,7 @@ from xsam.dataset.process_fns import (
 )
 from xsam.dataset.utils.catalog import MetadataCatalog
 from xsam.dataset.utils.encode import encode_fn
+from xsam.dataset.utils.load import load_image
 from xsam.engine.utils.util import split_list
 from xsam.utils.checkpoint import load_checkpoint
 from xsam.utils.config import setup_model_config
@@ -65,7 +68,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--image", type=str, required=True, help="path to input image")
     parser.add_argument("--prompt", type=str, required=True, help="user prompt for the task_name")
     parser.add_argument("--task_name", type=str, required=True, help="task_name name (e.g., segmentation, referring)")
-    parser.add_argument("--work-dir", help="directory to save logs and visualizations")
+    parser.add_argument("--vprompt_masks", type=str, required=False, help="path to vprompt masks")
+    parser.add_argument("--score_thr", type=float, default=0.5, help="score threshold for the task_name")
+    parser.add_argument("--work-dir", type=str, required=False, help="directory to save logs and visualizations")
+    parser.add_argument("--output_dir", type=str, required=False, help="directory to save output images")
     parser.add_argument(
         "--pth_model",
         type=str,
@@ -73,7 +79,6 @@ def parse_args() -> argparse.Namespace:
         help="path to model checkpoint",
     )
     parser.add_argument("--seed", type=int, default=None, help="random seed")
-    parser.add_argument("--output", type=str, default="demo_output.png", help="output image path")
     parser.add_argument(
         "--cfg-options",
         nargs="+",
@@ -576,7 +581,6 @@ class XSamDemo:
                 phrases=phrases,
                 **(seg_outputs[0]),
             )
-            # visualized_image.save("visualized_image.png")
         except Exception as e:
             print_log(f"Error in {task_name} visualization: {e}\n{traceback.format_exc()}", logger="current")
             return llm_input, generation_output, None
@@ -623,8 +627,43 @@ def main():
     # Create demo instance
     demo = XSamDemo(cfg, args.pth_model, output_ids_with_output=False)
 
-    pil_image = Image.open(args.image)
-    demo.run_on_image(pil_image, args.prompt, args.task_name, None)
+    if args.vprompt_masks and osp.exists(args.vprompt_masks):
+        if osp.isdir(args.vprompt_masks):
+            vprompt_masks = [
+                load_image(osp.join(args.vprompt_masks, file), mode="L") for file in os.listdir(args.vprompt_masks)
+            ]
+        else:
+            vprompt_masks = [load_image(args.vprompt_masks, mode="L")]
+    else:
+        vprompt_masks = None
+
+    if osp.isdir(args.image):
+        output_dir = args.image + "_vis" if args.output_dir is None else args.output_dir
+        os.makedirs(output_dir, exist_ok=True)
+        for file in os.listdir(args.image):
+            pil_image = Image.open(osp.join(args.image, file))
+            llm_input, llm_output, seg_output = demo.run_on_image(
+                pil_image, args.prompt, args.task_name, vprompt_masks=vprompt_masks, threshold=args.score_thr
+            )
+            # Save seg_output image
+            if seg_output is not None:
+                print(f"llm_input: {llm_input}\nllm_output: {llm_output}")
+                cv2.imwrite(f"{output_dir}/{file[:-4]}.png", cv2.cvtColor(seg_output, cv2.COLOR_RGB2BGR))
+    elif osp.isfile(args.image):
+        pil_image = Image.open(args.image)
+        llm_input, llm_output, seg_output = demo.run_on_image(
+            pil_image, args.prompt, args.task_name, vprompt_masks=vprompt_masks, threshold=args.score_thr
+        )
+        # Save seg_output image
+        output_dir = osp.dirname(args.image) + "_vis" if args.output_dir is None else args.output_dir
+        os.makedirs(output_dir, exist_ok=True)
+        if seg_output is not None:
+            print(f"llm_input: {llm_input}\nllm_output: {llm_output}")
+            cv2.imwrite(
+                f"{output_dir}/{osp.basename(args.image)[:-4]}.png", cv2.cvtColor(seg_output, cv2.COLOR_RGB2BGR)
+            )
+    else:
+        raise ValueError(f"Invalid image: {args.image}")
 
 
 if __name__ == "__main__":
