@@ -69,6 +69,21 @@ def parse_args():
     return args
 
 
+def register_function(cfg_dict):
+    if isinstance(cfg_dict, dict):
+        for key, value in dict.items(cfg_dict):
+            if isinstance(value, FunctionType):
+                value_str = str(value)
+                if value_str not in MAP_FUNC:
+                    MAP_FUNC.register_module(module=value, name=value_str)
+                cfg_dict[key] = value_str
+            else:
+                register_function(value)
+    elif isinstance(cfg_dict, (list, tuple)):
+        for value in cfg_dict:
+            register_function(value)
+
+
 def check_cfg(cfg, args):
     if getattr(cfg, "use_varlen_attn", False) and cfg.train_dataloader.batch_size > 1:
         raise NotImplementedError(
@@ -288,6 +303,7 @@ def main():
 
                 ds_grad_accum = ds_cfg.get("gradient_accumulation_steps", "auto")
                 mm_grad_accum = cfg.optim_wrapper.get("accumulative_counts", 1)
+                optim_constructor = cfg.optim_wrapper.get("constructor", "DefaultOptimWrapperConstructor")
                 if ds_grad_accum != "auto" and ds_grad_accum != mm_grad_accum:
                     print_log(
                         (
@@ -348,7 +364,10 @@ def main():
                 )
                 cfg.__setitem__("strategy", strategy)
                 optim_wrapper = dict(
-                    type="DeepSpeedOptimWrapper", optimizer=cfg.optim_wrapper.optimizer, paramwise_cfg=paramwise_cfg
+                    type="DeepSpeedOptimWrapper",
+                    constructor=optim_constructor,
+                    optimizer=cfg.optim_wrapper.optimizer,
+                    paramwise_cfg=paramwise_cfg,
                 )
                 cfg.__setitem__("optim_wrapper", optim_wrapper)
                 cfg.runner_type = "FlexibleRunner"

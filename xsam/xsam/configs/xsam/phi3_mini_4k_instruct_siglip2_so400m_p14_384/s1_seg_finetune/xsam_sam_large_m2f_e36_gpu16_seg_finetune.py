@@ -12,7 +12,7 @@ from xsam.dataset.collate_fns import xsam_collate_fn
 from xsam.dataset.process_fns import generic_seg_postprocess_fn, process_map_fn_factory
 from xsam.dataset.processors import SamImageProcessor
 from xsam.engine.hooks import DatasetInfoHook, ModelInfoHook, PTCheckpointHook
-from xsam.engine.runners import TrainLoop
+from xsam.engine.runner import TrainLoop
 from xsam.evaluation.evaluators import GenericSegEvaluator
 from xsam.model import XSamModel
 from xsam.model.segmentors import XSegmentor

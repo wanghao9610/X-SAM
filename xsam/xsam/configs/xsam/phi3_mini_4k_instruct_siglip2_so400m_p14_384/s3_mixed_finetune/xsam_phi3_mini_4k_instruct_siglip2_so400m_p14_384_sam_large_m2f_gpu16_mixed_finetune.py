@@ -40,7 +40,7 @@ from xsam.dataset.process_fns import (
 )
 from xsam.dataset.processors import SamImageProcessor
 from xsam.engine.hooks import DatasetInfoHook, EvaluateChatHook, ModelInfoHook, PTCheckpointHook
-from xsam.engine.runners import TrainLoop
+from xsam.engine.runner import TrainLoop
 from xsam.evaluation.evaluators import (
     GCGSegEvaluator,
     GenericSegEvaluator,

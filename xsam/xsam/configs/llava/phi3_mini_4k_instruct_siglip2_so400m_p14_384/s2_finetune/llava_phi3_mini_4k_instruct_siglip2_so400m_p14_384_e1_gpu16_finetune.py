@@ -12,7 +12,7 @@ from xsam.dataset import ImageConvDataset
 from xsam.dataset.collate_fns import xsam_collate_fn
 from xsam.dataset.map_fns import image_conv_map_fn, template_map_fn_factory
 from xsam.engine.hooks import DatasetInfoHook, EvaluateChatHook, ModelInfoHook, PTCheckpointHook
-from xsam.engine.runners import TrainLoop
+from xsam.engine.runner import TrainLoop
 from xsam.model import LLaVAModel
 
 #######################################################################

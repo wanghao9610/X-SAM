@@ -270,10 +270,10 @@ def sample_point(
 
     # use nn.function.grid_sample to get features for points in `point_coordinates` via bilinear interpolation
     point_features = torch.nn.functional.grid_sample(
-        input_features.to(point_coordinates.dtype),
-        2.0 * point_coordinates - 1.0,
+        input_features.float(),
+        (2.0 * point_coordinates - 1.0).float(),
         **kwargs,
-    )
+    ).to(point_coordinates.dtype)
     if add_dim:
         point_features = point_features.squeeze(3)
 
@@ -1020,9 +1020,9 @@ def multi_scale_deformable_attention(
         sampling_grid_l_ = sampling_grids[:, :, :, level_id].transpose(1, 2).flatten(0, 1)
         # batch_size*num_heads, hidden_dim, num_queries, num_points
         sampling_value_l_ = nn.functional.grid_sample(
-            value_l_, sampling_grid_l_, mode="bilinear", padding_mode="zeros", align_corners=False
+            value_l_.float(), sampling_grid_l_.float(), mode="bilinear", padding_mode="zeros", align_corners=False
         )
-        sampling_value_list.append(sampling_value_l_)
+        sampling_value_list.append(sampling_value_l_.to(value_l_.dtype))
     # (batch_size, num_queries, num_heads, num_levels, num_points)
     # -> (batch_size, num_heads, num_queries, num_levels, num_points)
     # -> (batch_size, num_heads, 1, num_queries, num_levels*num_points)
