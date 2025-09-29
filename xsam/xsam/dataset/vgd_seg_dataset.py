@@ -5,6 +5,7 @@ import os
 import os.path as osp
 import random
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 
 import numpy as np
@@ -45,6 +46,7 @@ class VGDSegDataset(BaseDataset):
         source_data_path=None,
         visual_prompt_type="point_visual_prompt",
         use_negative_sample=False,
+        use_threads=True,
         **kwargs,
     ):
         super().__init__(
@@ -56,6 +58,7 @@ class VGDSegDataset(BaseDataset):
             source_data_path=source_data_path,
             visual_prompt_type=visual_prompt_type,
             use_negative_sample=use_negative_sample,
+            use_threads=use_threads,
             **kwargs,
         )
 
@@ -67,6 +70,7 @@ class VGDSegDataset(BaseDataset):
         self.source_data_path = kwargs.get("source_data_path", None)
         self.visual_prompt_type = kwargs.get("visual_prompt_type", "point_visual_prompt")
         self.use_negative_sample = kwargs.get("use_negative_sample", False)
+        self.use_threads = kwargs.get("use_threads", True)
 
     def _set_metadata(self, **kwargs):
         gt_json = kwargs.get("gt_json", None)
@@ -197,18 +201,30 @@ class VGDSegDataset(BaseDataset):
         print_log(f"Processing {len(img_ids)} images with {num_workers} workers...", logger="current")
 
         results = []
-        chunksize = max(1, len(img_id_batches) // num_workers // 2)
-        with mp.Pool(num_workers) as pool:
-            process_func = partial(self._process_batch_images, coco_api=coco_api)
-            for i, batch_results in enumerate(
-                tqdm(
-                    pool.imap_unordered(process_func, img_id_batches, chunksize=chunksize),
-                    total=len(img_id_batches),
-                    desc=f"Processing {self.data_name}",
-                    ncols=80,
-                )
-            ):
-                results.extend(batch_results)
+
+        if self.use_threads:
+            print_log(f"Using ThreadPoolExecutor with {num_workers} threads for I/O-intensive tasks", logger="current")
+            with ThreadPoolExecutor(max_workers=num_workers) as executor:
+                process_func = partial(self._process_batch_images, coco_api=coco_api)
+                futures = [executor.submit(process_func, batch) for batch in img_id_batches]
+                for future in tqdm(futures, desc=f"Processing {self.data_name}", ncols=80):
+                    batch_results = future.result()
+                    if batch_results is not None:
+                        results.extend(batch_results)
+        else:
+            chunksize = max(1, len(img_id_batches) // num_workers // 2)
+            with mp.Pool(num_workers) as pool:
+                process_func = partial(self._process_batch_images, coco_api=coco_api)
+                for i, batch_results in enumerate(
+                    tqdm(
+                        pool.imap_unordered(process_func, img_id_batches, chunksize=chunksize),
+                        total=len(img_id_batches),
+                        desc=f"Processing {self.data_name}",
+                        ncols=80,
+                    )
+                ):
+                    if batch_results is not None:
+                        results.extend(batch_results)
 
         rets = [r for r in results if r is not None]
         return rets

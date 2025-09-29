@@ -4,11 +4,13 @@ import multiprocessing as mp
 import os
 import os.path as osp
 import tempfile
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 
 import cv2
 import numpy as np
 import torch
 from PIL import Image
+from tqdm import tqdm
 
 from xsam.utils.logging import print_log
 
@@ -30,6 +32,7 @@ class ReasonSegDataset(BaseDataset):
         explain_path=None,
         explain_ratio=0.5,
         query_type="all",
+        use_threads=True,
         **kwargs,
     ):
         super().__init__(
@@ -40,6 +43,7 @@ class ReasonSegDataset(BaseDataset):
             explain_path=explain_path,
             explain_ratio=explain_ratio,
             query_type=query_type,
+            use_threads=use_threads,
             **kwargs,
         )
 
@@ -48,6 +52,7 @@ class ReasonSegDataset(BaseDataset):
         self.explain_path = kwargs.get("explain_path", None)
         self.explain_ratio = kwargs.get("explain_ratio", 0.5)
         self.query_type = kwargs.get("query_type", "sentence")
+        self.use_threads = kwargs.get("use_threads", True)
         assert self.query_type in ["sentence", "phrase", "all"]
 
     def _set_metadata(self, **kwargs):
@@ -122,50 +127,57 @@ class ReasonSegDataset(BaseDataset):
         binary_mask = np.where(binary_mask == 255, 0, binary_mask).astype(np.uint8)
         return questions, binary_mask, ignore_mask, data.get("is_sentence", False)
 
-    def process_single_image_worker(self, args):
-        image_folder, image_name, name2explain = args[:3]
+    def process_batch_images_worker(self, args):
+        image_folder, image_names, name2explain = args
         get_ann_from_json = self._get_ann_from_json_static
 
-        image_path = osp.join(image_folder, image_name)
-        json_path = image_path.replace(".jpg", ".json")
-        pil_image = Image.open(image_path)
-        width, height = pil_image.size
-        explain = name2explain[image_name] if name2explain else None
-        questions, binary_mask, ignore_mask, is_sentence = get_ann_from_json(json_path, height, width)
+        results = []
+        for image_name in image_names:
+            image_path = osp.join(image_folder, image_name)
+            json_path = image_path.replace(".jpg", ".json")
 
-        if binary_mask is None or binary_mask.sum() == 0:
-            return None
-        if self.query_type == "sentence" and not is_sentence:
-            return None
-        if self.query_type == "phrase" and is_sentence:
-            return None
-        if self.query_type == "all":
-            pass
+            try:
+                pil_image = Image.open(image_path)
+                width, height = pil_image.size
+                explain = name2explain[image_name] if name2explain else None
+                questions, binary_mask, ignore_mask, is_sentence = get_ann_from_json(json_path, height, width)
 
-        image_info = {
-            "id": image_name,
-            "file_name": image_name,
-            "height": height,
-            "width": width,
-        }
-        annotations = []
-        for i, question in enumerate(questions):
-            annotations.append(
-                {
-                    "id": f"{image_name}_{i}",
-                    "image_id": image_name,
-                    "category_id": i,
-                    "explain": explain,
-                    "question": question,
-                    "is_sentence": is_sentence,
-                    "segmentation": encode_mask(binary_mask),
-                    "ignore_mask": encode_mask(ignore_mask),
-                    "area": int(np.sum(binary_mask)),
-                    "bbox": [0, 0, width, height],
-                    "iscrowd": 0,
+                if binary_mask is None or binary_mask.sum() == 0:
+                    continue
+                if self.query_type == "sentence" and not is_sentence:
+                    continue
+                if self.query_type == "phrase" and is_sentence:
+                    continue
+
+                image_info = {
+                    "id": image_name,
+                    "file_name": image_name,
+                    "height": height,
+                    "width": width,
                 }
-            )
-        return (image_info, annotations)
+                annotations = []
+                for i, question in enumerate(questions):
+                    annotations.append(
+                        {
+                            "id": f"{image_name}_{i}",
+                            "image_id": image_name,
+                            "category_id": i,
+                            "explain": explain,
+                            "question": question,
+                            "is_sentence": is_sentence,
+                            "segmentation": encode_mask(binary_mask),
+                            "ignore_mask": encode_mask(ignore_mask),
+                            "area": int(np.sum(binary_mask)),
+                            "bbox": [0, 0, width, height],
+                            "iscrowd": 0,
+                        }
+                    )
+                results.append((image_info, annotations))
+            except Exception as e:
+                print_log(f"Error processing {image_name}: {e}", logger="current")
+                continue
+
+        return results if results else None
 
     def _create_polygon_mask(self, mask, points, label_value=1):
         points_array = np.array([points], dtype=np.int32)
@@ -184,19 +196,53 @@ class ReasonSegDataset(BaseDataset):
             name2explain = None
 
         num_workers = min(16, max(1, mp.cpu_count() // 2))
+        print_log(f"Using {num_workers} workers for processing images", logger="current")
         coco_data = {"images": [], "annotations": [], "categories": [{"id": 0, "name": "question"}]}
         image_names = [f for f in os.listdir(self.image_folder) if f.endswith(".jpg")]
 
-        args_list = [(self.image_folder, image_name, name2explain) for image_name in image_names]
+        batch_size = max(32, min(128, len(image_names) // (num_workers * 4)))
+        batches = []
+        for i in range(0, len(image_names), batch_size):
+            batch_names = image_names[i : i + batch_size]
+            batch_name2explain = (
+                {name: name2explain[name] for name in batch_names if name2explain and name in name2explain}
+                if name2explain
+                else None
+            )
+            batches.append((self.image_folder, batch_names, batch_name2explain))
 
-        with mp.Pool(num_workers) as pool:
-            for res in pool.map(self.process_single_image_worker, args_list):
-                if res is not None:
-                    image_info, annotations = res
-                    coco_data["images"].append(image_info)
-                    coco_data["annotations"].extend(annotations)
-                else:
-                    self.woann_cnt += 1
+        print_log(
+            f"Processing {len(image_names)} images in {len(batches)} batches (batch_size={batch_size})",
+            logger="current",
+        )
+
+        if self.use_threads:
+            print_log(f"Using ThreadPoolExecutor with {num_workers} threads for I/O-intensive tasks", logger="current")
+            with ThreadPoolExecutor(max_workers=num_workers) as executor:
+                futures = [executor.submit(self.process_batch_images_worker, batch) for batch in batches]
+                for future in tqdm(futures, desc=f"Processing {self.data_name}", ncols=80):
+                    res = future.result()
+                    if res is not None:
+                        for image_info, annotations in res:
+                            coco_data["images"].append(image_info)
+                            coco_data["annotations"].extend(annotations)
+                    else:
+                        self.woann_cnt += 1
+        else:
+            with mp.Pool(num_workers) as pool:
+                chunksize = max(1, min(4, len(batches) // num_workers))
+                for res in tqdm(
+                    pool.imap_unordered(self.process_batch_images_worker, batches, chunksize=chunksize),
+                    total=len(batches),
+                    desc=f"Processing {self.data_name}",
+                    ncols=80,
+                ):
+                    if res is not None:
+                        for image_info, annotations in res:
+                            coco_data["images"].append(image_info)
+                            coco_data["annotations"].extend(annotations)
+                    else:
+                        self.woann_cnt += 1
         return coco_data
 
     def _load_ann_data(self):
