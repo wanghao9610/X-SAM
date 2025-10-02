@@ -77,6 +77,7 @@ def prepare_inputs_labels_for_multimodal(
         num_regions = (cur_input_ids == REGION_TOKEN_INDEX).sum()
 
         if num_images == 0 and num_regions == 0:
+            cur_pixel_values = pixel_values[cur_image_idx]
             cur_inputs_embeds = llm.get_input_embeddings()(cur_input_ids)
             cur_inputs_embeds = torch.cat([cur_inputs_embeds, cur_pixel_values[0:0]], dim=0)
             cur_cond_ids = cond_ids[batch_idx]
