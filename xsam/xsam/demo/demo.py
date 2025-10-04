@@ -645,9 +645,9 @@ def main():
             llm_input, llm_output, seg_output = demo.run_on_image(
                 pil_image, args.prompt, args.task_name, vprompt_masks=vprompt_masks, threshold=args.score_thr
             )
+            print(f"llm_input: {llm_input}\nllm_output: {llm_output}")
             # Save seg_output image
             if seg_output is not None:
-                print(f"llm_input: {llm_input}\nllm_output: {llm_output}")
                 cv2.imwrite(f"{output_dir}/{file[:-4]}.png", cv2.cvtColor(seg_output, cv2.COLOR_RGB2BGR))
     elif osp.isfile(args.image):
         pil_image = Image.open(args.image)
