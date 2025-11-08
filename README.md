@@ -42,6 +42,7 @@ We recommend that everyone use English to communicate in issues, as this helps d
 
 ## :boom: Updates
 
+- **`2025-11-08`**: Congratulations! 🎉🎉🎉 X-SAM has been accepted by AAAI 2026! We will release all the code in the coming week!
 - **`2025-09-28`**: We update the [Local Demo](#local-demo) Inference script, you can run local inference instead of on the Web Demo.
 - **`2025-08-11`**: Thanks for your great attention to our work! We have deployed another [Online Demo2](http://121.43.252.12:7862). You can also try it if [Online Demo1](http://47.115.200.157:7861) is not available.
 - **`2025-08-11`**: We released the effective code for [Evaluation on All Segmentation Benchmarks](#evaluate-on-all-segmentation-benchmarks). We have updated all code except for [Training X-SAM](#stage-3-mixed-fine-tuning).
