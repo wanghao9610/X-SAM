@@ -312,7 +312,7 @@ bash runs/run.sh --modes demo --config xsam/configs/xsam/phi3_mini_4k_instruct_s
 - [x] Release the code for [Demo Deployment](#computer-demo).
 - [x] Release the code for [Evaluation on All Segmentation Benchmarks](#evaluate-on-all-segmentation-benchmarks).
 - [x] Release the code for [Training X-SAM](#stage-3-mixed-fine-tuning).
-- [ ] Release the code and weight for Qwen3VL.
+- [ ] Release the code and weight for X-SAM-Qwen3VL.
 - [ ] Relaese the inference and demo code supporting transformers.
 
 ## :blush: Acknowledge
