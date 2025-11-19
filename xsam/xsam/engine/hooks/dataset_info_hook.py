@@ -8,6 +8,7 @@ from ...utils.constants import (
     DEFAULT_PEND_TOKEN,
     DEFAULT_PSTART_TOKEN,
     DEFAULT_SEG_TOKEN,
+    DEFAULT_SPECIAL_TOKENS,
     INDEX2TOKEN,
 )
 from ..utils.util import split_list
@@ -21,10 +22,7 @@ class DatasetInfoHook(Hook):
         self.is_intern_repo_dataset = is_intern_repo_dataset
 
     def _add_special_tokens(self, special_tokens):
-        assert all(
-            token in [DEFAULT_SEG_TOKEN, DEFAULT_PSTART_TOKEN, DEFAULT_PEND_TOKEN, DEFAULT_CLS_TOKEN]
-            for token in special_tokens
-        )
+        assert all(token in DEFAULT_SPECIAL_TOKENS for token in special_tokens)
         self.tokenizer.add_tokens(special_tokens, special_tokens=True)
 
         self.seg_token_idx = -1

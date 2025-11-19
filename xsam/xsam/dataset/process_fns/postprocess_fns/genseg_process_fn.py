@@ -11,10 +11,10 @@ from ...utils.mask import convert_segmentation_to_rle
 from ...utils.process import compute_segments, remove_low_and_no_objects, sem_seg_postprocess
 
 
-def generic_seg_postprocess_fn(
+def genseg_postprocess_fn(
     outputs,
     image_sizes,
-    task_name: str = "panoptic_genseg",
+    task_name: str = "genseg",
     scaled_sizes: Optional[List[TensorType]] = None,
     threshold: float = 0.5,
     mask_threshold: float = 0.5,
@@ -149,7 +149,7 @@ def generic_seg_postprocess_fn(
             )
         return results
 
-    def _panoptic_genseg_postprocess(
+    def _genseg_postprocess(
         outputs,
         image_sizes,
         scaled_sizes,
@@ -222,7 +222,7 @@ def generic_seg_postprocess_fn(
         label_ids_to_fuse = None
         if metadata is not None and hasattr(metadata, "stuff_dataset_id_to_contiguous_id"):
             label_ids_to_fuse = metadata.stuff_dataset_id_to_contiguous_id.values()
-        return _panoptic_genseg_postprocess(
+        return _genseg_postprocess(
             outputs,
             image_sizes,
             scaled_sizes,

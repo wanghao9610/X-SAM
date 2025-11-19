@@ -19,7 +19,6 @@ from xtuner.dataset.utils import expand2square
 from xsam.structures import BoxMode
 from xsam.utils.logging import print_log
 
-from ..utils.constants import DEFAULT_PEND_TOKEN, DEFAULT_PSTART_TOKEN, DEFAULT_SEG_TOKEN
 from ..utils.palette import get_palette
 from .base_dataset import BaseDataset
 from .utils.catalog import MetadataCatalog
@@ -31,8 +30,6 @@ from .utils.vprompt import (
     generate_point_vprompt,
     generate_scribble_vprompt,
 )
-
-SPECIAL_TOKENS = [DEFAULT_PEND_TOKEN, DEFAULT_PSTART_TOKEN, DEFAULT_SEG_TOKEN]
 
 
 class VGDSegDataset(BaseDataset):

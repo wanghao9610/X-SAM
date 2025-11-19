@@ -42,6 +42,7 @@ We recommend that everyone use English to communicate in issues, as this helps d
 
 ## :boom: Updates
 
+- **`2025-11-19`**: We release the code for [Training X-SAM](#stage-3-mixed-fine-tuning). Welcome to try it! If you have any questions, please feel free to open an issue.
 - **`2025-11-08`**: Congratulations! 🎉🎉🎉 X-SAM has been accepted by AAAI 2026! We will release all the code in the coming week!
 - **`2025-09-28`**: We update the [Local Demo](#local-demo) Inference script, you can run local inference instead of on the Web Demo.
 - **`2025-08-11`**: Thanks for your great attention to our work! We have deployed another [Online Demo2](http://121.43.252.12:7862). You can also try it if [Online Demo1](http://47.115.200.157:7861) is not available.
@@ -86,15 +87,15 @@ We provide a detailed project structure for X-SAM. Please follow this structure 
 ```bash
 X-SAM
 ├── datas
-│   ├── gcg_seg_data
-│   ├── gen_seg_data
-│   ├── img_conv_data
-│   ├── inter_seg_data
+│   ├── gcgseg_data
+│   ├── genseg_data
+│   ├── imgconv_data
+│   ├── intseg_data
 │   ├── LMUData
-│   ├── ov_seg_data
-│   ├── rea_seg_data
-│   ├── ref_seg_data
-│   └── vgd_seg_data
+│   ├── ovseg_data
+│   ├── reaseg_data
+│   ├── refseg_data
+│   └── vgdseg_data
 ├── inits
 │   ├── huggingface
 │   ├── mask2former-swin-large-coco-panoptic
@@ -119,7 +120,7 @@ X-SAM
 │   │   ├── ...
 │   ├── s2_align_pretrain
 │   │   ├── ...
-│   ├── s2_mixed_finetune
+│   ├── s3_mixed_finetune
 │   │   ├── ...
 │   ├── ...
 ...
@@ -213,9 +214,7 @@ bash runs/run.sh --modes train --config xsam/configs/xsam/phi3_mini_4k_instruct_
 
 ##### Stage 3: Mixed Fine-tuning
 ```bash
-# 🫣Coming soon...
-
-# ‼️NOTE: Training for Mixed Fine-tuning will be available with more than 500 🌟.
+bash runs/run.sh --modes train,segeval,vlmeval,visualize --config xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py
 ```
 </details>
 

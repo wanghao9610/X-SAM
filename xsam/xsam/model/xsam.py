@@ -41,6 +41,7 @@ from ..utils.constants import (
     DEFAULT_PEND_TOKEN,
     DEFAULT_PSTART_TOKEN,
     DEFAULT_SEG_TOKEN,
+    DEFAULT_SPECIAL_TOKENS,
     DEFAULT_TASKS,
 )
 from ..utils.misc import data_sample_to_device
@@ -135,7 +136,7 @@ class XSamModel(BaseModel):
                 )
                 self.llm_projector = DynamicProjectorModel(llm_projector_config).to(self.llm.dtype)
 
-            if self.segmentor.encoder is not None and use_dual_encoder:
+            if use_dual_encoder and self.segmentor.encoder is not None:
                 seg_projector_config = DynamicProjectorConfig(
                     visual_hidden_size=self.segmentor.enc_config.hidden_size,
                     llm_hidden_size=self.llm.config.hidden_size,
@@ -144,7 +145,7 @@ class XSamModel(BaseModel):
                 )
                 self.seg_projector = DynamicProjectorModel(seg_projector_config).to(self.segmentor.dtype)
 
-            if self.segmentor.pixel_decoder is not None and extract_seg_embeds and connector_type is not None:
+            if extract_seg_embeds and connector_type is not None and self.segmentor.pixel_decoder is not None:
                 seg_select_layers = seg_select_layers[-self.segmentor.dec_config.num_feature_levels :]
                 connector_config = ConnectorConfig(
                     segmentor_encoder_channels=[self.segmentor.enc_config.hidden_size]
@@ -155,7 +156,7 @@ class XSamModel(BaseModel):
                 )
                 self.seg_connector = ConnectorModel(connector_config).to(self.segmentor.dtype)
 
-            if self.segmentor.decoder is not None and use_vision_sampler:
+            if use_vision_sampler and self.segmentor.decoder is not None:
                 sampler_config = SamplerConfig(
                     sampler_type=sampler_type,
                     num_sample_point=256,
@@ -164,7 +165,7 @@ class XSamModel(BaseModel):
                 )
                 self.vision_sampler = SamplerModel(sampler_config).to(self.segmentor.dtype)
 
-            if self.segmentor.decoder is not None and self.segmentor.open_cls:
+            if self.segmentor.open_cls and self.segmentor.decoder is not None:
                 self.bg_embeds = nn.Embedding(1, self.segmentor.dec_config.hidden_size).to(self.segmentor.dtype)
 
         if self.freeze_llm and self.llm is not None:
@@ -256,10 +257,7 @@ class XSamModel(BaseModel):
         return get_parameter_dtype(self)
 
     def _add_special_tokens(self, special_tokens):
-        assert all(
-            token in [DEFAULT_SEG_TOKEN, DEFAULT_PSTART_TOKEN, DEFAULT_PEND_TOKEN, DEFAULT_CLS_TOKEN]
-            for token in special_tokens
-        )
+        assert all(token in DEFAULT_SPECIAL_TOKENS for token in special_tokens)
         num_new_tokens = self.tokenizer.add_tokens(special_tokens, special_tokens=True)
         if num_new_tokens > 0:
             self.llm.resize_token_embeddings(len(self.tokenizer))
@@ -296,7 +294,7 @@ class XSamModel(BaseModel):
         local_cond_lens = None
         global_cond_lens = None
         bg_embeds = self.bg_embeds.weight
-        if task_name in ["genseg", "vgdseg", "gcgseg", "ovseg", "interseg"]:
+        if task_name in ["genseg", "vgdseg", "gcgseg", "ovseg", "intseg"]:
             max_cond_len = max([x.shape[0] for x in cond_embeds])
             embed_masks = []
             for i, cond_embed in enumerate(cond_embeds):

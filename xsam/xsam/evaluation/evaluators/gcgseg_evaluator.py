@@ -25,10 +25,10 @@ from ...dataset.utils.coco_cap_eval import COCOEvalCap
 from ...dataset.utils.mask import decode_mask, encode_mask
 from ..utils import comm
 from ..utils.miou import compute_iou_matrix, compute_miou
-from .base_seg_evaluator import BaseSegEvaluator
+from .base_evaluator import BaseEvaluator
 
 
-class GCGSegEvaluator(BaseSegEvaluator):
+class GCGSegEvaluator(BaseEvaluator):
 
     def __init__(
         self,

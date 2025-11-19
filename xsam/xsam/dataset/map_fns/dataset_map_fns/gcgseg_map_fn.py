@@ -60,7 +60,7 @@ def gcg_seg_conversations(caption, tokens_positive, question=None, output_ids_wi
     return rets
 
 
-def gcg_seg_map_fn(example, output_ids_with_output=True, cond_type="phrase"):
+def gcgseg_map_fn(example, output_ids_with_output=True, cond_type="phrase"):
     if "annotations" in example:
         tokens_positive = [ann["tokens_positive"] for ann in example["annotations"]]
         assert all(

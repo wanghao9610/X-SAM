@@ -10,7 +10,7 @@ from xsam.structures.boxes import pairwise_iou
 from ...utils.process import sem_seg_postprocess
 
 
-def inter_seg_postprocess_fn(
+def intseg_postprocess_fn(
     outputs,
     image_sizes,
     scaled_sizes,

@@ -194,7 +194,7 @@ TASK_DESCRIPTION = {
     "refseg": "Referring segmentation - Segment objects by referring expressions",
     "reaseg": "Reasoning segmentation - Segment objects by reasoning questions",
     "gcgseg": "GCG segmentation - Generate caption then segment objects in the caption",
-    "interseg": "Interactive segmentation - Segment objects by the interactive prompt",
+    "intseg": "Interactive segmentation - Segment objects by the interactive prompt",
     "vgdseg": "VGD segmentation - Segment objects by the visual grounded prompt",
 }
 
@@ -234,14 +234,10 @@ EXAMPLES = {
         "Can you provide a brief description of this image? Please respond with interleaved segmentation masks for the corresponding phrases.",
         "gcgseg",
     ],
-    "interseg": [
-        (
-            osp.join(this_dir, "./images/interseg.jpg")
-            if osp.exists(osp.join(this_dir, "./images/interseg.jpg"))
-            else None
-        ),
-        "You DON'T NEED to input any prompt for interseg. Draw the object you want to segment on the image (support single object for now).",
-        "interseg",
+    "intseg": [
+        (osp.join(this_dir, "./images/intseg.jpg") if osp.exists(osp.join(this_dir, "./images/intseg.jpg")) else None),
+        "You DON'T NEED to input any prompt for intseg. Draw the object you want to segment on the image (support single object for now).",
+        "intseg",
     ],
     "vgdseg": [
         (osp.join(this_dir, "./images/vgdseg.jpg") if osp.exists(osp.join(this_dir, "./images/vgdseg.jpg")) else None),
@@ -292,7 +288,7 @@ class GradioApp:
 
             # Validate inputs
             if not prompt or prompt.strip() == "":
-                if task_name not in ["gcgseg", "interseg", "vgdseg"]:  # gcgseg doesn't need prompt
+                if task_name not in ["gcgseg", "intseg", "vgdseg"]:  # gcgseg doesn't need prompt
                     return "❌ No prompt provided", "", "", None
 
             # Logging setup

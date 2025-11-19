@@ -130,26 +130,6 @@ class XSam_XTuner(BaseModel):
             segmentor_encoder = None
             extra_image_processor = None
 
-        # if segmentor_path is not None and "sam" in segmentor_path:
-        #     segmentor = SamModel.from_pretrained(segmentor_path, torch_dtype=torch_dtype, device_map="cpu")
-        #     segmentor_encoder = segmentor.vision_encoder
-        #     extra_image_processor = SamImageProcessor.from_pretrained(segmentor_path)
-        #     print_log(f"Load segmentor from {segmentor_path}", logger="current")
-        #     if segmentor_encoder_path is not None:
-        #         from xtuner.model.utils import guess_load_checkpoint
-
-        #         pretrained_state_dict = guess_load_checkpoint(segmentor_encoder_path)
-        #         pretrained_state_dict = {
-        #             k.replace("segmentor.encoder.", ""): v
-        #             for k, v in pretrained_state_dict.items()
-        #             if "segmentor.encoder" in k
-        #         }
-        #         segmentor_encoder.load_state_dict(pretrained_state_dict, strict=True)
-        #         print_log(f"Load segmentor_encoder from {segmentor_encoder_path}", logger="current")
-        # else:
-        #     segmentor_encoder = None
-        #     extra_image_processor = None
-
         # load adapter
         if "llm_adapter" in os.listdir(xsam_path):
             adapter_path = osp.join(xsam_path, "llm_adapter")

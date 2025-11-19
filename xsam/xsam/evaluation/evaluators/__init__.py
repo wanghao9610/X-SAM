@@ -1,17 +1,17 @@
-from .gcg_seg_evaluator import GCGSegEvaluator
-from .generic_seg_evaluator import GenericSegEvaluator
-from .inter_seg_evaluator import InterSegEvaluator
-from .ov_seg_evaluator import OVSegEvaluator
-from .reason_seg_evaluator import ReasonSegEvaluator
-from .refer_seg_evaluator import ReferSegEvaluator
-from .vgd_seg_evaluator import VGDSegEvaluator
+from .gcgseg_evaluator import GCGSegEvaluator
+from .genseg_evaluator import GenSegEvaluator
+from .intseg_evaluator import IntSegEvaluator
+from .ovseg_evaluator import OVSegEvaluator
+from .reaseg_evaluator import ReaSegEvaluator
+from .refseg_evaluator import RefSegEvaluator
+from .vgdseg_evaluator import VGDSegEvaluator
 
 __all__ = [
-    "GenericSegEvaluator",
-    "ReferSegEvaluator",
-    "ReasonSegEvaluator",
+    "GenSegEvaluator",
+    "RefSegEvaluator",
+    "ReaSegEvaluator",
     "GCGSegEvaluator",
     "VGDSegEvaluator",
-    "InterSegEvaluator",
+    "IntSegEvaluator",
     "OVSegEvaluator",
 ]

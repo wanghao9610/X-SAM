@@ -12,10 +12,10 @@ from ..structures import BoxMode
 from .utils.coco import COCO_INSTANCE_CATEGORIES
 from .utils.mask import decode_mask, encode_mask
 from .utils.vprompt import enhance_with_circles
-from .vgd_seg_dataset import VGDSegDataset
+from .vgdseg_dataset import VGDSegDataset
 
 
-class InterSegDataset(VGDSegDataset):
+class IntSegDataset(VGDSegDataset):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 

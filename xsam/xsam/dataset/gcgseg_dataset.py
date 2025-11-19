@@ -6,13 +6,10 @@ import numpy as np
 import torch
 from PIL import Image
 
-from ..utils.constants import DEFAULT_PEND_TOKEN, DEFAULT_PSTART_TOKEN, DEFAULT_SEG_TOKEN
 from .base_dataset import BaseDataset
 from .utils.catalog import MetadataCatalog
 from .utils.coco import COCO
 from .utils.mask import decode_mask
-
-SPECIAL_TOKENS = [DEFAULT_PEND_TOKEN, DEFAULT_PSTART_TOKEN, DEFAULT_SEG_TOKEN]
 
 
 class GCGSegDataset(BaseDataset):
@@ -263,7 +260,7 @@ class GCGSegDataset(BaseDataset):
 
         if self.data_name in ["psg_gcgseg", "grandf_gcgseg"]:
             rets = self._process_grandf_format_data(json_data)
-        elif self.data_name in ["refcocog_gcgseg"]:
+        elif self.data_name in ["gcgseg"]:
             rets = self._process_refcocog_format_data(json_data)
         elif self.data_name in ["flickr_gcgseg"]:
             rets = self._process_flickr_format_data(json_data)

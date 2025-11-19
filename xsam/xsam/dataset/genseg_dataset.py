@@ -11,7 +11,6 @@ from PIL import Image
 from pycocotools import mask as mask_utils
 
 from ..structures import BoxMode
-from ..utils.constants import DEFAULT_PEND_TOKEN, DEFAULT_PSTART_TOKEN, DEFAULT_SEG_TOKEN
 from ..utils.logging import print_log
 from ..utils.palette import get_palette
 from .base_dataset import BaseDataset
@@ -19,10 +18,8 @@ from .utils.catalog import MetadataCatalog
 from .utils.coco import COCO
 from .utils.mask import decode_mask
 
-SPECIAL_TOKENS = [DEFAULT_PEND_TOKEN, DEFAULT_PSTART_TOKEN, DEFAULT_SEG_TOKEN]
 
-
-class GenericSegDataset(BaseDataset):
+class GenSegDataset(BaseDataset):
     def __init__(
         self,
         *args,

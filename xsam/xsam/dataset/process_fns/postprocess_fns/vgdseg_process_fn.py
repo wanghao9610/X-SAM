@@ -10,7 +10,7 @@ from ...utils.mask import convert_segmentation_to_rle
 from ...utils.process import sem_seg_postprocess
 
 
-def vgd_seg_postprocess_fn(
+def vgdseg_postprocess_fn(
     outputs,
     image_sizes,
     scaled_sizes,

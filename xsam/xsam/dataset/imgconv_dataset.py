@@ -15,7 +15,7 @@ from .base_dataset import BaseDataset
 from .utils.load import load_jsonl
 
 
-class ImageConvDataset(BaseDataset):
+class ImgConvDataset(BaseDataset):
     def __init__(
         self,
         *args,

@@ -23,7 +23,7 @@
 <img src="results/reaseg.png" width="800">
 
 ### Interactive Segmentation
-<img src="results/interseg.png" width="800">
+<img src="results/intseg.png" width="800">
 
 ## Conversation Benchmarks
 ### Image Conversation

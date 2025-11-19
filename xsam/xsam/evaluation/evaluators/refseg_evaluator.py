@@ -13,10 +13,10 @@ from ...dataset.utils.catalog import MetadataCatalog
 from ...dataset.utils.mask import calculate_iou, decode_mask, encode_mask
 from ..utils import comm
 from ..utils.iou import IouStat
-from .base_seg_evaluator import BaseSegEvaluator
+from .base_evaluator import BaseEvaluator
 
 
-class ReferSegEvaluator(BaseSegEvaluator):
+class RefSegEvaluator(BaseEvaluator):
 
     def __init__(
         self,

@@ -416,7 +416,7 @@ class Visualizer:
             output_img = self.draw_gcg_seg(**kwargs)
         elif "ovseg" in data_name:
             output_img = self.draw_ov_seg(data_name, **kwargs)
-        elif "interseg" in data_name:
+        elif "intseg" in data_name:
             output_img, aux_output_img = self.draw_inter_seg(**kwargs)
         elif "vgdseg" in data_name:
             output_img, aux_output_img = self.draw_vgd_seg(**kwargs)
@@ -443,7 +443,7 @@ class Visualizer:
         elif "pan" in data_name:
             return self.draw_pan_seg(**kwargs)
         else:
-            raise ValueError(f"Unsupported task: {data_name}")
+            return self.draw_pan_seg(**kwargs)
 
     def draw_ov_seg(self, data_name, **kwargs):
         return self.draw_gen_seg(data_name, **kwargs)

@@ -14,16 +14,13 @@ from tqdm import tqdm
 
 from xsam.utils.logging import print_log
 
-from ..utils.constants import DEFAULT_PEND_TOKEN, DEFAULT_PSTART_TOKEN, DEFAULT_SEG_TOKEN
 from .base_dataset import BaseDataset
 from .utils.catalog import MetadataCatalog
 from .utils.coco import COCO
 from .utils.mask import decode_mask, encode_mask
 
-SPECIAL_TOKENS = [DEFAULT_PEND_TOKEN, DEFAULT_PSTART_TOKEN, DEFAULT_SEG_TOKEN]
 
-
-class ReasonSegDataset(BaseDataset):
+class ReaSegDataset(BaseDataset):
     def __init__(
         self,
         *args,

@@ -16,12 +16,12 @@ from ..utils.constants import (
     DEFAULT_PEND_TOKEN,
     DEFAULT_PSTART_TOKEN,
     DEFAULT_SEG_TOKEN,
+    DEFAULT_SPECIAL_TOKENS,
     DEFAULT_TASKS,
 )
 from .utils.catalog import MetadataCatalog
 from .utils.encode import encode_fn
 
-SPECIAL_TOKENS = [DEFAULT_PEND_TOKEN, DEFAULT_PSTART_TOKEN, DEFAULT_SEG_TOKEN, DEFAULT_CLS_TOKEN]
 TASK_MODALITY_LENGTH = {k: int(i * 512) for i, k in enumerate(DEFAULT_TASKS)}
 
 debug_mode = os.getenv("DEBUG_MODE", "false").lower() == "true"
@@ -120,8 +120,8 @@ class BaseDataset(Dataset):
 
         if special_tokens is not None:
             assert all(
-                token in SPECIAL_TOKENS for token in special_tokens
-            ), f"special_tokens must be a subset of {SPECIAL_TOKENS}"
+                token in DEFAULT_SPECIAL_TOKENS for token in special_tokens
+            ), f"special_tokens must be a subset of {DEFAULT_SPECIAL_TOKENS}"
             self.tokenizer.add_tokens(special_tokens, special_tokens=True)
 
             self.seg_token_idx = -1

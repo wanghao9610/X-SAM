@@ -23,6 +23,7 @@ from ...utils.constants import (
     DEFAULT_PEND_TOKEN,
     DEFAULT_PSTART_TOKEN,
     DEFAULT_SEG_TOKEN,
+    DEFAULT_SPECIAL_TOKENS,
     TOKEN2INDEX,
 )
 from ...utils.logging import print_log
@@ -164,10 +165,7 @@ class EvaluateChatHook(Hook):
         self.pstart_token_idx = -1
         self.pend_token_idx = -1
         if special_tokens is not None:
-            assert all(
-                token in [DEFAULT_SEG_TOKEN, DEFAULT_PSTART_TOKEN, DEFAULT_PEND_TOKEN, DEFAULT_CLS_TOKEN]
-                for token in special_tokens
-            )
+            assert all(token in DEFAULT_SPECIAL_TOKENS for token in special_tokens)
             self.tokenizer.add_tokens(special_tokens, special_tokens=True)
 
             if DEFAULT_SEG_TOKEN in special_tokens:

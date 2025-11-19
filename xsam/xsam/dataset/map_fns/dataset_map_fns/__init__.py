@@ -1,21 +1,20 @@
-from .gcg_seg_map_fn import gcg_seg_map_fn
-from .gen_seg_map_fn import generic_seg_map_fn
-from .image_conv_map_fn import image_conv_map_fn, llava_conv_image_only_map_fn
-from .inter_seg_map_fn import inter_seg_map_fn
-from .ov_seg_map_fn import ov_seg_map_fn
-from .rea_seg_map_fn import reason_seg_map_fn
-from .ref_seg_map_fn import refer_seg_map_fn
-from .vgd_seg_map_fn import vgd_seg_map_fn
+from .gcgseg_map_fn import gcgseg_map_fn
+from .genseg_map_fn import genseg_map_fn
+from .imgconv_map_fn import imgconv_map_fn
+from .intseg_map_fn import intseg_map_fn
+from .ovseg_map_fn import ovseg_map_fn
+from .reaseg_map_fn import reaseg_map_fn
+from .refseg_map_fn import refseg_map_fn
+from .vgdseg_map_fn import vgdseg_map_fn
 
 __all__ = [
-    "generic_seg_map_fn",
-    "refer_seg_map_fn",
-    "llava_conv_image_only_map_fn",
-    "image_conv_map_fn",
-    "image_conv_map_fn",
-    "gcg_seg_map_fn",
-    "vgd_seg_map_fn",
-    "reason_seg_map_fn",
-    "inter_seg_map_fn",
-    "ov_seg_map_fn",
+    "genseg_map_fn",
+    "refseg_map_fn",
+    "imgconv_map_fn",
+    "imgconv_map_fn",
+    "gcgseg_map_fn",
+    "vgdseg_map_fn",
+    "reaseg_map_fn",
+    "intseg_map_fn",
+    "ovseg_map_fn",
 ]

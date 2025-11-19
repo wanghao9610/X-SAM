@@ -8,9 +8,9 @@ from torch.optim import AdamW
 from transformers import AutoModelForCausalLM, AutoTokenizer, SiglipImageProcessor, SiglipVisionModel
 from xtuner.utils import PROMPT_TEMPLATE
 
-from xsam.dataset import ImageConvDataset
+from xsam.dataset import ImgConvDataset
 from xsam.dataset.collate_fns import xsam_collate_fn
-from xsam.dataset.map_fns import image_conv_map_fn, template_map_fn_factory
+from xsam.dataset.map_fns import imgconv_map_fn, template_map_fn_factory
 from xsam.dataset.processors import SamImageProcessor
 from xsam.engine.hooks import DatasetInfoHook, EvaluateChatHook, ModelInfoHook, PTCheckpointHook
 from xsam.engine.runner import TrainLoop
@@ -36,7 +36,7 @@ seg_encoder_name_or_path = init_dir + "sam-vit-large"
 s1_pretrained_pth = work_dir + "s1_seg_finetune/xsam_sam_large_m2f_e36_gpu16_seg_finetune/pytorch_model.bin"
 
 # Data
-data_root = data_dir + "img_conv_data/"
+data_root = data_dir + "imgconv_data/"
 data_path = data_root + "LLaVA-Pretrain/blip_laion_cc_sbu_558k.json"
 image_folder = data_root + "LLaVA-Pretrain/images"
 prompt_template = PROMPT_TEMPLATE.phi3_chat
@@ -63,7 +63,7 @@ logging_interval = 10
 # Evaluate the generation performance during the training
 evaluation_freq = 2000
 SYSTEM = ""
-evaluation_images = code_dir + "xsam/configs/xsam/images/llava_imgconv.jpg"
+evaluation_images = code_dir + "xsam/configs/xsam/images/imgconv.jpg"
 evaluation_inputs = ["Can you describe this image in detail? Please elaborate in your response."]
 
 #######################################################################
@@ -130,16 +130,16 @@ model = dict(
 #######################################################################
 #                      PART 3  Dataset & Dataloader                   #
 #######################################################################
-llava_imgconv_dataset = dict(
-    type=ImageConvDataset,
+imgconv_dataset = dict(
+    type=ImgConvDataset,
     data_path=data_path,
     tokenizer=tokenizer,
     image_folder=image_folder,
     task_name="imgconv",
-    data_name="llava_imgconv",
+    data_name="imgconv",
     image_processor=image_processor,
     extra_image_processor=extra_image_processor,
-    dataset_map_fn=image_conv_map_fn,
+    dataset_map_fn=imgconv_map_fn,
     template_map_fn=dict(type=template_map_fn_factory, template=prompt_template),
     max_length=max_length,
     pad_image_to_square=True,
@@ -150,7 +150,7 @@ train_dataloader = dict(
     batch_size=batch_size,
     num_workers=dataloader_num_workers,
     pin_memory=True,
-    dataset=llava_imgconv_dataset,
+    dataset=imgconv_dataset,
     sampler=dict(type=DefaultSampler, shuffle=True),
     collate_fn=dict(type=xsam_collate_fn),
 )

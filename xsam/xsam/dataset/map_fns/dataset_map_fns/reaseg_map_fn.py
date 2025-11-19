@@ -104,7 +104,7 @@ def reason_seg_conversations(labels, explain, is_sentence=True, output_ids_with_
     return rets
 
 
-def reason_seg_map_fn(example, output_ids_with_output=True, cond_type="phrase"):
+def reaseg_map_fn(example, output_ids_with_output=True, cond_type="phrase"):
     messages = reason_seg_conversations(
         example["sampled_sents"],
         example.get("explain", None),

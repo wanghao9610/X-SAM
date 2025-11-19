@@ -92,7 +92,7 @@ def generic_seg_conversations(categories, caption=None, output_ids_with_output=T
     return rets
 
 
-def generic_seg_map_fn(example, output_ids_with_output=True, cond_type="phrase"):
+def genseg_map_fn(example, output_ids_with_output=True, cond_type="phrase"):
     messages = generic_seg_conversations(
         example["sampled_cats"], example["caption"], output_ids_with_output, cond_type
     )

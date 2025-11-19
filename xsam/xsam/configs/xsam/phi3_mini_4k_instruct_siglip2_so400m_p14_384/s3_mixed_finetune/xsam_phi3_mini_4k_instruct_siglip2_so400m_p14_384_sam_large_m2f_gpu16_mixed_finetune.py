@@ -5,49 +5,54 @@ import torch
 from mmengine.hooks import CheckpointHook, DistSamplerSeedHook, IterTimerHook, LoggerHook, ParamSchedulerHook
 from mmengine.optim import AmpOptimWrapper, CosineAnnealingLR, LinearLR
 from torch.optim import AdamW
-from transformers import AutoModelForCausalLM, AutoTokenizer, SiglipImageProcessor, SiglipVisionModel
+from transformers import AutoModelForCausalLM, AutoTokenizer, SiglipProcessor, SiglipVisionModel
 from xtuner.utils import PROMPT_TEMPLATE
 
 from xsam.dataset import (
+    ConcatDataset,
     GCGSegDataset,
-    GenericSegDataset,
-    InterSegDataset,
+    GenSegDataset,
+    ImgConvDataset,
+    IntSegDataset,
     OVSegDataset,
-    ReasonSegDataset,
-    ReferSegDataset,
+    ReaSegDataset,
+    RefSegDataset,
     VGDSegDataset,
 )
+from xsam.dataset.collate_fns import xsam_collate_fn
 from xsam.dataset.map_fns import (
     dataset_map_fn_factory,
-    gcg_seg_map_fn,
-    generic_seg_map_fn,
-    inter_seg_map_fn,
-    ov_seg_map_fn,
-    reason_seg_map_fn,
-    refer_seg_map_fn,
+    gcgseg_map_fn,
+    genseg_map_fn,
+    imgconv_map_fn,
+    intseg_map_fn,
+    ovseg_map_fn,
+    reaseg_map_fn,
+    refseg_map_fn,
     template_map_fn_factory,
-    vgd_seg_map_fn,
+    vgdseg_map_fn,
 )
 from xsam.dataset.process_fns import (
-    gcg_seg_postprocess_fn,
-    generic_seg_postprocess_fn,
-    inter_seg_postprocess_fn,
-    ov_seg_postprocess_fn,
+    gcgseg_postprocess_fn,
+    genseg_postprocess_fn,
+    intseg_postprocess_fn,
+    ovseg_postprocess_fn,
     process_map_fn_factory,
-    reason_seg_postprocess_fn,
-    refer_seg_postprocess_fn,
-    vgd_seg_postprocess_fn,
+    reaseg_postprocess_fn,
+    refseg_postprocess_fn,
+    vgdseg_postprocess_fn,
 )
 from xsam.dataset.processors import SamImageProcessor
+from xsam.dataset.samplers import SourceGroupedSampler
 from xsam.engine.hooks import DatasetInfoHook, EvaluateChatHook, ModelInfoHook, PTCheckpointHook
 from xsam.engine.runner import TrainLoop
 from xsam.evaluation.evaluators import (
     GCGSegEvaluator,
-    GenericSegEvaluator,
-    InterSegEvaluator,
+    GenSegEvaluator,
+    IntSegEvaluator,
     OVSegEvaluator,
-    ReasonSegEvaluator,
-    ReferSegEvaluator,
+    ReaSegEvaluator,
+    RefSegEvaluator,
     VGDSegEvaluator,
 )
 from xsam.model import XSamModel
@@ -73,15 +78,15 @@ seg_decoder_name_or_path = init_dir + "mask2former-swin-large-coco-panoptic"
 
 # Specify the pretrained pth
 # Case1: Comment the following for training from scratch
-# s1_pretrained_pth = work_dir + "s1_seg_finetune/xsam_sam_large_m2f_e36_gpu16_seg_finetune/pytorch_model.bin"
-# s2_pretrained_pth = (
-#     work_dir
-#     + "s2_align_pretrain/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_e1_gpu16_align_pretrain/pytorch_model.bin"
-# )  # noqa: E501
+s1_pretrained_pth = work_dir + "s1_seg_finetune/xsam_sam_large_m2f_e36_gpu16_seg_finetune/pytorch_model.bin"
+s2_pretrained_pth = (
+    work_dir
+    + "s2_align_pretrain/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_e1_gpu16_align_pretrain/pytorch_model.bin"
+)  # noqa: E501
 
 # Case2: Uncomment the following for evaluating from our pretrained model
-s1_pretrained_pth = None
-s2_pretrained_pth = None
+# s1_pretrained_pth = None
+# s2_pretrained_pth = None
 
 # Prompt
 prompt_template = PROMPT_TEMPLATE.phi3_chat
@@ -110,20 +115,20 @@ logging_interval = 10
 evaluation_freq = 2000
 SYSTEM = ""
 evaluation_images = [
-    code_dir + "xsam/configs/xsam/images/llava_imgconv.jpg",
-    code_dir + "xsam/configs/xsam/images/panoptic_genseg.jpg",
-    code_dir + "xsam/configs/xsam/images/refcoco_refseg.jpg",
-    code_dir + "xsam/configs/xsam/images/lisa_reaseg.jpg",
-    code_dir + "xsam/configs/xsam/images/refcocog_gcgseg.jpg",
-    code_dir + "xsam/configs/xsam/images/coco_interseg.jpg",
-    code_dir + "xsam/configs/xsam/images/coco_interseg.jpg",
-    code_dir + "xsam/configs/xsam/images/coco_interseg.jpg",
-    code_dir + "xsam/configs/xsam/images/coco_interseg.jpg",
-    code_dir + "xsam/configs/xsam/images/coco_vgdseg.jpg",
-    code_dir + "xsam/configs/xsam/images/coco_vgdseg.jpg",
-    code_dir + "xsam/configs/xsam/images/coco_vgdseg.jpg",
-    code_dir + "xsam/configs/xsam/images/coco_vgdseg.jpg",
-    code_dir + "xsam/configs/xsam/images/coco_vgdseg.jpg",
+    code_dir + "xsam/configs/xsam/images/imgconv.jpg",
+    code_dir + "xsam/configs/xsam/images/genseg.jpg",
+    code_dir + "xsam/configs/xsam/images/refseg.jpg",
+    code_dir + "xsam/configs/xsam/images/reaseg.jpg",
+    code_dir + "xsam/configs/xsam/images/gcgseg.jpg",
+    code_dir + "xsam/configs/xsam/images/intseg.jpg",
+    code_dir + "xsam/configs/xsam/images/intseg.jpg",
+    code_dir + "xsam/configs/xsam/images/intseg.jpg",
+    code_dir + "xsam/configs/xsam/images/intseg.jpg",
+    code_dir + "xsam/configs/xsam/images/vgdseg.jpg",
+    code_dir + "xsam/configs/xsam/images/vgdseg.jpg",
+    code_dir + "xsam/configs/xsam/images/vgdseg.jpg",
+    code_dir + "xsam/configs/xsam/images/vgdseg.jpg",
+    code_dir + "xsam/configs/xsam/images/vgdseg.jpg",
 ]
 evaluation_inputs = [
     "Can you describe this image in detail? Please elaborate in your response.",
@@ -147,25 +152,25 @@ vprompt_masks = [
     (None,),
     (None,),
     (None,),
-    (code_dir + "xsam/configs/xsam/images/vprompt_masks/coco_interseg_point0.png",),
-    (code_dir + "xsam/configs/xsam/images/vprompt_masks/coco_interseg_scribble1.png",),
-    (code_dir + "xsam/configs/xsam/images/vprompt_masks/coco_interseg_box0.png",),
-    (code_dir + "xsam/configs/xsam/images/vprompt_masks/coco_interseg_mask1.png",),
-    (code_dir + "xsam/configs/xsam/images/vprompt_masks/coco_vgdseg_point0.png",),
-    (code_dir + "xsam/configs/xsam/images/vprompt_masks/coco_vgdseg_scribble1.png",),
-    (code_dir + "xsam/configs/xsam/images/vprompt_masks/coco_vgdseg_box0.png",),
+    (code_dir + "xsam/configs/xsam/images/vprompt_masks/intseg_point0.png",),
+    (code_dir + "xsam/configs/xsam/images/vprompt_masks/intseg_scribble1.png",),
+    (code_dir + "xsam/configs/xsam/images/vprompt_masks/intseg_box0.png",),
+    (code_dir + "xsam/configs/xsam/images/vprompt_masks/intseg_mask1.png",),
+    (code_dir + "xsam/configs/xsam/images/vprompt_masks/vgdseg_point0.png",),
+    (code_dir + "xsam/configs/xsam/images/vprompt_masks/vgdseg_scribble1.png",),
+    (code_dir + "xsam/configs/xsam/images/vprompt_masks/vgdseg_box0.png",),
     (
-        code_dir + "xsam/configs/xsam/images/vprompt_masks/coco_vgdseg_point0.png",
-        code_dir + "xsam/configs/xsam/images/vprompt_masks/coco_vgdseg_scribble1.png",
+        code_dir + "xsam/configs/xsam/images/vprompt_masks/vgdseg_point0.png",
+        code_dir + "xsam/configs/xsam/images/vprompt_masks/vgdseg_scribble1.png",
     ),
     (
-        code_dir + "xsam/configs/xsam/images/vprompt_masks/coco_vgdseg_box0.png",
-        code_dir + "xsam/configs/xsam/images/vprompt_masks/coco_vgdseg_point1.png",
+        code_dir + "xsam/configs/xsam/images/vprompt_masks/vgdseg_box0.png",
+        code_dir + "xsam/configs/xsam/images/vprompt_masks/vgdseg_point1.png",
     ),
 ]
 
 #######################################################################
-#            PART 2  Model & Tokenizer & Image Processor              #
+#            PART 2  Model & Tokenizer &  Processor              #
 #######################################################################
 # TODO: add special tokens via import from xsam.utils
 special_tokens = ["<SEG>", "<p>", "</p>"]
@@ -179,7 +184,7 @@ tokenizer = dict(
 )
 
 image_processor = dict(
-    type=SiglipImageProcessor.from_pretrained,
+    type=SiglipProcessor.from_pretrained,
     pretrained_model_name_or_path=visual_encoder_name_or_path,
     trust_remote_code=True,
 )
@@ -208,7 +213,7 @@ model = dict(
     s1_pretrained_pth=s1_pretrained_pth,
     s2_pretrained_pth=s2_pretrained_pth,
     tokenizer=tokenizer,
-    postprocess_fn=generic_seg_postprocess_fn,
+    postprocess_fn=genseg_postprocess_fn,
     llm=dict(
         type=AutoModelForCausalLM.from_pretrained,
         pretrained_model_name_or_path=llm_name_or_path,
@@ -250,19 +255,332 @@ model = dict(
 #######################################################################
 #                      PART 3  Dataset & Dataloader                   #
 #######################################################################
-genseg_data_root = data_dir + "gen_seg_data/"
-ovseg_data_root = data_dir + "ov_seg_data/"
-refseg_data_root = data_dir + "ref_seg_data/"
-reaseg_data_root = data_dir + "rea_seg_data/"
-gcgseg_data_root = data_dir + "gcg_seg_data/"
-interseg_data_root = data_dir + "inter_seg_data/"
-vgdseg_data_root = data_dir + "vgd_seg_data/"
+imgconv_data_root = data_dir + "imgconv_data/"
+genseg_data_root = data_dir + "genseg_data/"
+ovseg_data_root = data_dir + "ovseg_data/"
+refseg_data_root = data_dir + "refseg_data/"
+reaseg_data_root = data_dir + "reaseg_data/"
+gcgseg_data_root = data_dir + "gcgseg_data/"
+intseg_data_root = data_dir + "intseg_data/"
+vgdseg_data_root = data_dir + "vgdseg_data/"
+
+llava_imgconv_dataset = dict(
+    type=ImgConvDataset,
+    data_path=imgconv_data_root + "llava/LLaVA-Instruct-150K/llava_v1_5_mix665k.json",
+    tokenizer=tokenizer,
+    cond_type=cond_type,
+    special_tokens=special_tokens,
+    image_folder=imgconv_data_root + "llava/llava_images",
+    image_processor=image_processor,
+    extra_image_processor=extra_image_processor,
+    task_name="imgconv",
+    data_name="llava_imgconv",
+    dataset_map_fn=dict(
+        type=dataset_map_fn_factory,
+        fn=imgconv_map_fn,
+    ),
+    template_map_fn=dict(type=template_map_fn_factory, template=prompt_template),
+    max_length=max_length,
+    pixel_values_ndim=2,
+    is_multimodal=True,
+    exclude_pure_text=True,
+    pad_image_to_square=False,
+    preprocess_text_data=False,
+)
+
+coco_genseg_dataset = dict(
+    type=GenSegDataset,
+    data_path=genseg_data_root + "coco/annotations/panoptic_train2017.json",
+    image_folder=genseg_data_root + "coco/train2017",
+    panseg_map_folder=genseg_data_root + "coco/panoptic_train2017",
+    tokenizer=tokenizer,
+    task_name="genseg",
+    data_name="coco_panoptic_genseg",
+    cond_type=cond_type,
+    special_tokens=special_tokens,
+    extra_image_processor=extra_image_processor,
+    image_processor=image_processor,
+    dataset_map_fn=dict(
+        type=dataset_map_fn_factory,
+        fn=genseg_map_fn,
+        cond_type=cond_type,
+    ),
+    template_map_fn=dict(type=template_map_fn_factory, template=prompt_template),
+    max_length=max_length,
+    use_variant_cat=True,
+    pad_image_to_square=False,
+)
+
+refcoco_refseg_dataset = dict(
+    type=RefSegDataset,
+    data_root=refseg_data_root,
+    image_folder=refseg_data_root + "images/train2014",
+    dataset="refcoco",
+    data_split="train",
+    tokenizer=tokenizer,
+    task_name="refseg",
+    data_name="refcoco_refseg",
+    cond_type=cond_type,
+    special_tokens=special_tokens,
+    extra_image_processor=extra_image_processor,
+    image_processor=image_processor,
+    postprocess_fn=refseg_postprocess_fn,
+    dataset_map_fn=dict(
+        type=dataset_map_fn_factory,
+        fn=refseg_map_fn,
+        cond_type=cond_type,
+    ),
+    template_map_fn=dict(type=template_map_fn_factory, template=prompt_template),
+    use_variant_cat=True,
+    use_random_cat=True,
+    max_length=max_length,
+    pad_image_to_square=False,
+    num_sample=100,
+    ignore_label=ignore_label,
+)
+
+refcocop_refseg_dataset = dict(
+    type=RefSegDataset,
+    data_root=refseg_data_root,
+    image_folder=refseg_data_root + "images/train2014",
+    dataset="refcoco+",
+    data_split="train",
+    tokenizer=tokenizer,
+    task_name="refseg",
+    data_name="refcoco+_refseg",
+    cond_type=cond_type,
+    special_tokens=special_tokens,
+    extra_image_processor=extra_image_processor,
+    image_processor=image_processor,
+    postprocess_fn=refseg_postprocess_fn,
+    dataset_map_fn=dict(
+        type=dataset_map_fn_factory,
+        fn=refseg_map_fn,
+        cond_type=cond_type,
+    ),
+    template_map_fn=dict(type=template_map_fn_factory, template=prompt_template),
+    max_length=max_length,
+    pad_image_to_square=False,
+    num_sample=100,
+    ignore_label=ignore_label,
+)
+
+refcocog_refseg_dataset = dict(
+    type=RefSegDataset,
+    data_root=refseg_data_root,
+    image_folder=refseg_data_root + "images/train2014",
+    dataset="refcocog",
+    data_split="train",
+    tokenizer=tokenizer,
+    task_name="refseg",
+    data_name="refcocog_refseg",
+    cond_type=cond_type,
+    special_tokens=special_tokens,
+    extra_image_processor=extra_image_processor,
+    image_processor=image_processor,
+    postprocess_fn=refseg_postprocess_fn,
+    dataset_map_fn=dict(
+        type=dataset_map_fn_factory,
+        fn=refseg_map_fn,
+        cond_type=cond_type,
+    ),
+    template_map_fn=dict(type=template_map_fn_factory, template=prompt_template),
+    max_length=max_length,
+    pad_image_to_square=False,
+    num_sample=100,
+    ignore_label=ignore_label,
+)
+
+lisa_reaseg_dataset = dict(
+    type=ReaSegDataset,
+    data_root=reaseg_data_root + "lisa",
+    image_folder=reaseg_data_root + "lisa/train",
+    explain_path=reaseg_data_root + "lisa/explanatory/train.json",
+    data_mode="train",
+    tokenizer=tokenizer,
+    task_name="reaseg",
+    data_name="lisa_reaseg",
+    cond_type=cond_type,
+    special_tokens=special_tokens,
+    extra_image_processor=extra_image_processor,
+    image_processor=image_processor,
+    postprocess_fn=reaseg_postprocess_fn,
+    dataset_map_fn=dict(
+        type=dataset_map_fn_factory,
+        fn=reaseg_map_fn,
+        cond_type=cond_type,
+    ),
+    template_map_fn=dict(type=template_map_fn_factory, template=prompt_template),
+    use_variant_cat=True,
+    use_random_cat=True,
+    max_length=max_length,
+    pad_image_to_square=False,
+    num_sample=100,
+    ignore_label=ignore_label,
+)
+
+grandf_gcgseg_dataset = dict(
+    type=GCGSegDataset,
+    data_path=gcgseg_data_root + "grand_f/annotations/train/GranDf_HA_GCG_train.json",
+    data_root=gcgseg_data_root,
+    image_folder=gcgseg_data_root + "grand_f/images/GranDf_HA_images/train",
+    data_mode="train",
+    tokenizer=tokenizer,
+    task_name="gcgseg",
+    data_name="grandf_gcgseg",
+    cond_type=cond_type,
+    special_tokens=special_tokens,
+    extra_image_processor=extra_image_processor,
+    image_processor=image_processor,
+    dataset_map_fn=dict(
+        type=dataset_map_fn_factory,
+        fn=gcgseg_map_fn,
+        cond_type=cond_type,
+    ),
+    template_map_fn=dict(type=template_map_fn_factory, template=prompt_template),
+    max_length=max_length,
+    pad_image_to_square=False,
+    num_sample=100,
+    ignore_label=ignore_label,
+)
+
+refcocog_gcgseg_dataset = dict(
+    type=GCGSegDataset,
+    data_path=gcgseg_data_root + "grand_f/annotations/train/RefCOCOg_GCG_train.json",
+    data_root=gcgseg_data_root,
+    image_folder=gcgseg_data_root + "grand_f/images/coco2014/train2014",
+    data_mode="train",
+    tokenizer=tokenizer,
+    task_name="gcgseg",
+    data_name="refcocog_gcgseg",
+    cond_type=cond_type,
+    special_tokens=special_tokens,
+    extra_image_processor=extra_image_processor,
+    image_processor=image_processor,
+    dataset_map_fn=dict(
+        type=dataset_map_fn_factory,
+        fn=gcgseg_map_fn,
+        cond_type=cond_type,
+    ),
+    template_map_fn=dict(type=template_map_fn_factory, template=prompt_template),
+    max_length=max_length,
+    pad_image_to_square=False,
+    num_sample=100,
+    ignore_label=ignore_label,
+)
+
+psg_gcgseg_dataset = dict(
+    type=GCGSegDataset,
+    data_path=gcgseg_data_root + "grand_f/annotations/train/OpenPsgGCG_train.json",
+    data_root=gcgseg_data_root,
+    image_folder=gcgseg_data_root + "grand_f/images/coco2017",
+    data_mode="train",
+    tokenizer=tokenizer,
+    task_name="gcgseg",
+    data_name="psg_gcgseg",
+    cond_type=cond_type,
+    special_tokens=special_tokens,
+    extra_image_processor=extra_image_processor,
+    image_processor=image_processor,
+    dataset_map_fn=dict(
+        type=dataset_map_fn_factory,
+        fn=gcgseg_map_fn,
+        cond_type=cond_type,
+    ),
+    template_map_fn=dict(type=template_map_fn_factory, template=prompt_template),
+    max_length=max_length,
+    pad_image_to_square=False,
+    num_sample=100,
+    ignore_label=ignore_label,
+)
+
+flickr_gcgseg_dataset = dict(
+    type=GCGSegDataset,
+    data_path=gcgseg_data_root + "grand_f/annotations/train/flickr_mergedGT_GCG_train.json",
+    data_root=gcgseg_data_root,
+    image_folder=gcgseg_data_root + "grand_f/images/flickr30k/images/train",
+    data_mode="train",
+    tokenizer=tokenizer,
+    task_name="gcgseg",
+    data_name="flickr_gcgseg",
+    cond_type=cond_type,
+    special_tokens=special_tokens,
+    extra_image_processor=extra_image_processor,
+    image_processor=image_processor,
+    dataset_map_fn=dict(
+        type=dataset_map_fn_factory,
+        fn=gcgseg_map_fn,
+        cond_type=cond_type,
+    ),
+    template_map_fn=dict(type=template_map_fn_factory, template=prompt_template),
+    max_length=max_length,
+    pad_image_to_square=False,
+    num_sample=100,
+    ignore_label=ignore_label,
+)
+
+coco_vgdseg_dataset = dict(
+    type=VGDSegDataset,
+    source_data_path=vgdseg_data_root + "coco_vgd/coco/annotations/instances_train2017.json",
+    data_path=vgdseg_data_root + "coco_vgd/annotations/coco_vgdseg_train.json",
+    image_folder=vgdseg_data_root + "coco_vgd/coco/train2017",
+    tokenizer=tokenizer,
+    data_mode="train",
+    task_name="vgdseg",
+    data_name="coco_vgdseg",
+    cond_type=cond_type,
+    special_tokens=special_tokens,
+    extra_image_processor=extra_image_processor,
+    image_processor=image_processor,
+    dataset_map_fn=dict(
+        type=dataset_map_fn_factory,
+        fn=vgdseg_map_fn,
+        cond_type=cond_type,
+    ),
+    template_map_fn=dict(type=template_map_fn_factory, template=prompt_template),
+    use_negative_sample=True,
+    num_sample=5,
+    max_length=max_length,
+    pad_image_to_square=False,
+)
+
+train_datasets = dict(
+    type=ConcatDataset,
+    oversample_ratio=0.1,
+    datasets=[
+        llava_imgconv_dataset,
+        coco_genseg_dataset,
+        refcoco_refseg_dataset,
+        refcocop_refseg_dataset,
+        refcocog_refseg_dataset,
+        lisa_reaseg_dataset,
+        grandf_gcgseg_dataset,
+        refcocog_gcgseg_dataset,
+        psg_gcgseg_dataset,
+        flickr_gcgseg_dataset,
+        coco_vgdseg_dataset,
+    ],
+)
+
+train_dataloader = dict(
+    batch_size=batch_size,
+    num_workers=dataloader_num_workers,
+    pin_memory=True,
+    dataset=train_datasets,
+    persistent_workers=True,
+    sampler=dict(
+        type=SourceGroupedSampler,
+        length_property="source_length",
+        per_device_batch_size=batch_size * accumulative_counts,
+    ),
+    collate_fn=dict(type=xsam_collate_fn),
+)
 
 # False for predict mode, True for tensor mode
 output_ids_with_output = True
 val_datasets = [
     dict(
-        type=GenericSegDataset,
+        type=GenSegDataset,
         data_path=genseg_data_root + "coco2017/annotations/panoptic_val2017.json",
         image_folder=genseg_data_root + "coco2017/val2017",
         panseg_map_folder=genseg_data_root + "coco2017/panoptic_val2017",
@@ -270,7 +588,7 @@ val_datasets = [
         data_mode="eval",
         tokenizer=tokenizer,
         task_name="genseg",
-        data_name="panoptic_genseg",
+        data_name="coco_panoptic_genseg",
         cond_type=cond_type,
         special_tokens=special_tokens,
         extra_image_processor=extra_image_processor,
@@ -278,13 +596,13 @@ val_datasets = [
         output_ids_with_output=output_ids_with_output,
         postprocess_fn=dict(
             type=process_map_fn_factory,
-            fn=generic_seg_postprocess_fn,
-            task_name="panoptic_genseg",
+            fn=genseg_postprocess_fn,
+            task_name="genseg",
             threshold=0.0,
         ),
         dataset_map_fn=dict(
             type=dataset_map_fn_factory,
-            fn=generic_seg_map_fn,
+            fn=genseg_map_fn,
             cond_type=cond_type,
         ),
         template_map_fn=dict(
@@ -296,7 +614,7 @@ val_datasets = [
         pad_image_to_square=True,
     ),
     dict(
-        type=GenericSegDataset,
+        type=GenSegDataset,
         data_path=genseg_data_root + "coco2017/annotations/panoptic_val2017.json",
         image_folder=genseg_data_root + "coco2017/val2017",
         panseg_map_folder=genseg_data_root + "coco2017/panoptic_val2017",
@@ -304,7 +622,7 @@ val_datasets = [
         data_mode="eval",
         tokenizer=tokenizer,
         task_name="genseg",
-        data_name="panoptic_semantic_genseg",  # semantic genseg shared with panoptic annotation
+        data_name="coco_panoptic_semantic_genseg",  # semantic genseg shared with panoptic annotation
         output_ids_with_output=output_ids_with_output,
         cond_type=cond_type,
         special_tokens=special_tokens,
@@ -312,12 +630,12 @@ val_datasets = [
         extra_image_processor=extra_image_processor,
         dataset_map_fn=dict(
             type=dataset_map_fn_factory,
-            fn=generic_seg_map_fn,
+            fn=genseg_map_fn,
             cond_type=cond_type,
         ),
         postprocess_fn=dict(
             type=process_map_fn_factory,
-            fn=generic_seg_postprocess_fn,
+            fn=genseg_postprocess_fn,
             task_name="semantic_genseg",
         ),
         template_map_fn=dict(
@@ -329,11 +647,11 @@ val_datasets = [
         pad_image_to_square=True,
     ),
     dict(
-        type=GenericSegDataset,
+        type=GenSegDataset,
         data_path=genseg_data_root + "coco2017/annotations/instances_val2017.json",
         image_folder=genseg_data_root + "coco2017/val2017",
         task_name="genseg",
-        data_name="instance_genseg",
+        data_name="coco_instance_genseg",
         data_mode="eval",
         tokenizer=tokenizer,
         output_ids_with_output=output_ids_with_output,
@@ -343,13 +661,13 @@ val_datasets = [
         extra_image_processor=extra_image_processor,
         postprocess_fn=dict(
             type=process_map_fn_factory,
-            fn=generic_seg_postprocess_fn,
+            fn=genseg_postprocess_fn,
             task_name="instance_genseg",
             threshold=0.0,
         ),
         dataset_map_fn=dict(
             type=dataset_map_fn_factory,
-            fn=generic_seg_map_fn,
+            fn=genseg_map_fn,
             cond_type=cond_type,
         ),
         template_map_fn=dict(
@@ -377,11 +695,11 @@ val_datasets = [
         extra_image_processor=extra_image_processor,
         dataset_map_fn=dict(
             type=dataset_map_fn_factory,
-            fn=ov_seg_map_fn,
+            fn=ovseg_map_fn,
             cond_type=cond_type,
         ),
         postprocess_fn=dict(
-            type=process_map_fn_factory, fn=ov_seg_postprocess_fn, threshold=0.0, task_name="panoptic_ovseg"
+            type=process_map_fn_factory, fn=ovseg_postprocess_fn, threshold=0.0, task_name="panoptic_ovseg"
         ),
         template_map_fn=dict(
             type=template_map_fn_factory, template=prompt_template, output_suffix=output_ids_with_output
@@ -406,10 +724,10 @@ val_datasets = [
         extra_image_processor=extra_image_processor,
         dataset_map_fn=dict(
             type=dataset_map_fn_factory,
-            fn=ov_seg_map_fn,
+            fn=ovseg_map_fn,
             cond_type=cond_type,
         ),
-        postprocess_fn=dict(type=process_map_fn_factory, fn=ov_seg_postprocess_fn, task_name="semantic_ovseg"),
+        postprocess_fn=dict(type=process_map_fn_factory, fn=ovseg_postprocess_fn, task_name="semantic_ovseg"),
         template_map_fn=dict(
             type=template_map_fn_factory, template=prompt_template, output_suffix=output_ids_with_output
         ),
@@ -431,11 +749,11 @@ val_datasets = [
         extra_image_processor=extra_image_processor,
         dataset_map_fn=dict(
             type=dataset_map_fn_factory,
-            fn=ov_seg_map_fn,
+            fn=ovseg_map_fn,
             cond_type=cond_type,
         ),
         postprocess_fn=dict(
-            type=process_map_fn_factory, fn=ov_seg_postprocess_fn, task_name="instance_ovseg", threshold=0.0
+            type=process_map_fn_factory, fn=ovseg_postprocess_fn, task_name="instance_ovseg", threshold=0.0
         ),
         template_map_fn=dict(
             type=template_map_fn_factory, template=prompt_template, output_suffix=output_ids_with_output
@@ -461,10 +779,10 @@ val_datasets = [
         extra_image_processor=extra_image_processor,
         dataset_map_fn=dict(
             type=dataset_map_fn_factory,
-            fn=ov_seg_map_fn,
+            fn=ovseg_map_fn,
             cond_type=cond_type,
         ),
-        postprocess_fn=dict(type=process_map_fn_factory, fn=ov_seg_postprocess_fn, task_name="semantic_ovseg"),
+        postprocess_fn=dict(type=process_map_fn_factory, fn=ovseg_postprocess_fn, task_name="semantic_ovseg"),
         template_map_fn=dict(
             type=template_map_fn_factory, template=prompt_template, output_suffix=output_ids_with_output
         ),
@@ -472,7 +790,7 @@ val_datasets = [
         pad_image_to_square=True,
     ),
     dict(
-        type=ReferSegDataset,
+        type=RefSegDataset,
         data_root=refseg_data_root,
         image_folder=refseg_data_root + "images/train2014",
         dataset="refcoco",
@@ -486,10 +804,10 @@ val_datasets = [
         extra_image_processor=extra_image_processor,
         output_ids_with_output=output_ids_with_output,
         image_processor=image_processor,
-        postprocess_fn=refer_seg_postprocess_fn,
+        postprocess_fn=refseg_postprocess_fn,
         dataset_map_fn=dict(
             type=dataset_map_fn_factory,
-            fn=refer_seg_map_fn,
+            fn=refseg_map_fn,
             cond_type=cond_type,
         ),
         template_map_fn=dict(
@@ -500,7 +818,7 @@ val_datasets = [
         ignore_label=ignore_label,
     ),
     dict(
-        type=ReferSegDataset,
+        type=RefSegDataset,
         data_root=refseg_data_root,
         image_folder=refseg_data_root + "images/train2014",
         dataset="refcoco",
@@ -514,10 +832,10 @@ val_datasets = [
         extra_image_processor=extra_image_processor,
         output_ids_with_output=output_ids_with_output,
         image_processor=image_processor,
-        postprocess_fn=refer_seg_postprocess_fn,
+        postprocess_fn=refseg_postprocess_fn,
         dataset_map_fn=dict(
             type=dataset_map_fn_factory,
-            fn=refer_seg_map_fn,
+            fn=refseg_map_fn,
             cond_type=cond_type,
         ),
         template_map_fn=dict(
@@ -528,7 +846,7 @@ val_datasets = [
         ignore_label=ignore_label,
     ),
     dict(
-        type=ReferSegDataset,
+        type=RefSegDataset,
         data_root=refseg_data_root,
         image_folder=refseg_data_root + "images/train2014",
         dataset="refcoco",
@@ -542,10 +860,10 @@ val_datasets = [
         extra_image_processor=extra_image_processor,
         output_ids_with_output=output_ids_with_output,
         image_processor=image_processor,
-        postprocess_fn=refer_seg_postprocess_fn,
+        postprocess_fn=refseg_postprocess_fn,
         dataset_map_fn=dict(
             type=dataset_map_fn_factory,
-            fn=refer_seg_map_fn,
+            fn=refseg_map_fn,
             cond_type=cond_type,
         ),
         template_map_fn=dict(
@@ -556,7 +874,7 @@ val_datasets = [
         ignore_label=ignore_label,
     ),
     dict(
-        type=ReferSegDataset,
+        type=RefSegDataset,
         data_root=refseg_data_root,
         image_folder=refseg_data_root + "images/train2014",
         dataset="refcoco+",
@@ -569,10 +887,10 @@ val_datasets = [
         special_tokens=special_tokens,
         extra_image_processor=extra_image_processor,
         image_processor=image_processor,
-        postprocess_fn=refer_seg_postprocess_fn,
+        postprocess_fn=refseg_postprocess_fn,
         dataset_map_fn=dict(
             type=dataset_map_fn_factory,
-            fn=refer_seg_map_fn,
+            fn=refseg_map_fn,
             cond_type=cond_type,
         ),
         template_map_fn=dict(type=template_map_fn_factory, template=prompt_template),
@@ -582,7 +900,7 @@ val_datasets = [
         ignore_label=ignore_label,
     ),
     dict(
-        type=ReferSegDataset,
+        type=RefSegDataset,
         data_root=refseg_data_root,
         image_folder=refseg_data_root + "images/train2014",
         dataset="refcoco+",
@@ -595,10 +913,10 @@ val_datasets = [
         special_tokens=special_tokens,
         extra_image_processor=extra_image_processor,
         image_processor=image_processor,
-        postprocess_fn=refer_seg_postprocess_fn,
+        postprocess_fn=refseg_postprocess_fn,
         dataset_map_fn=dict(
             type=dataset_map_fn_factory,
-            fn=refer_seg_map_fn,
+            fn=refseg_map_fn,
             cond_type=cond_type,
         ),
         template_map_fn=dict(type=template_map_fn_factory, template=prompt_template),
@@ -608,7 +926,7 @@ val_datasets = [
         ignore_label=ignore_label,
     ),
     dict(
-        type=ReferSegDataset,
+        type=RefSegDataset,
         data_root=refseg_data_root,
         image_folder=refseg_data_root + "images/train2014",
         dataset="refcoco+",
@@ -621,10 +939,10 @@ val_datasets = [
         special_tokens=special_tokens,
         extra_image_processor=extra_image_processor,
         image_processor=image_processor,
-        postprocess_fn=refer_seg_postprocess_fn,
+        postprocess_fn=refseg_postprocess_fn,
         dataset_map_fn=dict(
             type=dataset_map_fn_factory,
-            fn=refer_seg_map_fn,
+            fn=refseg_map_fn,
             cond_type=cond_type,
         ),
         template_map_fn=dict(type=template_map_fn_factory, template=prompt_template),
@@ -634,7 +952,7 @@ val_datasets = [
         ignore_label=ignore_label,
     ),
     dict(
-        type=ReferSegDataset,
+        type=RefSegDataset,
         data_root=refseg_data_root,
         image_folder=refseg_data_root + "images/train2014",
         dataset="refcocog",
@@ -647,10 +965,10 @@ val_datasets = [
         special_tokens=special_tokens,
         extra_image_processor=extra_image_processor,
         image_processor=image_processor,
-        postprocess_fn=refer_seg_postprocess_fn,
+        postprocess_fn=refseg_postprocess_fn,
         dataset_map_fn=dict(
             type=dataset_map_fn_factory,
-            fn=refer_seg_map_fn,
+            fn=refseg_map_fn,
             cond_type=cond_type,
         ),
         template_map_fn=dict(type=template_map_fn_factory, template=prompt_template),
@@ -660,7 +978,7 @@ val_datasets = [
         ignore_label=ignore_label,
     ),
     dict(
-        type=ReferSegDataset,
+        type=RefSegDataset,
         data_root=refseg_data_root,
         image_folder=refseg_data_root + "images/train2014",
         dataset="refcocog",
@@ -673,10 +991,10 @@ val_datasets = [
         special_tokens=special_tokens,
         extra_image_processor=extra_image_processor,
         image_processor=image_processor,
-        postprocess_fn=refer_seg_postprocess_fn,
+        postprocess_fn=refseg_postprocess_fn,
         dataset_map_fn=dict(
             type=dataset_map_fn_factory,
-            fn=refer_seg_map_fn,
+            fn=refseg_map_fn,
             cond_type=cond_type,
         ),
         template_map_fn=dict(type=template_map_fn_factory, template=prompt_template),
@@ -686,7 +1004,7 @@ val_datasets = [
         ignore_label=ignore_label,
     ),
     dict(
-        type=ReasonSegDataset,
+        type=ReaSegDataset,
         data_root=reaseg_data_root,
         image_folder=reaseg_data_root + "val",
         data_split="val",
@@ -699,10 +1017,10 @@ val_datasets = [
         extra_image_processor=extra_image_processor,
         output_ids_with_output=output_ids_with_output,
         image_processor=image_processor,
-        postprocess_fn=reason_seg_postprocess_fn,
+        postprocess_fn=reaseg_postprocess_fn,
         dataset_map_fn=dict(
             type=dataset_map_fn_factory,
-            fn=reason_seg_map_fn,
+            fn=reaseg_map_fn,
             cond_type=cond_type,
         ),
         template_map_fn=dict(
@@ -716,7 +1034,7 @@ val_datasets = [
         ignore_label=ignore_label,
     ),
     dict(
-        type=ReasonSegDataset,
+        type=ReaSegDataset,
         data_root=reaseg_data_root,
         image_folder=reaseg_data_root + "test",
         data_split="test",
@@ -730,10 +1048,10 @@ val_datasets = [
         extra_image_processor=extra_image_processor,
         output_ids_with_output=output_ids_with_output,
         image_processor=image_processor,
-        postprocess_fn=reason_seg_postprocess_fn,
+        postprocess_fn=reaseg_postprocess_fn,
         dataset_map_fn=dict(
             type=dataset_map_fn_factory,
-            fn=reason_seg_map_fn,
+            fn=reaseg_map_fn,
             cond_type=cond_type,
         ),
         template_map_fn=dict(
@@ -747,7 +1065,7 @@ val_datasets = [
         ignore_label=ignore_label,
     ),
     dict(
-        type=ReasonSegDataset,
+        type=ReaSegDataset,
         data_root=reaseg_data_root,
         image_folder=reaseg_data_root + "test",
         data_split="test",
@@ -761,10 +1079,10 @@ val_datasets = [
         extra_image_processor=extra_image_processor,
         output_ids_with_output=output_ids_with_output,
         image_processor=image_processor,
-        postprocess_fn=reason_seg_postprocess_fn,
+        postprocess_fn=reaseg_postprocess_fn,
         dataset_map_fn=dict(
             type=dataset_map_fn_factory,
-            fn=reason_seg_map_fn,
+            fn=reaseg_map_fn,
             cond_type=cond_type,
         ),
         template_map_fn=dict(
@@ -778,7 +1096,7 @@ val_datasets = [
         ignore_label=ignore_label,
     ),
     dict(
-        type=ReasonSegDataset,
+        type=ReaSegDataset,
         data_root=reaseg_data_root,
         image_folder=reaseg_data_root + "test",
         data_split="test",
@@ -792,10 +1110,10 @@ val_datasets = [
         extra_image_processor=extra_image_processor,
         output_ids_with_output=output_ids_with_output,
         image_processor=image_processor,
-        postprocess_fn=reason_seg_postprocess_fn,
+        postprocess_fn=reaseg_postprocess_fn,
         dataset_map_fn=dict(
             type=dataset_map_fn_factory,
-            fn=reason_seg_map_fn,
+            fn=reaseg_map_fn,
             cond_type=cond_type,
         ),
         template_map_fn=dict(
@@ -823,10 +1141,10 @@ val_datasets = [
         special_tokens=special_tokens,
         image_processor=image_processor,
         extra_image_processor=extra_image_processor,
-        postprocess_fn=gcg_seg_postprocess_fn,
+        postprocess_fn=gcgseg_postprocess_fn,
         dataset_map_fn=dict(
             type=dataset_map_fn_factory,
-            fn=gcg_seg_map_fn,
+            fn=gcgseg_map_fn,
             cond_type=cond_type,
         ),
         template_map_fn=dict(type=template_map_fn_factory, template=prompt_template, output_suffix=False),
@@ -849,10 +1167,10 @@ val_datasets = [
         special_tokens=special_tokens,
         image_processor=image_processor,
         extra_image_processor=extra_image_processor,
-        postprocess_fn=gcg_seg_postprocess_fn,
+        postprocess_fn=gcgseg_postprocess_fn,
         dataset_map_fn=dict(
             type=dataset_map_fn_factory,
-            fn=gcg_seg_map_fn,
+            fn=gcgseg_map_fn,
             cond_type=cond_type,
         ),
         template_map_fn=dict(type=template_map_fn_factory, template=prompt_template, output_suffix=False),
@@ -863,11 +1181,11 @@ val_datasets = [
     dict(
         type=VGDSegDataset,
         source_data_path=vgdseg_data_root + "coco2017/annotations/instances_val2017.json",
-        data_path=vgdseg_data_root + "annotations/coco_vgdseg_val.json",
+        data_path=vgdseg_data_root + "annotations/vgdseg_val.json",
         image_folder=vgdseg_data_root + "coco2017/val2017",
         tokenizer=tokenizer,
         task_name="vgdseg",
-        data_name="coco_vgdseg_point",
+        data_name="vgdseg_point",
         data_mode="eval",
         visual_prompt_type="point_visual_prompt",
         output_ids_with_output=output_ids_with_output,
@@ -877,13 +1195,13 @@ val_datasets = [
         image_processor=image_processor,
         postprocess_fn=dict(
             type=process_map_fn_factory,
-            fn=vgd_seg_postprocess_fn,
+            fn=vgdseg_postprocess_fn,
             threshold=0.0,
             return_contiguous_labels=True,
         ),
         dataset_map_fn=dict(
             type=dataset_map_fn_factory,
-            fn=vgd_seg_map_fn,
+            fn=vgdseg_map_fn,
             cond_type=cond_type,
         ),
         template_map_fn=dict(
@@ -897,11 +1215,11 @@ val_datasets = [
     dict(
         type=VGDSegDataset,
         source_data_path=vgdseg_data_root + "coco2017/annotations/instances_val2017.json",
-        data_path=vgdseg_data_root + "annotations/coco_vgdseg_val.json",
+        data_path=vgdseg_data_root + "annotations/vgdseg_val.json",
         image_folder=vgdseg_data_root + "coco2017/val2017",
         tokenizer=tokenizer,
         task_name="vgdseg",
-        data_name="coco_vgdseg_scribble",
+        data_name="vgdseg_scribble",
         data_mode="eval",
         visual_prompt_type="scribble_visual_prompt",
         output_ids_with_output=output_ids_with_output,
@@ -911,13 +1229,13 @@ val_datasets = [
         image_processor=image_processor,
         postprocess_fn=dict(
             type=process_map_fn_factory,
-            fn=vgd_seg_postprocess_fn,
+            fn=vgdseg_postprocess_fn,
             threshold=0.0,
             return_contiguous_labels=True,
         ),
         dataset_map_fn=dict(
             type=dataset_map_fn_factory,
-            fn=vgd_seg_map_fn,
+            fn=vgdseg_map_fn,
             cond_type=cond_type,
         ),
         template_map_fn=dict(
@@ -931,11 +1249,11 @@ val_datasets = [
     dict(
         type=VGDSegDataset,
         source_data_path=vgdseg_data_root + "coco2017/annotations/instances_val2017.json",
-        data_path=vgdseg_data_root + "annotations/coco_vgdseg_val.json",
+        data_path=vgdseg_data_root + "annotations/vgdseg_val.json",
         image_folder=vgdseg_data_root + "coco2017/val2017",
         tokenizer=tokenizer,
         task_name="vgdseg",
-        data_name="coco_vgdseg_box",
+        data_name="vgdseg_box",
         data_mode="eval",
         visual_prompt_type="box_visual_prompt",
         output_ids_with_output=output_ids_with_output,
@@ -945,13 +1263,13 @@ val_datasets = [
         image_processor=image_processor,
         postprocess_fn=dict(
             type=process_map_fn_factory,
-            fn=vgd_seg_postprocess_fn,
+            fn=vgdseg_postprocess_fn,
             threshold=0.0,
             return_contiguous_labels=True,
         ),
         dataset_map_fn=dict(
             type=dataset_map_fn_factory,
-            fn=vgd_seg_map_fn,
+            fn=vgdseg_map_fn,
             cond_type=cond_type,
         ),
         template_map_fn=dict(
@@ -965,11 +1283,11 @@ val_datasets = [
     dict(
         type=VGDSegDataset,
         source_data_path=vgdseg_data_root + "coco2017/annotations/instances_val2017.json",
-        data_path=vgdseg_data_root + "annotations/coco_vgdseg_val.json",
+        data_path=vgdseg_data_root + "annotations/vgdseg_val.json",
         image_folder=vgdseg_data_root + "coco2017/val2017",
         tokenizer=tokenizer,
         task_name="vgdseg",
-        data_name="coco_vgdseg_mask",
+        data_name="vgdseg_mask",
         data_mode="eval",
         visual_prompt_type="mask_visual_prompt",
         output_ids_with_output=output_ids_with_output,
@@ -979,13 +1297,13 @@ val_datasets = [
         image_processor=image_processor,
         postprocess_fn=dict(
             type=process_map_fn_factory,
-            fn=vgd_seg_postprocess_fn,
+            fn=vgdseg_postprocess_fn,
             threshold=0.0,
             return_contiguous_labels=True,
         ),
         dataset_map_fn=dict(
             type=dataset_map_fn_factory,
-            fn=vgd_seg_map_fn,
+            fn=vgdseg_map_fn,
             cond_type=cond_type,
         ),
         template_map_fn=dict(
@@ -997,13 +1315,13 @@ val_datasets = [
         pad_image_to_square=True,
     ),
     dict(
-        type=InterSegDataset,
-        source_data_path=interseg_data_root + "coco2017/annotations/coco_interactive_val_psalm.json",
-        data_path=interseg_data_root + "annotations/coco_interseg_val.json",
-        image_folder=interseg_data_root + "coco2017/val2017",
+        type=IntSegDataset,
+        source_data_path=intseg_data_root + "coco2017/annotations/coco_interactive_val_psalm.json",
+        data_path=intseg_data_root + "annotations/intseg_val.json",
+        image_folder=intseg_data_root + "coco2017/val2017",
         tokenizer=tokenizer,
-        task_name="interseg",
-        data_name="coco_interseg_point",
+        task_name="intseg",
+        data_name="intseg_point",
         data_mode="eval",
         visual_prompt_type="point_visual_prompt",
         output_ids_with_output=output_ids_with_output,
@@ -1013,11 +1331,11 @@ val_datasets = [
         image_processor=image_processor,
         postprocess_fn=dict(
             type=process_map_fn_factory,
-            fn=inter_seg_postprocess_fn,
+            fn=intseg_postprocess_fn,
             threshold=0.5,
             return_contiguous_labels=True,
         ),
-        dataset_map_fn=inter_seg_map_fn,
+        dataset_map_fn=intseg_map_fn,
         template_map_fn=dict(
             type=template_map_fn_factory, template=prompt_template, output_suffix=output_ids_with_output
         ),
@@ -1025,13 +1343,13 @@ val_datasets = [
         pad_image_to_square=True,
     ),
     dict(
-        type=InterSegDataset,
-        source_data_path=interseg_data_root + "coco2017/annotations/coco_interactive_val_psalm.json",
-        data_path=interseg_data_root + "annotations/coco_interseg_val.json",
-        image_folder=interseg_data_root + "coco2017/val2017",
+        type=IntSegDataset,
+        source_data_path=intseg_data_root + "coco2017/annotations/coco_interactive_val_psalm.json",
+        data_path=intseg_data_root + "annotations/intseg_val.json",
+        image_folder=intseg_data_root + "coco2017/val2017",
         tokenizer=tokenizer,
-        task_name="interseg",
-        data_name="coco_interseg_scribble",
+        task_name="intseg",
+        data_name="intseg_scribble",
         data_mode="eval",
         visual_prompt_type="scribble_visual_prompt",
         output_ids_with_output=output_ids_with_output,
@@ -1041,11 +1359,11 @@ val_datasets = [
         image_processor=image_processor,
         postprocess_fn=dict(
             type=process_map_fn_factory,
-            fn=inter_seg_postprocess_fn,
+            fn=intseg_postprocess_fn,
             threshold=0.5,
             return_contiguous_labels=True,
         ),
-        dataset_map_fn=inter_seg_map_fn,
+        dataset_map_fn=intseg_map_fn,
         template_map_fn=dict(
             type=template_map_fn_factory, template=prompt_template, output_suffix=output_ids_with_output
         ),
@@ -1053,13 +1371,13 @@ val_datasets = [
         pad_image_to_square=True,
     ),
     dict(
-        type=InterSegDataset,
-        source_data_path=interseg_data_root + "coco2017/annotations/coco_interactive_val_psalm.json",
-        data_path=interseg_data_root + "annotations/coco_interseg_val.json",
-        image_folder=interseg_data_root + "coco2017/val2017",
+        type=IntSegDataset,
+        source_data_path=intseg_data_root + "coco2017/annotations/coco_interactive_val_psalm.json",
+        data_path=intseg_data_root + "annotations/intseg_val.json",
+        image_folder=intseg_data_root + "coco2017/val2017",
         tokenizer=tokenizer,
-        task_name="interseg",
-        data_name="coco_interseg_box",
+        task_name="intseg",
+        data_name="intseg_box",
         data_mode="eval",
         visual_prompt_type="box_visual_prompt",
         output_ids_with_output=output_ids_with_output,
@@ -1069,11 +1387,11 @@ val_datasets = [
         image_processor=image_processor,
         postprocess_fn=dict(
             type=process_map_fn_factory,
-            fn=inter_seg_postprocess_fn,
+            fn=intseg_postprocess_fn,
             threshold=0.5,
             return_contiguous_labels=True,
         ),
-        dataset_map_fn=inter_seg_map_fn,
+        dataset_map_fn=intseg_map_fn,
         template_map_fn=dict(
             type=template_map_fn_factory, template=prompt_template, output_suffix=output_ids_with_output
         ),
@@ -1081,13 +1399,13 @@ val_datasets = [
         pad_image_to_square=True,
     ),
     dict(
-        type=InterSegDataset,
-        source_data_path=interseg_data_root + "coco2017/annotations/coco_interactive_val_psalm.json",
-        data_path=interseg_data_root + "annotations/coco_interseg_val.json",
-        image_folder=interseg_data_root + "coco2017/val2017",
+        type=IntSegDataset,
+        source_data_path=intseg_data_root + "coco2017/annotations/coco_interactive_val_psalm.json",
+        data_path=intseg_data_root + "annotations/intseg_val.json",
+        image_folder=intseg_data_root + "coco2017/val2017",
         tokenizer=tokenizer,
-        task_name="interseg",
-        data_name="coco_interseg_mask",
+        task_name="intseg",
+        data_name="intseg_mask",
         data_mode="eval",
         visual_prompt_type="mask_visual_prompt",
         output_ids_with_output=output_ids_with_output,
@@ -1097,11 +1415,11 @@ val_datasets = [
         image_processor=image_processor,
         postprocess_fn=dict(
             type=process_map_fn_factory,
-            fn=inter_seg_postprocess_fn,
+            fn=intseg_postprocess_fn,
             threshold=0.5,
             return_contiguous_labels=True,
         ),
-        dataset_map_fn=inter_seg_map_fn,
+        dataset_map_fn=intseg_map_fn,
         template_map_fn=dict(
             type=template_map_fn_factory, template=prompt_template, output_suffix=output_ids_with_output
         ),
@@ -1112,17 +1430,17 @@ val_datasets = [
 
 val_evaluators = [
     dict(
-        type=GenericSegEvaluator,
+        type=GenSegEvaluator,
         distributed=True,
-        data_name="panoptic_genseg",
+        data_name="genseg",
     ),
     dict(
-        type=GenericSegEvaluator,
+        type=GenSegEvaluator,
         data_name="semantic_genseg",
         distributed=True,
     ),
     dict(
-        type=GenericSegEvaluator,
+        type=GenSegEvaluator,
         data_name="instance_genseg",
         distributed=True,
     ),
@@ -1147,62 +1465,62 @@ val_evaluators = [
         distributed=True,
     ),
     dict(
-        type=ReferSegEvaluator,
+        type=RefSegEvaluator,
         distributed=True,
         data_name="refcoco_val_refseg",
     ),
     dict(
-        type=ReferSegEvaluator,
+        type=RefSegEvaluator,
         distributed=True,
         data_name="refcoco_testA_refseg",
     ),
     dict(
-        type=ReferSegEvaluator,
+        type=RefSegEvaluator,
         distributed=True,
         data_name="refcoco_testB_refseg",
     ),
     dict(
-        type=ReferSegEvaluator,
+        type=RefSegEvaluator,
         distributed=True,
         data_name="refcoco+_val_refseg",
     ),
     dict(
-        type=ReferSegEvaluator,
+        type=RefSegEvaluator,
         distributed=True,
         data_name="refcoco+_testA_refseg",
     ),
     dict(
-        type=ReferSegEvaluator,
+        type=RefSegEvaluator,
         distributed=True,
         data_name="refcoco+_testB_refseg",
     ),
     dict(
-        type=ReferSegEvaluator,
+        type=RefSegEvaluator,
         distributed=True,
         data_name="refcocog_val_refseg",
     ),
     dict(
-        type=ReferSegEvaluator,
+        type=RefSegEvaluator,
         distributed=True,
         data_name="refcocog_test_refseg",
     ),
     dict(
-        type=ReasonSegEvaluator,
+        type=ReaSegEvaluator,
         distributed=True,
         data_name="val_reaseg",
     ),
     dict(
-        type=ReasonSegEvaluator,
+        type=ReaSegEvaluator,
         distributed=True,
         data_name="test_all_reaseg",
     ),
     dict(
-        type=ReasonSegEvaluator,
+        type=ReaSegEvaluator,
         distributed=True,
         data_name="test_sentence_reaseg",
     ),
     dict(
-        type=ReasonSegEvaluator,
+        type=ReaSegEvaluator,
         distributed=True,
         data_name="test_phrase_reaseg",
     ),
@@ -1218,42 +1536,42 @@ val_evaluators = [
     ),
     dict(
         type=VGDSegEvaluator,
-        data_name="coco_vgdseg_point",
+        data_name="vgdseg_point",
         distributed=True,
     ),
     dict(
         type=VGDSegEvaluator,
-        data_name="coco_vgdseg_scribble",
+        data_name="vgdseg_scribble",
         distributed=True,
     ),
     dict(
         type=VGDSegEvaluator,
-        data_name="coco_vgdseg_box",
+        data_name="vgdseg_box",
         distributed=True,
     ),
     dict(
         type=VGDSegEvaluator,
-        data_name="coco_vgdseg_mask",
+        data_name="vgdseg_mask",
         distributed=True,
     ),
     dict(
-        type=InterSegEvaluator,
-        data_name="coco_interseg_point",
+        type=IntSegEvaluator,
+        data_name="intseg_point",
         distributed=True,
     ),
     dict(
-        type=InterSegEvaluator,
-        data_name="coco_interseg_scribble",
+        type=IntSegEvaluator,
+        data_name="intseg_scribble",
         distributed=True,
     ),
     dict(
-        type=InterSegEvaluator,
-        data_name="coco_interseg_box",
+        type=IntSegEvaluator,
+        data_name="intseg_box",
         distributed=True,
     ),
     dict(
-        type=InterSegEvaluator,
-        data_name="coco_interseg_mask",
+        type=IntSegEvaluator,
+        data_name="intseg_mask",
         distributed=True,
     ),
 ]
@@ -1262,7 +1580,7 @@ vis_datasets = val_datasets
 
 vis_datasets = deepcopy(val_datasets)
 for dataset in vis_datasets:
-    if dataset["task_name"] in ["genseg", "ovseg", "vgdseg", "interseg"]:
+    if dataset["task_name"] in ["genseg", "ovseg", "vgdseg", "intseg"]:
         dataset["postprocess_fn"]["threshold"] = 0.5  # type: ignore
 
 #######################################################################
@@ -1333,19 +1651,19 @@ custom_hooks = [
         image_processor=image_processor,
         postprocess_fns=[
             None,
-            generic_seg_postprocess_fn,
-            refer_seg_postprocess_fn,
-            reason_seg_postprocess_fn,
-            gcg_seg_postprocess_fn,
-            inter_seg_postprocess_fn,
-            inter_seg_postprocess_fn,
-            inter_seg_postprocess_fn,
-            inter_seg_postprocess_fn,
-            vgd_seg_postprocess_fn,
-            vgd_seg_postprocess_fn,
-            vgd_seg_postprocess_fn,
-            vgd_seg_postprocess_fn,
-            vgd_seg_postprocess_fn,
+            genseg_postprocess_fn,
+            refseg_postprocess_fn,
+            reaseg_postprocess_fn,
+            gcgseg_postprocess_fn,
+            intseg_postprocess_fn,
+            intseg_postprocess_fn,
+            intseg_postprocess_fn,
+            intseg_postprocess_fn,
+            vgdseg_postprocess_fn,
+            vgdseg_postprocess_fn,
+            vgdseg_postprocess_fn,
+            vgdseg_postprocess_fn,
+            vgdseg_postprocess_fn,
         ],
         extra_image_processor=extra_image_processor,
         visualizer=visualizer,

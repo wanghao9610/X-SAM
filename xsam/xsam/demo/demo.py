@@ -27,23 +27,23 @@ from xtuner.utils.device import get_device
 from xsam.dataset.collate_fns import xsam_collate_fn
 from xsam.dataset.map_fns import (
     dataset_map_fn_factory,
-    gcg_seg_map_fn,
-    generic_seg_map_fn,
-    image_conv_map_fn,
-    inter_seg_map_fn,
-    reason_seg_map_fn,
-    refer_seg_map_fn,
+    gcgseg_map_fn,
+    genseg_map_fn,
+    imgconv_map_fn,
+    intseg_map_fn,
+    reaseg_map_fn,
+    refseg_map_fn,
     template_map_fn_factory,
-    vgd_seg_map_fn,
+    vgdseg_map_fn,
 )
 from xsam.dataset.process_fns import (
-    gcg_seg_postprocess_fn,
-    generic_seg_postprocess_fn,
-    inter_seg_postprocess_fn,
+    gcgseg_postprocess_fn,
+    genseg_postprocess_fn,
+    intseg_postprocess_fn,
     process_map_fn_factory,
-    reason_seg_postprocess_fn,
-    refer_seg_postprocess_fn,
-    vgd_seg_postprocess_fn,
+    reaseg_postprocess_fn,
+    refseg_postprocess_fn,
+    vgdseg_postprocess_fn,
 )
 from xsam.dataset.utils.catalog import MetadataCatalog
 from xsam.dataset.utils.encode import encode_fn
@@ -195,7 +195,7 @@ class XSamDemo:
                 template=self.cfg.prompt_template,
                 output_suffix=False,
             ),
-            "interseg": dict(
+            "intseg": dict(
                 type=template_map_fn_factory,
                 template=self.cfg.prompt_template,
                 output_suffix=self.output_ids_with_output,
@@ -214,35 +214,35 @@ class XSamDemo:
 
     def build_map_fns(self):
         task_map_fns = {
-            "imgconv": image_conv_map_fn,
+            "imgconv": imgconv_map_fn,
             "genseg": dict(
                 type=dataset_map_fn_factory,
-                fn=generic_seg_map_fn,
+                fn=genseg_map_fn,
                 cond_type=self.cond_type,
             ),
             "refseg": dict(
                 type=dataset_map_fn_factory,
-                fn=refer_seg_map_fn,
+                fn=refseg_map_fn,
                 cond_type=self.cond_type,
             ),
             "reaseg": dict(
                 type=dataset_map_fn_factory,
-                fn=reason_seg_map_fn,
+                fn=reaseg_map_fn,
                 cond_type=self.cond_type,
             ),
             "gcgseg": dict(
                 type=dataset_map_fn_factory,
-                fn=gcg_seg_map_fn,
+                fn=gcgseg_map_fn,
                 cond_type=self.cond_type,
             ),
-            "interseg": dict(
+            "intseg": dict(
                 type=dataset_map_fn_factory,
-                fn=inter_seg_map_fn,
+                fn=intseg_map_fn,
                 cond_type=self.cond_type,
             ),
             "vgdseg": dict(
                 type=dataset_map_fn_factory,
-                fn=vgd_seg_map_fn,
+                fn=vgdseg_map_fn,
                 cond_type=self.cond_type,
             ),
         }
@@ -256,25 +256,25 @@ class XSamDemo:
             "imgconv": None,
             "genseg(pan)": dict(
                 type=process_map_fn_factory,
-                fn=generic_seg_postprocess_fn,
+                fn=genseg_postprocess_fn,
                 task_name="genseg(pan)",
                 threshold=0.5,
             ),
             "genseg(sem)": dict(
                 type=process_map_fn_factory,
-                fn=generic_seg_postprocess_fn,
+                fn=genseg_postprocess_fn,
                 task_name="genseg(sem)",
             ),
             "genseg(ins)": dict(
                 type=process_map_fn_factory,
-                fn=generic_seg_postprocess_fn,
+                fn=genseg_postprocess_fn,
                 task_name="genseg(ins)",
             ),
-            "refseg": refer_seg_postprocess_fn,
-            "reaseg": reason_seg_postprocess_fn,
-            "gcgseg": gcg_seg_postprocess_fn,
-            "interseg": inter_seg_postprocess_fn,
-            "vgdseg": vgd_seg_postprocess_fn,
+            "refseg": refseg_postprocess_fn,
+            "reaseg": reaseg_postprocess_fn,
+            "gcgseg": gcgseg_postprocess_fn,
+            "intseg": intseg_postprocess_fn,
+            "vgdseg": vgdseg_postprocess_fn,
         }
         postprocess_fns = {
             task_name: build_from_cfg_or_module(postprocess_fn)
@@ -405,8 +405,8 @@ class XSamDemo:
             }
         elif task_name == "gcgseg":
             example = {}
-        elif task_name == "interseg":
-            # TODO: add interseg example
+        elif task_name == "intseg":
+            # TODO: add intseg example
             example = {
                 "sampled_labels": [0],
             }

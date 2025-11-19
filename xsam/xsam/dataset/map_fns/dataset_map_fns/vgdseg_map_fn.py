@@ -68,7 +68,7 @@ def vgd_seg_conversations(regions, output_ids_with_output=True, cond_type="phras
     return rets
 
 
-def vgd_seg_map_fn(example, output_ids_with_output=True, cond_type="phrase"):
+def vgdseg_map_fn(example, output_ids_with_output=True, cond_type="phrase"):
     messages = vgd_seg_conversations(example["sampled_labels"], output_ids_with_output, cond_type)
     input = ""
     conversation = []

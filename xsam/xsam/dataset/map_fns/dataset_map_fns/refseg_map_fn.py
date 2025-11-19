@@ -59,7 +59,7 @@ def refer_seg_conversations(labels, output_ids_with_output=True, cond_type="phra
     return rets
 
 
-def refer_seg_map_fn(example, output_ids_with_output=True, cond_type="phrase"):
+def refseg_map_fn(example, output_ids_with_output=True, cond_type="phrase"):
     messages = refer_seg_conversations(example["sampled_sents"], output_ids_with_output, cond_type)
     input = ""
     conversation = []

@@ -1,16 +1,14 @@
 import json
 
-import numpy as np
-
 from xsam.utils.logging import print_log
 
 from ...dataset.utils.mask import calculate_iou, decode_mask
-from .refer_seg_evaluator import ReferSegEvaluator
+from .refer_seg_evaluator import RefSegEvaluator
 
 
-class ReasonSegEvaluator(ReferSegEvaluator):
+class IntSegEvaluator(RefSegEvaluator):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, cat_names=["ignore", "reason"], **kwargs)
+        super().__init__(*args, cat_names=["ignore", "inter"], **kwargs)
 
     def _eval_predictions(self, predictions, gt_json):
         with open(gt_json, "r") as f:
@@ -26,14 +24,10 @@ class ReasonSegEvaluator(ReferSegEvaluator):
             pred_mask = decode_mask(pred_mask, height, width)
 
             # segmentation is polygon
-            ignore_mask = id2ann_map[f"{image_id}{sample_id}"][0]["ignore_mask"]
             gt_mask = id2ann_map[f"{image_id}{sample_id}"][0]["segmentation"]
-            ignore_mask = decode_mask(ignore_mask, height, width)
             gt_mask = decode_mask(gt_mask, height, width)
 
-            pred_mask = np.where(ignore_mask == 1, self._metadata.ignore_label, pred_mask)
-            gt_mask = np.where(ignore_mask == 1, self._metadata.ignore_label, gt_mask)
-            intersection, union, _ = calculate_iou(pred_mask, gt_mask, 2, self._metadata.ignore_label)
+            intersection, union, _ = calculate_iou(pred_mask, gt_mask, self._metadata.ignore_label)
             self.iou_stat.update(intersection, union, n=1)
 
         self.iou_stat.average()

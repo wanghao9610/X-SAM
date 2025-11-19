@@ -7,13 +7,13 @@ from mmengine.optim import AmpOptimWrapper, LinearLR, MultiStepLR
 from torch.optim import AdamW
 from xtuner.dataset.samplers import LengthGroupedSampler
 
-from xsam.dataset import GenericSegDataset
+from xsam.dataset import GenSegDataset
 from xsam.dataset.collate_fns import xsam_collate_fn
-from xsam.dataset.process_fns import generic_seg_postprocess_fn, process_map_fn_factory
+from xsam.dataset.process_fns import genseg_postprocess_fn, process_map_fn_factory
 from xsam.dataset.processors import SamImageProcessor
 from xsam.engine.hooks import DatasetInfoHook, ModelInfoHook, PTCheckpointHook
 from xsam.engine.runner import TrainLoop
-from xsam.evaluation.evaluators import GenericSegEvaluator
+from xsam.evaluation.evaluators import GenSegEvaluator
 from xsam.model import XSamModel
 from xsam.model.segmentors import XSegmentor
 from xsam.model.segmentors.mask2former import Mask2FormerConfig, Mask2FormerModel
@@ -33,7 +33,7 @@ seg_encoder_name_or_path = init_dir + "sam-vit-large"
 seg_decoder_name_or_path = init_dir + "mask2former-swin-large-coco-panoptic"
 
 # Data
-data_root = data_dir + "gen_seg_data/"
+data_root = data_dir + "genseg_data/"
 data_path = data_root + "coco2017/annotations/panoptic_train2017.json"
 image_folder = data_root + "coco2017/train2017"
 panseg_map_folder = data_root + "coco2017/panoptic_train2017"
@@ -73,7 +73,7 @@ model = dict(
     type=XSamModel,
     freeze_segmentor_encoder=False,
     use_activation_checkpointing=False,
-    postprocess_fn=generic_seg_postprocess_fn,
+    postprocess_fn=genseg_postprocess_fn,
     connector_type="conv",
     seg_select_layers=[6, 12, 18, 24],
     connector_hidden_dim=512,
@@ -117,13 +117,13 @@ train_extra_image_processor.update(
 )
 
 pannoptic_genseg_dataset = dict(
-    type=GenericSegDataset,
+    type=GenSegDataset,
     data_path=data_path,
     image_folder=image_folder,
     panseg_map_folder=panseg_map_folder,
     extra_image_processor=train_extra_image_processor,
     task_name="genseg",
-    data_name="panoptic_genseg",
+    data_name="genseg",
     pad_image_to_square=True,
 )
 
@@ -143,39 +143,39 @@ train_dataloader = dict(
 
 val_datasets = [
     dict(
-        type=GenericSegDataset,
+        type=GenSegDataset,
         data_path=data_root + "coco2017/annotations/panoptic_val2017.json",
         image_folder=data_root + "coco2017/val2017",
         panseg_map_folder=data_root + "coco2017/panoptic_val2017",
         semseg_map_folder=data_root + "coco2017/panoptic_semseg_val2017",
         task_name="genseg",
-        data_name="panoptic_genseg",
+        data_name="genseg",
         data_mode="eval",
-        postprocess_fn=dict(type=process_map_fn_factory, fn=generic_seg_postprocess_fn, task_name="panoptic_genseg"),
+        postprocess_fn=dict(type=process_map_fn_factory, fn=genseg_postprocess_fn, task_name="genseg"),
         extra_image_processor=extra_image_processor,
         pad_image_to_square=True,
     ),
     dict(
-        type=GenericSegDataset,
+        type=GenSegDataset,
         data_path=data_root + "coco2017/annotations/panoptic_val2017.json",
         image_folder=data_root + "coco2017/val2017",
         panseg_map_folder=data_root + "coco2017/panoptic_val2017",
         semseg_map_folder=data_root + "coco2017/panoptic_semseg_val2017",
         task_name="genseg",
-        data_name="panoptic_genseg",
+        data_name="genseg",
         data_mode="eval",
-        postprocess_fn=dict(type=process_map_fn_factory, fn=generic_seg_postprocess_fn, task_name="semantic_genseg"),
+        postprocess_fn=dict(type=process_map_fn_factory, fn=genseg_postprocess_fn, task_name="semantic_genseg"),
         extra_image_processor=extra_image_processor,
         pad_image_to_square=True,
     ),
     dict(
-        type=GenericSegDataset,
+        type=GenSegDataset,
         data_path=data_root + "coco2017/annotations/instances_val2017.json",
         image_folder=data_root + "coco2017/val2017",
         task_name="genseg",
         data_name="instance_genseg",
         data_mode="eval",
-        postprocess_fn=dict(type=process_map_fn_factory, fn=generic_seg_postprocess_fn, task_name="instance_genseg"),
+        postprocess_fn=dict(type=process_map_fn_factory, fn=genseg_postprocess_fn, task_name="instance_genseg"),
         extra_image_processor=extra_image_processor,
         pad_image_to_square=True,
     ),
@@ -183,17 +183,17 @@ val_datasets = [
 
 val_evaluators = [
     dict(
-        type=GenericSegEvaluator,
-        data_name="panoptic_genseg",
+        type=GenSegEvaluator,
+        data_name="genseg",
         distributed=True,
     ),
     dict(
-        type=GenericSegEvaluator,
+        type=GenSegEvaluator,
         data_name="semantic_genseg",
         distributed=True,
     ),
     dict(
-        type=GenericSegEvaluator,
+        type=GenSegEvaluator,
         data_name="instance_genseg",
         distributed=True,
     ),

@@ -12,12 +12,12 @@ from pycocotools import mask as mask_utils
 from ..structures import BoxMode
 from ..utils.logging import print_log
 from ..utils.palette import get_palette
-from .gen_seg_dataset import GenericSegDataset
+from .genseg_dataset import GenSegDataset
 from .utils.catalog import MetadataCatalog
 from .utils.coco import COCO
 
 
-class OVSegDataset(GenericSegDataset):
+class OVSegDataset(GenSegDataset):
     def __init__(self, *args, label_file=None, label_shift=0, **kwargs):
         super().__init__(*args, label_file=label_file, label_shift=label_shift, **kwargs)
 

@@ -11,13 +11,14 @@ from torch.utils.data import Sampler
 from xsam.utils.logging import print_log
 
 
-def get_source_grouped_indices(lengths, group_batch_size, seed=None):
+def get_source_grouped_indices(lengths, group_batch_size, round_up=True, seed=None):
     """
     Group indices by their source and create batches from the same source.
 
     Args:
         lengths: List of lengths for each source
         group_batch_size: Size of each group batch
+        round_up: Whether to round up the number of samples to the nearest multiple of the group batch size
         seed: Random number generator for reproducibility
 
     Returns:
@@ -68,7 +69,7 @@ def get_source_grouped_indices(lengths, group_batch_size, seed=None):
     for source_idx, source_pointer in enumerate(source_pointers):
         remaining_samples = all_source_indices[source_idx][source_pointer:]
         neighbor_samples = all_source_indices[source_idx][source_pointer - group_batch_size : source_pointer]
-        if len(remaining_samples) > 0:
+        if len(remaining_samples) > 0 and round_up:
             megabatches.append(
                 remaining_samples[:group_batch_size] + neighbor_samples[: group_batch_size - len(remaining_samples)]
             )
@@ -102,14 +103,6 @@ class SourceGroupedSampler(Sampler):
         self.step = 0  # Added step for checkpoint resuming
         self.round_up = round_up
 
-        if self.round_up:
-            num_iters = math.ceil(len(self.dataset) / world_size / per_device_batch_size)
-            self.num_samples = num_iters * per_device_batch_size
-            self.total_size = self.num_samples * self.world_size
-        else:
-            self.num_samples = math.ceil((len(self.dataset) - rank) / world_size)
-            self.total_size = len(self.dataset)
-
         total_batch_size = per_device_batch_size * self.world_size
         if mega_batch_mult is None:
             # Default for mega_batch_mult: 16 or the number to get 4
@@ -129,6 +122,15 @@ class SourceGroupedSampler(Sampler):
             self.length = [getattr(self.dataset, length_property)]
         assert isinstance(self.length, (list, tuple))
 
+        if self.round_up:
+            num_group_iters = sum([math.ceil(length / self.group_batch_size) for length in self.length])
+            self.total_size = num_group_iters * self.group_batch_size
+            self.num_samples = self.total_size // self.world_size
+        else:
+            num_group_iters = sum([length // self.group_batch_size for length in self.length])
+            self.total_size = num_group_iters * self.group_batch_size
+            self.num_samples = self.total_size // self.world_size
+
         self.total_batch_size = total_batch_size
         print_log(
             f"SourceGroupedSampler construction is complete, " f"and the selected attribute is {length_property}.",
@@ -142,12 +144,10 @@ class SourceGroupedSampler(Sampler):
         indices = get_source_grouped_indices(
             lengths=self.length,
             group_batch_size=self.group_batch_size,
+            round_up=self.round_up,
             seed=seed,
         )
 
-        # add extra samples to make it evenly divisible
-        if self.round_up:
-            indices = (indices * int(self.total_size / len(indices) + 1))[: self.total_size]
         # subsample
         assert len(indices) == self.total_size, f"Indices length {len(indices)} != total_size {self.total_size}"
         indices = indices[self.rank : self.total_size : self.world_size]

@@ -7,7 +7,7 @@ from torch import TensorType
 from ...utils.process import sem_seg_postprocess
 
 
-def refer_seg_postprocess_fn(
+def refseg_postprocess_fn(
     outputs,
     image_sizes,
     scaled_sizes: Optional[List[TensorType]] = None,

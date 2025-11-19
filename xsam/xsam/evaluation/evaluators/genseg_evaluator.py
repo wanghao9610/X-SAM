@@ -20,13 +20,13 @@ from ...dataset.utils.coco import COCO
 from ..utils import comm
 from ..utils.map import convert_to_coco_json, derive_coco_results, evaluate_predictions_on_coco, instances_to_coco_json
 from ..utils.pq import pq_compute, print_panoptic_results
-from .base_seg_evaluator import BaseSegEvaluator
+from .base_evaluator import BaseEvaluator
 
 
-class GenericSegEvaluator(BaseSegEvaluator):
+class GenSegEvaluator(BaseEvaluator):
     def __init__(
         self,
-        data_name: str = "panoptic_genseg",
+        data_name: str = "genseg",
         output_dir: Optional[str] = None,
         distributed: bool = True,
         show_categories: bool = False,
