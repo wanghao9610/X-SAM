@@ -34,7 +34,7 @@
 
 ## :eyes: Notice
 
-X-SAM is under active development, and we will continue to update the code and documentation. Please read [TODO](#white_check_mark-todo) to check our development schedule.
+X-SAM is under active development, and we will continue to update the code and documentation. Please check [TODO](#white_check_mark-todo) to get our development schedule.
 
 We recommend that everyone use English to communicate in issues, as this helps developers from around the world discuss, share experiences, and answer questions together.
 
