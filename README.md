@@ -34,7 +34,7 @@
 
 ## :eyes: Notice
 
-X-SAM is under active development, and we will continue to update the code and documentation.
+X-SAM is under active development, and we will continue to update the code and documentation. Please read [TODO](#white_check_mark-todo) to check our development schedule.
 
 We recommend that everyone use English to communicate in issues, as this helps developers from around the world discuss, share experiences, and answer questions together.
 
@@ -311,8 +311,9 @@ bash runs/run.sh --modes demo --config xsam/configs/xsam/phi3_mini_4k_instruct_s
 - [x] Release the code for [Evaluation on All VLM Benchmarks](#evaluate-on-all-vlm-benchmarks).
 - [x] Release the code for [Demo Deployment](#computer-demo).
 - [x] Release the code for [Evaluation on All Segmentation Benchmarks](#evaluate-on-all-segmentation-benchmarks).
+- [x] Release the code for [Training X-SAM](#stage-3-mixed-fine-tuning).
+- [ ] Release the code and weight for Qwen3VL.
 - [ ] Relaese the inference and demo code supporting transformers.
-- [ ] Release the code for [Training X-SAM](#stage-3-mixed-fine-tuning) (more than 500 🌟).
 
 ## :blush: Acknowledge
 This project has referenced some excellent open-sourced repos ([xtuner](https://github.com/InternLM/xtuner), [VLMEvalKit](https://github.com/open-compass/VLMEvalKit), [Sa2VA](https://github.com/magic-research/Sa2VA)). Thanks for their wonderful works and contributions to the community.
