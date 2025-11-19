@@ -214,6 +214,7 @@ bash runs/run.sh --modes train --config xsam/configs/xsam/phi3_mini_4k_instruct_
 
 ##### Stage 3: Mixed Fine-tuning
 ```bash
+cd $root_dir
 bash runs/run.sh --modes train,segeval,vlmeval,visualize --config xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py
 ```
 </details>
