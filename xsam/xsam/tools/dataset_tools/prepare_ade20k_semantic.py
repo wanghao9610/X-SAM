@@ -15,7 +15,7 @@ def convert(input, output):
 
 
 if __name__ == "__main__":
-    dataset_dir = osp.join(os.getenv("root_dir", "."), "datas")
+    dataset_dir = osp.join(os.getenv("root_dir", "."), "datas/ovseg_data")
     for name in ["training", "validation"]:
         annotation_dir = osp.join(dataset_dir, "ade20k/annotations", name)
         output_dir = osp.join(dataset_dir, "ade20k/annotations_detectron2", name)

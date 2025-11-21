@@ -106,10 +106,6 @@ wget http://images.cocodataset.org/zips/val2014.zip -O $temp_data_dir/coco2014/v
 unzip $temp_data_dir/coco2014/train2014.zip -d $temp_data_dir/coco2014
 unzip $temp_data_dir/coco2014/val2014.zip -d $temp_data_dir/coco2014
 rm $temp_data_dir/coco2014/train2014.zip $temp_data_dir/coco2014/val2014.zip
-# convert dataset
-python $root_dir/xsam/xsam/tools/dataset_tools/prepare_ade20k_panoptic.py
-python $root_dir/xsam/xsam/tools/dataset_tools/prepare_ade20k_semantic.py
-python $root_dir/xsam/xsam/tools/dataset_tools/prepare_ade20k_instance.py
 
 unset temp_data_dir
 ```
@@ -126,6 +122,10 @@ unzip $temp_data_dir/ADEChallengeData2016.zip -d $temp_data_dir
 mv $temp_data_dir/ADEChallengeData2016 $temp_data_dir/ade20k
 # remove zip file
 rm $temp_data_dir/ADEChallengeData2016.zip
+# convert dataset
+python $root_dir/xsam/xsam/tools/dataset_tools/prepare_ade20k_panoptic.py
+python $root_dir/xsam/xsam/tools/dataset_tools/prepare_ade20k_semantic.py
+python $root_dir/xsam/xsam/tools/dataset_tools/prepare_ade20k_instance.py
 
 unset temp_data_dir
 ```

@@ -2,9 +2,9 @@
 import glob
 import json
 import os
+import os.path as osp
 
 import numpy as np
-import osp as osp
 import pycocotools.mask as mask_util
 import tqdm
 from panopticapi.utils import save_json
@@ -14,7 +14,7 @@ this_dir = osp.dirname(osp.abspath(__file__))
 
 
 if __name__ == "__main__":
-    dataset_dir = osp.join(os.getenv("root_dir", "."), "datas")
+    dataset_dir = osp.join(os.getenv("root_dir", "."), "datas/ovseg_data")
 
     for name, dirname in [("train", "training"), ("val", "validation")]:
         image_dir = osp.join(dataset_dir, f"ade20k/images/{dirname}/")

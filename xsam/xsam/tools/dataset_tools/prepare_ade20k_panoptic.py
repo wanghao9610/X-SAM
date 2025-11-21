@@ -319,7 +319,7 @@ PALETTE = [
 
 
 if __name__ == "__main__":
-    dataset_dir = os.getenv("root_dir", ".") / "datas"
+    dataset_dir = osp.join(os.getenv("root_dir", "."), "datas/ovseg_data")
 
     for name, dirname in [("train", "training"), ("val", "validation")]:
         image_dir = osp.join(dataset_dir, f"ade20k/images/{dirname}/")
