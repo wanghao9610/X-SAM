@@ -6,7 +6,6 @@ from mmengine.hooks import CheckpointHook, DistSamplerSeedHook, IterTimerHook, L
 from mmengine.optim import AmpOptimWrapper, CosineAnnealingLR, LinearLR
 from torch.optim import AdamW
 from transformers import AutoModelForCausalLM, AutoTokenizer, SiglipProcessor, SiglipVisionModel
-from xtuner.utils import PROMPT_TEMPLATE
 
 from xsam.dataset import (
     ConcatDataset,
@@ -1553,6 +1552,9 @@ optim_wrapper = dict(
     loss_scale="dynamic",
     dtype="float16",
     paramwise_cfg=dict(
+        # Avoid adding tied/shared parameters (e.g., embedding <-> lm_head) multiple times
+        # when traversing complex HF modules
+        bypass_duplicate=True,
         custom_keys={
             "segmentor.encoder": dict(lr_mult=0.1, decay_mult=1.0),
             "visual_encoder": dict(lr_mult=0.1, decay_mult=1.0),
