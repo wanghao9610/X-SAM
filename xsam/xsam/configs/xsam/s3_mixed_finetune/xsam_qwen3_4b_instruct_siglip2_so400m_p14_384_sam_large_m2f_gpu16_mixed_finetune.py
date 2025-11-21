@@ -1417,11 +1417,6 @@ val_evaluators = [
         distributed=True,
     ),
     dict(
-        type=OVSegEvaluator,
-        data_name="pc59_semantic_ovseg",
-        distributed=True,
-    ),
-    dict(
         type=RefSegEvaluator,
         distributed=True,
         data_name="refcoco_val_refseg",
