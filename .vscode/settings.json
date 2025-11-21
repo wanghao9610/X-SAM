@@ -17,7 +17,7 @@
         "**/CVS": true,
         "**/.DS_Store": true,
         "**/Thumbs.db": true,
-        // "**/.*/**": true,
+        "**/.*/**": true,
         "datas/**": true,
         "inits/**": true,
     },
