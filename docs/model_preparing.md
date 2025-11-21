@@ -22,6 +22,16 @@ alias hfd="$PWD/hfd.sh"
 hfd microsoft/Phi-3-mini-4k-instruct --tools aria2c -x 8 --save_dir $root_dir/inits
 ```
 
+## Qwen3-4B-Instruct-2507
+```bash
+cd $root_dir/docs
+mkdir -p $root_dir/inits
+chmod +x hfd.sh
+alias hfd="$PWD/hfd.sh"
+
+hfd Qwen/Qwen3-4B-Instruct-2507 --tools aria2c -x 8 --save_dir $root_dir/inits
+```
+
 ## siglip2-so400m-patch14-384
 ```bash
 cd $root_dir/docs
