@@ -42,6 +42,7 @@ We recommend that everyone use English to communicate in issues, as this helps d
 
 ## :boom: Updates
 
+- **`2025-11-21`**: We release the code for X-SAM with [Qwen3-4B-Instruct-2507](xsam/xsam/configs/xsam/s3_mixed_finetune/xsam_qwen3_4b_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py). We will release the weight soon.
 - **`2025-11-19`**: We release the code for [Training X-SAM](#stage-3-mixed-fine-tuning). Welcome to try it! If you have any questions, please feel free to open an issue.
 - **`2025-11-08`**: Congratulations! 🎉🎉🎉 X-SAM has been accepted by AAAI 2026! We will release all the code in the coming week!
 - **`2025-09-28`**: We update the [Local Demo](#local-demo) Inference script, you can run local inference instead of on the Web Demo.
@@ -313,7 +314,7 @@ bash runs/run.sh --modes demo --config xsam/configs/xsam/s3_mixed_finetune/xsam_
 - [x] Release the code for [Demo Deployment](#computer-demo).
 - [x] Release the code for [Evaluation on All Segmentation Benchmarks](#evaluate-on-all-segmentation-benchmarks).
 - [x] Release the code for [Training X-SAM](#stage-3-mixed-fine-tuning).
-- [ ] Release the code and weight for X-SAM with Qwen3.
+- [x] Release the code and weight for X-SAM with Qwen3.
 - [ ] Release the code and weight for X-SAM with Qwen3VL.
 - [ ] Relaese the inference and demo code supporting transformers.
 
