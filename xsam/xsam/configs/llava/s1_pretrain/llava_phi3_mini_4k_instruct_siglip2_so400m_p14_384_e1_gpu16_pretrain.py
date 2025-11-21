@@ -11,12 +11,9 @@ from xtuner.utils import PROMPT_TEMPLATE
 from xsam.dataset import ImgConvDataset
 from xsam.dataset.collate_fns import xsam_collate_fn
 from xsam.dataset.map_fns import imgconv_map_fn, template_map_fn_factory
-from xsam.dataset.processors import SamImageProcessor
 from xsam.engine.hooks import DatasetInfoHook, EvaluateChatHook, ModelInfoHook, PTCheckpointHook
 from xsam.engine.runner import TrainLoop
-from xsam.model import XSamModel
-from xsam.model.segmentors import XSegmentor
-from xsam.model.segmentors.sam import SamModel
+from xsam.model import LLaVAModel
 
 #######################################################################
 #                          PART 1  Settings                           #
@@ -25,26 +22,21 @@ from xsam.model.segmentors.sam import SamModel
 code_dir = getenv("CODE_DIR", "./xsam/")
 data_dir = getenv("DATA_DIR", "./datas/")
 init_dir = getenv("INIT_DIR", "./inits/")
-work_dir = getenv("WORK_DIR", "./wkdrs/")
 
 # Model
 llm_name_or_path = init_dir + "Phi-3-mini-4k-instruct"
 visual_encoder_name_or_path = init_dir + "siglip2-so400m-patch14-384"
-seg_encoder_name_or_path = init_dir + "sam-vit-large"
-
-# Specify the pretrained pth
-s1_pretrained_pth = work_dir + "s1_seg_finetune/xsam_sam_large_m2f_e36_gpu16_seg_finetune/pytorch_model.bin"
 
 # Data
 data_root = data_dir + "imgconv_data/"
-data_path = data_root + "LLaVA-Pretrain/blip_laion_cc_sbu_558k.json"
-image_folder = data_root + "LLaVA-Pretrain/images"
+data_path = data_root + "llava/LLaVA-Pretrain/blip_laion_cc_sbu_558k.json"
+image_folder = data_root + "llava/LLaVA-Pretrain/images"
 prompt_template = PROMPT_TEMPLATE.phi3_chat
-max_length = int(4096 - (384 / 14) ** 2 - 1024)
+max_length = int(4096 - (384 / 14) ** 2)
 
 # Scheduler & Optimizer
-batch_size = 4  # per_device
-accumulative_counts = 4
+batch_size = 16  # per_device
+accumulative_counts = 1
 dataloader_num_workers = 8
 max_epochs = 1
 optim_type = AdamW
@@ -63,13 +55,12 @@ logging_interval = 10
 # Evaluate the generation performance during the training
 evaluation_freq = 2000
 SYSTEM = ""
-evaluation_images = code_dir + "xsam/configs/xsam/images/imgconv.jpg"
+evaluation_images = code_dir + "xsam/configs/llava/images/imgconv.jpg"
 evaluation_inputs = ["Can you describe this image in detail? Please elaborate in your response."]
 
 #######################################################################
 #            PART 2  Model & Tokenizer & Image Processor              #
 #######################################################################
-ignore_label = 255
 tokenizer = dict(
     type=AutoTokenizer.from_pretrained,
     pretrained_model_name_or_path=llm_name_or_path,
@@ -83,25 +74,10 @@ image_processor = dict(
     trust_remote_code=True,
 )
 
-extra_image_processor = dict(
-    type=SamImageProcessor.from_pretrained,
-    pretrained_model_name_or_path=seg_encoder_name_or_path,
-    trust_remote_code=True,
-    ignore_index=0,
-)
-
 model = dict(
-    type=XSamModel,
+    type=LLaVAModel,
     freeze_llm=True,
     freeze_visual_encoder=True,
-    freeze_segmentor_encoder=True,
-    use_dual_encoder=True,
-    s1_pretrained_pth=s1_pretrained_pth,
-    tokenizer=tokenizer,
-    connector_type="conv",
-    seg_select_layers=[6, 12, 18, 24],
-    connector_hidden_dim=512,
-    connector_scale_factor=[4, 2, 1, 0.5],
     llm=dict(
         type=AutoModelForCausalLM.from_pretrained,
         pretrained_model_name_or_path=llm_name_or_path,
@@ -114,17 +90,6 @@ model = dict(
         pretrained_model_name_or_path=visual_encoder_name_or_path,
         torch_dtype=torch.bfloat16,
     ),
-    segmentor=dict(
-        type=XSegmentor,
-        encoder=dict(
-            type=SamModel.from_pretrained,
-            pretrained_model_name_or_path=seg_encoder_name_or_path,
-            trust_remote_code=True,
-            torch_dtype=torch.bfloat16,
-        ),
-        torch_dtype=torch.bfloat16,
-        drop_decoder=True,
-    ),
 )
 
 #######################################################################
@@ -135,10 +100,9 @@ imgconv_dataset = dict(
     data_path=data_path,
     tokenizer=tokenizer,
     image_folder=image_folder,
-    task_name="imgconv",
-    data_name="imgconv",
     image_processor=image_processor,
-    extra_image_processor=extra_image_processor,
+    task_name="imgconv",
+    data_name="llava_imgconv",
     dataset_map_fn=imgconv_map_fn,
     template_map_fn=dict(type=template_map_fn_factory, template=prompt_template),
     max_length=max_length,
@@ -161,6 +125,7 @@ train_dataloader = dict(
 # optimizer
 optim_wrapper = dict(
     type=AmpOptimWrapper,
+    constructor="CustomOptimWrapperConstructor",
     optimizer=dict(type=optim_type, lr=lr, betas=betas, weight_decay=weight_decay),
     clip_grad=dict(max_norm=max_norm, error_if_nonfinite=False),
     accumulative_counts=accumulative_counts,
@@ -199,7 +164,7 @@ train_cfg = dict(type=TrainLoop, max_epochs=max_epochs)
 custom_hooks = [
     dict(
         type=ModelInfoHook,
-        module_names=["llm", "visual_encoder", "projector", "segmentor.encoder"],
+        module_names=["llm", "visual_encoder", "projector"],
         display_params=True,
     ),
     dict(type=DatasetInfoHook, tokenizer=tokenizer),
@@ -207,7 +172,6 @@ custom_hooks = [
         type=EvaluateChatHook,
         tokenizer=tokenizer,
         image_processor=image_processor,
-        extra_image_processor=extra_image_processor,
         every_n_iters=evaluation_freq,
         evaluation_inputs=evaluation_inputs,
         evaluation_images=evaluation_images,

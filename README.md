@@ -204,19 +204,19 @@ Prepare the [Datasets](docs/dataset_preparing.md) and [Models](docs/model_prepar
 ##### Stage 1: Segmentor Fine-tuning
 ```bash
 cd $root_dir
-bash runs/run.sh --modes train --config xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s1_seg_finetune/xsam_sam_large_m2f_e36_gpu16_seg_finetune.py
+bash runs/run.sh --modes train --config xsam/configs/xsam/s1_seg_finetune/xsam_sam_large_m2f_e36_gpu16_seg_finetune.py
 ```
 
 ##### Stage 2: Alignment Pre-training
 ```bash
 cd $root_dir
-bash runs/run.sh --modes train --config xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s2_align_pretrain/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_e1_gpu16_align_pretrain.py
+bash runs/run.sh --modes train --config xsam/configs/xsam/s2_align_pretrain/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_e1_gpu16_align_pretrain.py
 ```
 
 ##### Stage 3: Mixed Fine-tuning
 ```bash
 cd $root_dir
-bash runs/run.sh --modes train,segeval,vlmeval,visualize --config xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py
+bash runs/run.sh --modes train,segeval,vlmeval,visualize --config xsam/configs/xsam/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py
 ```
 </details>
 
@@ -227,14 +227,14 @@ bash runs/run.sh --modes train,segeval,vlmeval,visualize --config xsam/configs/x
 ```bash
 cd $root_dir
 # Evaluate on all segmentation benchmarks.
-bash runs/run.sh --modes segeval --config xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py --work-dir $root_dir/inits/X-SAM/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune
+bash runs/run.sh --modes segeval --config xsam/configs/xsam/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py --work-dir $root_dir/inits/X-SAM/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune
 ```
 
 ##### Evaluate on all VLM benchmarks
 ```bash
 cd $root_dir
 # Evaluate on all VLM benchmarks.
-bash runs/run.sh --modes vlmeval --config xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py --work-dir $root_dir/inits/X-SAM/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune
+bash runs/run.sh --modes vlmeval --config xsam/configs/xsam/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py --work-dir $root_dir/inits/X-SAM/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune
 ```
 
 </details>
@@ -247,13 +247,13 @@ bash runs/run.sh --modes vlmeval --config xsam/configs/xsam/phi3_mini_4k_instruc
 ##### Stage 1: Alignment Pre-training
 ```bash
 cd $root_dir
-bash runs/run.sh --modes train --config xsam/configs/llava/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s1_pretrain/llava_phi3_mini_4k_instruct_siglip2_so400m_p14_384_e1_gpu16_pretrain.py
+bash runs/run.sh --modes train --config xsam/configs/llava/s1_pretrain/llava_phi3_mini_4k_instruct_siglip2_so400m_p14_384_e1_gpu16_pretrain.py
 ```
 
 ##### Stage 2: Instruction Fine-tuning
 ```bash
 cd $root_dir
-bash runs/run.sh --modes train --config xsam/configs/llava/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s2_finetune/llava_phi3_mini_4k_instruct_siglip2_so400m_p14_384_e1_gpu16_finetune.py
+bash runs/run.sh --modes train --config xsam/configs/llava/s2_finetune/llava_phi3_mini_4k_instruct_siglip2_so400m_p14_384_e1_gpu16_finetune.py
 ```
 </details>
 
@@ -263,7 +263,7 @@ bash runs/run.sh --modes train --config xsam/configs/llava/phi3_mini_4k_instruct
 ##### Evaluate on all VLM benchmarks
 ```bash
 cd $root_dir
-bash runs/run.sh --modes vlmeval --config xsam/configs/llava/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s2_finetune/llava_phi3_mini_4k_instruct_siglip2_so400m_p14_384_e1_gpu16_finetune.py
+bash runs/run.sh --modes vlmeval --config xsam/configs/llava/s2_finetune/llava_phi3_mini_4k_instruct_siglip2_so400m_p14_384_e1_gpu16_finetune.py
 ```
 </details>
 
@@ -277,10 +277,10 @@ We provide detalied instructions for local demo inference and web demo deploymen
 ```bash
 cd $root_dir
 export PYTHONPATH=$root_dir/xsam:$PYTHONPATH
-python xsam/xsam/demo/demo.py xsam/xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py --pth_model $root_dir/inits/X-SAM/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune/pytorch_model.bin --image INPUT_IMAGE/INPUT_DIR --prompt INPUT_PROMPT --task_name TASK_NAME
+python xsam/xsam/demo/demo.py xsam/xsam/configs/xsam/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py --pth_model $root_dir/inits/X-SAM/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune/pytorch_model.bin --image INPUT_IMAGE/INPUT_DIR --prompt INPUT_PROMPT --task_name TASK_NAME
 
 # example: genseg
-python xsam/xsam/demo/demo.py xsam/xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py --pth_model $root_dir/inits/X-SAM/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune/pytorch_model.bin --image xsam/xsam/demo/images/genseg.jpg --prompt "ins: person, bird, boat; sem: water, sky" --task_name genseg
+python xsam/xsam/demo/demo.py xsam/xsam/configs/xsam/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py --pth_model $root_dir/inits/X-SAM/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune/pytorch_model.bin --image xsam/xsam/demo/images/genseg.jpg --prompt "ins: person, bird, boat; sem: water, sky" --task_name genseg
 # more examples please refer to the web demo examples.
 ```
 
@@ -292,7 +292,7 @@ python xsam/xsam/demo/demo.py xsam/xsam/configs/xsam/phi3_mini_4k_instruct_sigli
 
 ```bash
 cd $root_dir
-bash runs/run.sh --modes demo --config xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py --work-dir $root_dir/inits/X-SAM/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune
+bash runs/run.sh --modes demo --config xsam/configs/xsam/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py --work-dir $root_dir/inits/X-SAM/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune
 ```
 </details>
 

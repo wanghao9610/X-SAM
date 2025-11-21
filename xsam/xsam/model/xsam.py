@@ -166,7 +166,7 @@ class XSamModel(BaseModel):
                 )
                 self.vision_sampler = SamplerModel(sampler_config).to(self.segmentor.dtype)
 
-            if self.segmentor.open_cls and self.segmentor.decoder is not None:
+            if self.segmentor.decoder is not None and self.segmentor.open_cls:
                 self.bg_embeds = nn.Embedding(1, self.segmentor.dec_config.hidden_size).to(self.segmentor.dtype)
 
         if self.freeze_llm and self.llm is not None:

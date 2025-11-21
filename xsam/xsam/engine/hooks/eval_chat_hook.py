@@ -48,7 +48,7 @@ class EvaluateChatHook(Hook):
         system="",
         prompt_template=None,
         every_n_iters=None,
-        max_new_tokens=600,
+        max_new_tokens=1024,
         stop_word=None,
         stop_words=[],
         generation_kwargs={},

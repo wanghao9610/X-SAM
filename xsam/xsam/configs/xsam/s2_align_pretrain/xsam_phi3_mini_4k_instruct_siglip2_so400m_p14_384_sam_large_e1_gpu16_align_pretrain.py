@@ -1,22 +1,21 @@
-from copy import deepcopy
 from os import getenv
 
 import torch
+from mmengine.dataset import DefaultSampler
 from mmengine.hooks import CheckpointHook, DistSamplerSeedHook, IterTimerHook, LoggerHook, ParamSchedulerHook
-from mmengine.optim import AmpOptimWrapper, LinearLR, MultiStepLR
+from mmengine.optim import AmpOptimWrapper, CosineAnnealingLR, LinearLR
 from torch.optim import AdamW
-from xtuner.dataset.samplers import LengthGroupedSampler
+from transformers import AutoModelForCausalLM, AutoTokenizer, SiglipImageProcessor, SiglipVisionModel
+from xtuner.utils import PROMPT_TEMPLATE
 
-from xsam.dataset import GenSegDataset
+from xsam.dataset import ImgConvDataset
 from xsam.dataset.collate_fns import xsam_collate_fn
-from xsam.dataset.process_fns import genseg_postprocess_fn, process_map_fn_factory
+from xsam.dataset.map_fns import imgconv_map_fn, template_map_fn_factory
 from xsam.dataset.processors import SamImageProcessor
-from xsam.engine.hooks import DatasetInfoHook, ModelInfoHook, PTCheckpointHook
+from xsam.engine.hooks import DatasetInfoHook, EvaluateChatHook, ModelInfoHook, PTCheckpointHook
 from xsam.engine.runner import TrainLoop
-from xsam.evaluation.evaluators import GenSegEvaluator
 from xsam.model import XSamModel
 from xsam.model.segmentors import XSegmentor
-from xsam.model.segmentors.mask2former import Mask2FormerConfig, Mask2FormerModel
 from xsam.model.segmentors.sam import SamModel
 
 #######################################################################
@@ -29,38 +28,60 @@ init_dir = getenv("INIT_DIR", "./inits/")
 work_dir = getenv("WORK_DIR", "./wkdrs/")
 
 # Model
+llm_name_or_path = init_dir + "Phi-3-mini-4k-instruct"
+visual_encoder_name_or_path = init_dir + "siglip2-so400m-patch14-384"
 seg_encoder_name_or_path = init_dir + "sam-vit-large"
-seg_decoder_name_or_path = init_dir + "mask2former-swin-large-coco-panoptic"
+
+# Specify the pretrained pth
+s1_pretrained_pth = work_dir + "s1_seg_finetune/xsam_sam_large_m2f_e36_gpu16_seg_finetune/pytorch_model.bin"
 
 # Data
-data_root = data_dir + "genseg_data/"
-data_path = data_root + "coco2017/annotations/panoptic_train2017.json"
-image_folder = data_root + "coco2017/train2017"
-panseg_map_folder = data_root + "coco2017/panoptic_train2017"
+data_root = data_dir + "imgconv_data/"
+data_path = data_root + "llava/LLaVA-Pretrain/blip_laion_cc_sbu_558k.json"
+image_folder = data_root + "llava/LLaVA-Pretrain/images"
+prompt_template = PROMPT_TEMPLATE.phi3_chat
+max_length = int(4096 - (384 / 14) ** 2 - 1024)
 
 # Scheduler & Optimizer
 batch_size = 4  # per_device
-accumulative_counts = 1
+accumulative_counts = 4
 dataloader_num_workers = 8
-max_epochs = 36
+max_epochs = 1
 optim_type = AdamW
-lr = 1e-4
+lr = 1e-3
 betas = (0.9, 0.999)
-weight_decay = 0.05
-max_norm = 0.01  # grad clip
+weight_decay = 0
+max_norm = 1  # grad clip
 warmup_ratio = 0.03
 
 # Save
 save_steps = 2000
 save_total_limit = 2  # Maximum checkpoints to keep (-1 means unlimited)
-
 # Logging
 logging_interval = 10
+
+# Evaluate the generation performance during the training
+evaluation_freq = 2000
+SYSTEM = ""
+evaluation_images = code_dir + "xsam/configs/xsam/images/imgconv.jpg"
+evaluation_inputs = ["Can you describe this image in detail? Please elaborate in your response."]
 
 #######################################################################
 #            PART 2  Model & Tokenizer & Image Processor              #
 #######################################################################
-# TODO: add special tokens via import from xsam.utils
+ignore_label = 255
+tokenizer = dict(
+    type=AutoTokenizer.from_pretrained,
+    pretrained_model_name_or_path=llm_name_or_path,
+    trust_remote_code=True,
+    padding_side="right",
+)
+
+image_processor = dict(
+    type=SiglipImageProcessor.from_pretrained,
+    pretrained_model_name_or_path=visual_encoder_name_or_path,
+    trust_remote_code=True,
+)
 
 extra_image_processor = dict(
     type=SamImageProcessor.from_pretrained,
@@ -71,13 +92,28 @@ extra_image_processor = dict(
 
 model = dict(
     type=XSamModel,
-    freeze_segmentor_encoder=False,
-    use_activation_checkpointing=False,
-    postprocess_fn=genseg_postprocess_fn,
+    freeze_llm=True,
+    freeze_visual_encoder=True,
+    freeze_segmentor_encoder=True,
+    use_dual_encoder=True,
+    s1_pretrained_pth=s1_pretrained_pth,
+    tokenizer=tokenizer,
     connector_type="conv",
     seg_select_layers=[6, 12, 18, 24],
     connector_hidden_dim=512,
     connector_scale_factor=[4, 2, 1, 0.5],
+    llm=dict(
+        type=AutoModelForCausalLM.from_pretrained,
+        pretrained_model_name_or_path=llm_name_or_path,
+        trust_remote_code=False,  # from transformers
+        torch_dtype=torch.bfloat16,
+        attn_implementation="flash_attention_2",
+    ),
+    visual_encoder=dict(
+        type=SiglipVisionModel.from_pretrained,
+        pretrained_model_name_or_path=visual_encoder_name_or_path,
+        torch_dtype=torch.bfloat16,
+    ),
     segmentor=dict(
         type=XSegmentor,
         encoder=dict(
@@ -85,119 +121,40 @@ model = dict(
             pretrained_model_name_or_path=seg_encoder_name_or_path,
             trust_remote_code=True,
             torch_dtype=torch.bfloat16,
-        ),
-        decoder=dict(
-            type=Mask2FormerModel._from_config,
-            config=dict(
-                type=Mask2FormerConfig.from_pretrained,
-                pretrained_model_name_or_path=seg_decoder_name_or_path,
-                use_backbone=False,
-                feature_channels=[512, 1024, 2048],
-                num_feature_levels=3,
-                trust_remote_code=True,
-            ),
-            torch_dtype=torch.bfloat16,
+            attn_implementation="eager",
         ),
         torch_dtype=torch.bfloat16,
-        reinit_decoder=True,
-        close_cls=True,
+        drop_decoder=True,
     ),
 )
 
 #######################################################################
 #                      PART 3  Dataset & Dataloader                   #
 #######################################################################
-train_extra_image_processor = deepcopy(extra_image_processor)
-train_extra_image_processor.update(
-    {
-        "size": {"min_scale": 0.1, "max_scale": 2.0, "target_size": 1024},
-        "do_crop": True,
-        "crop_size": {"height": 1024, "width": 1024},
-    }
-)
-
-pannoptic_genseg_dataset = dict(
-    type=GenSegDataset,
+imgconv_dataset = dict(
+    type=ImgConvDataset,
     data_path=data_path,
+    tokenizer=tokenizer,
     image_folder=image_folder,
-    panseg_map_folder=panseg_map_folder,
-    extra_image_processor=train_extra_image_processor,
-    task_name="genseg",
-    data_name="genseg",
+    task_name="imgconv",
+    data_name="llava_imgconv",
+    image_processor=image_processor,
+    extra_image_processor=extra_image_processor,
+    dataset_map_fn=imgconv_map_fn,
+    template_map_fn=dict(type=template_map_fn_factory, template=prompt_template),
+    max_length=max_length,
     pad_image_to_square=True,
+    preprocess_text_data=False,
 )
 
 train_dataloader = dict(
     batch_size=batch_size,
     num_workers=dataloader_num_workers,
     pin_memory=True,
-    dataset=pannoptic_genseg_dataset,
-    sampler=dict(
-        type=LengthGroupedSampler,
-        length_property="modality_length",
-        mega_batch_mult=1,
-        per_device_batch_size=batch_size * accumulative_counts,
-    ),
+    dataset=imgconv_dataset,
+    sampler=dict(type=DefaultSampler, shuffle=True),
     collate_fn=dict(type=xsam_collate_fn),
 )
-
-val_datasets = [
-    dict(
-        type=GenSegDataset,
-        data_path=data_root + "coco2017/annotations/panoptic_val2017.json",
-        image_folder=data_root + "coco2017/val2017",
-        panseg_map_folder=data_root + "coco2017/panoptic_val2017",
-        semseg_map_folder=data_root + "coco2017/panoptic_semseg_val2017",
-        task_name="genseg",
-        data_name="genseg",
-        data_mode="eval",
-        postprocess_fn=dict(type=process_map_fn_factory, fn=genseg_postprocess_fn, task_name="genseg"),
-        extra_image_processor=extra_image_processor,
-        pad_image_to_square=True,
-    ),
-    dict(
-        type=GenSegDataset,
-        data_path=data_root + "coco2017/annotations/panoptic_val2017.json",
-        image_folder=data_root + "coco2017/val2017",
-        panseg_map_folder=data_root + "coco2017/panoptic_val2017",
-        semseg_map_folder=data_root + "coco2017/panoptic_semseg_val2017",
-        task_name="genseg",
-        data_name="genseg",
-        data_mode="eval",
-        postprocess_fn=dict(type=process_map_fn_factory, fn=genseg_postprocess_fn, task_name="semantic_genseg"),
-        extra_image_processor=extra_image_processor,
-        pad_image_to_square=True,
-    ),
-    dict(
-        type=GenSegDataset,
-        data_path=data_root + "coco2017/annotations/instances_val2017.json",
-        image_folder=data_root + "coco2017/val2017",
-        task_name="genseg",
-        data_name="instance_genseg",
-        data_mode="eval",
-        postprocess_fn=dict(type=process_map_fn_factory, fn=genseg_postprocess_fn, task_name="instance_genseg"),
-        extra_image_processor=extra_image_processor,
-        pad_image_to_square=True,
-    ),
-]
-
-val_evaluators = [
-    dict(
-        type=GenSegEvaluator,
-        data_name="genseg",
-        distributed=True,
-    ),
-    dict(
-        type=GenSegEvaluator,
-        data_name="semantic_genseg",
-        distributed=True,
-    ),
-    dict(
-        type=GenSegEvaluator,
-        data_name="instance_genseg",
-        distributed=True,
-    ),
-]
 
 #######################################################################
 #                    PART 4  Scheduler & Optimizer                    #
@@ -206,15 +163,10 @@ val_evaluators = [
 optim_wrapper = dict(
     type=AmpOptimWrapper,
     optimizer=dict(type=optim_type, lr=lr, betas=betas, weight_decay=weight_decay),
-    clip_grad=dict(max_norm=max_norm, norm_type=2, error_if_nonfinite=False),
+    clip_grad=dict(max_norm=max_norm, error_if_nonfinite=False),
     accumulative_counts=accumulative_counts,
     loss_scale="dynamic",
     dtype="float16",
-    paramwise_cfg=dict(
-        custom_keys={
-            "segmentor.encoder": dict(lr_mult=0.1, decay_mult=1.0),
-        },
-    ),
 )
 
 # learning policy
@@ -229,12 +181,11 @@ param_scheduler = [
         convert_to_iter_based=True,
     ),
     dict(
-        type=MultiStepLR,
+        type=CosineAnnealingLR,
+        eta_min=0.0,
+        by_epoch=True,
         begin=warmup_ratio * max_epochs,
         end=max_epochs,
-        by_epoch=True,
-        milestones=[24, 30],
-        gamma=0.1,
         convert_to_iter_based=True,
     ),
 ]
@@ -245,17 +196,25 @@ train_cfg = dict(type=TrainLoop, max_epochs=max_epochs)
 #######################################################################
 #                           PART 5  Runtime                           #
 #######################################################################
-# set visualizer
-visualizer = None
-
 # Log the dialogue periodically during the training process, optional
 custom_hooks = [
     dict(
         type=ModelInfoHook,
-        module_names=["llm", "connector", "segmentor.encoder", "segmentor.pixel_decoder", "segmentor.decoder"],
+        module_names=["llm", "visual_encoder", "projector", "segmentor.encoder"],
         display_params=True,
     ),
-    dict(type=DatasetInfoHook),
+    dict(type=DatasetInfoHook, tokenizer=tokenizer),
+    dict(
+        type=EvaluateChatHook,
+        tokenizer=tokenizer,
+        image_processor=image_processor,
+        extra_image_processor=extra_image_processor,
+        every_n_iters=evaluation_freq,
+        evaluation_inputs=evaluation_inputs,
+        evaluation_images=evaluation_images,
+        system=SYSTEM,
+        prompt_template=prompt_template,
+    ),
     dict(type=PTCheckpointHook, clean_pth=False),
 ]
 
@@ -288,6 +247,9 @@ env_cfg = dict(
     dist_cfg=dict(backend="nccl"),
 )
 
+# set visualizer
+visualizer = None
+
 # set log level
 log_level = "INFO"
 
@@ -306,5 +268,3 @@ log_processor = dict(
     window_size=1,
     mean_pattern=r".*(loss|time|data_time|grad_norm|tflops).*",
 )
-
-find_unused_parameters = True

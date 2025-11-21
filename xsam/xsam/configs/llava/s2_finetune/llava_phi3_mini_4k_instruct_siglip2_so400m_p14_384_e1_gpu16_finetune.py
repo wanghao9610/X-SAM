@@ -22,27 +22,32 @@ from xsam.model import LLaVAModel
 code_dir = getenv("CODE_DIR", "./xsam/")
 data_dir = getenv("DATA_DIR", "./datas/")
 init_dir = getenv("INIT_DIR", "./inits/")
+work_dir = getenv("WORK_DIR", "./wkdrs/")
 
 # Model
 llm_name_or_path = init_dir + "Phi-3-mini-4k-instruct"
 visual_encoder_name_or_path = init_dir + "siglip2-so400m-patch14-384"
 
+# Specify the pretrained pth
+s1_pretrained_pth = (
+    work_dir
+    + "llava/s1_pretrain/llava_phi3_mini_4k_instruct_siglip2_so400m_p14_384_e1_gpu16_pretrain/pytorch_model.bin"
+)  # noqa: E501
+
 # Data
 data_root = data_dir + "imgconv_data/"
-data_path = data_root + "LLaVA-Pretrain/blip_laion_cc_sbu_558k.json"
-image_folder = data_root + "LLaVA-Pretrain/images"
 prompt_template = PROMPT_TEMPLATE.phi3_chat
 max_length = int(4096 - (384 / 14) ** 2)
 
 # Scheduler & Optimizer
-batch_size = 16  # per_device
+batch_size = 4  # per_device
 accumulative_counts = 1
 dataloader_num_workers = 8
 max_epochs = 1
 optim_type = AdamW
-lr = 1e-3
+lr = 4e-5
 betas = (0.9, 0.999)
-weight_decay = 0
+weight_decay = 0.05
 max_norm = 1  # grad clip
 warmup_ratio = 0.03
 
@@ -76,8 +81,9 @@ image_processor = dict(
 
 model = dict(
     type=LLaVAModel,
-    freeze_llm=True,
+    freeze_llm=False,
     freeze_visual_encoder=True,
+    s1_pretrained_pth=s1_pretrained_pth,
     llm=dict(
         type=AutoModelForCausalLM.from_pretrained,
         pretrained_model_name_or_path=llm_name_or_path,
@@ -97,15 +103,16 @@ model = dict(
 #######################################################################
 imgconv_dataset = dict(
     type=ImgConvDataset,
-    data_path=data_path,
+    data_path=data_root + "LLaVA-Instruct-150K/llava_v1_5_mix665k.json",
+    image_folder=data_root + "llava_images",
     tokenizer=tokenizer,
-    image_folder=image_folder,
     image_processor=image_processor,
     task_name="imgconv",
-    data_name="imgconv",
+    data_name="llava_imgconv",
     dataset_map_fn=imgconv_map_fn,
     template_map_fn=dict(type=template_map_fn_factory, template=prompt_template),
     max_length=max_length,
+    is_multimodal=True,
     pad_image_to_square=True,
     preprocess_text_data=False,
 )

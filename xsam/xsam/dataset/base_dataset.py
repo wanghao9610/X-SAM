@@ -25,7 +25,7 @@ from .utils.encode import encode_fn
 TASK_MODALITY_LENGTH = {k: int(i * 512) for i, k in enumerate(DEFAULT_TASKS)}
 
 debug_mode = os.getenv("DEBUG_MODE", "false").lower() == "true"
-debug_iter = 40
+debug_iter = 200
 
 
 class BaseDataset(Dataset):
