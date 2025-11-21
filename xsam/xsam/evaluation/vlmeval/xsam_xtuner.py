@@ -5,6 +5,7 @@ import string
 import pandas as pd
 import torch
 from huggingface_hub import snapshot_download
+from peft import PeftModel
 from PIL import Image
 from transformers import (
     AutoModel,
@@ -20,10 +21,12 @@ from transformers import (
 from vlmeval.dataset import DATASET_TYPE
 from vlmeval.smp import *
 from vlmeval.vlm.base import BaseModel
+from xtuner.utils import StopWordStoppingCriteria
 
 from xsam.dataset.processors import SamImageProcessor
 from xsam.model.segmentors.sam import SamModel
 from xsam.utils.logging import print_log
+from xsam.utils.template import PROMPT_TEMPLATE
 
 
 class XSam_XTuner(BaseModel):
@@ -44,13 +47,6 @@ class XSam_XTuner(BaseModel):
         stop_words=[],
         torch_dtype=torch.float16,
     ):
-        try:
-            from peft import PeftModel
-            from xtuner.utils import PROMPT_TEMPLATE, StopWordStoppingCriteria
-        except Exception as err:
-            logging.critical("Please install xtuner with `pip install -U xtuner` before " "using LLaVA_XTuner")
-            raise err
-
         if not osp.isdir(xsam_path):
             cache_path = get_cache_path(xsam_path)
             if cache_path is not None:
@@ -204,53 +200,9 @@ class XSam_XTuner(BaseModel):
         self.segmentor_projector = segmentor_projector.cuda() if segmentor_projector is not None else None
         self.visual_select_layer = visual_select_layer
         self.visual_select_indx = visual_select_indx
-        if prompt_template is not None:
-            # modified prompt template
-            if prompt_template == "llama3_chat":
-                self.prompt_template = dict(
-                    SYSTEM=("<|start_header_id|>system<|end_header_id|>\n\n" "{system}<|eot_id|>"),
-                    INSTRUCTION=(
-                        "<|start_header_id|>user<|end_header_id|>\n\n{input}<|eot_id|>"
-                        "<|start_header_id|>assistant<|end_header_id|>\n\n"
-                    ),
-                    SUFFIX="<|eot_id|>",
-                    SUFFIX_AS_EOS=True,
-                    STOP_WORDS=["<|eot_id|>"],
-                )
-            elif prompt_template == "phi3_chat":
-                self.prompt_template = dict(
-                    SYSTEM="<|system|>\n{system}<|end|>\n",
-                    INSTRUCTION="<|user|>\n{input}<|end|>\n<|assistant|>\n",
-                    SUFFIX="<|end|>",
-                    SUFFIX_AS_EOS=True,
-                    SEP="\n",
-                    STOP_WORDS=["<|end|>"],
-                )
-            elif prompt_template == "qwen_chat":
-                self.prompt_template = dict(
-                    SYSTEM=("<|im_start|>system\n{system}<|im_end|>\n"),
-                    INSTRUCTION=("<|im_start|>user\n{input}<|im_end|>\n" "<|im_start|>assistant\n"),
-                    SUFFIX="<|im_end|>",
-                    SUFFIX_AS_EOS=True,
-                    SEP="\n",
-                    STOP_WORDS=["<|im_end|>", "<|endoftext|>"],
-                )
-            elif prompt_template == "qwen3_chat":
-                self.prompt_template = dict(
-                    SYSTEM=("<|im_start|>system\n{system}<|im_end|>\n"),
-                    INSTRUCTION=(
-                        "<|im_start|>user\n{input}<|im_end|>\n" "<|im_start|>assistant\n<think>\n\n</think>\n\n"
-                    ),
-                    SUFFIX="<|im_end|>",
-                    SUFFIX_AS_EOS=True,
-                    SEP="\n",
-                    STOP_WORDS=["<|im_end|>", "<|endoftext|>"],
-                )
-            else:
-                self.prompt_template = PROMPT_TEMPLATE[prompt_template]
-            stop_words += self.prompt_template.get("STOP_WORDS", [])
-        else:
-            self.prompt_template = None
+        self.prompt_template = PROMPT_TEMPLATE.get(prompt_template, None)
+        assert self.prompt_template is not None, f"Unsupported prompt template: {prompt_template}"
+        stop_words += self.prompt_template.get("STOP_WORDS", [])
 
         self.stop_criteria = StoppingCriteriaList()
         for word in stop_words:

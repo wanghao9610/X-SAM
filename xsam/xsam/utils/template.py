@@ -12,7 +12,7 @@ PROMPT_TEMPLATE.update(
         ),
         qwen3_wothinking=dict(
             SYSTEM=("<|im_start|>system\n{system}<|im_end|>\n"),
-            INSTRUCTION=("<|im_start|>user\n{input}<|im_end|>\n" "<|im_start|>assistant\n<think>\n\n</think>\n"),
+            INSTRUCTION=("<|im_start|>user\n{input}<|im_end|>\n" "<|im_start|>assistant\n<think>\n\n</think>\n\n"),
             SUFFIX="<|im_end|>",
             SUFFIX_AS_EOS=True,
             SEP="\n",
