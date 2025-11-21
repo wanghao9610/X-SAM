@@ -260,7 +260,7 @@ class GCGSegDataset(BaseDataset):
 
         if self.data_name in ["psg_gcgseg", "grandf_gcgseg"]:
             rets = self._process_grandf_format_data(json_data)
-        elif self.data_name in ["gcgseg"]:
+        elif self.data_name in ["refcocog_gcgseg"]:
             rets = self._process_refcocog_format_data(json_data)
         elif self.data_name in ["flickr_gcgseg"]:
             rets = self._process_flickr_format_data(json_data)

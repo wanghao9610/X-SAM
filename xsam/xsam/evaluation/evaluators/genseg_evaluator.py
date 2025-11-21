@@ -342,12 +342,12 @@ class GenSegEvaluator(BaseEvaluator):
         return table
 
     def process(self, inputs, outputs):
-        if "panoptic" in self.data_name:
-            self.panoptic_process(inputs, outputs)
-        elif "semantic" in self.data_name:
+        if "sem" in self.data_name:
             self.semantic_process(inputs, outputs)
-        elif "instance" in self.data_name:
+        elif "ins" in self.data_name:
             self.instance_process(inputs, outputs)
+        elif "pan" in self.data_name:
+            self.panoptic_process(inputs, outputs)
         else:
             raise ValueError(f"Unknown dataset name: {self.data_name}")
 
@@ -368,12 +368,12 @@ class GenSegEvaluator(BaseEvaluator):
         else:
             predictions = self._predictions
 
-        if "panoptic" in self.data_name:
-            table = self.panoptic_evaluate(predictions)
-        elif "semantic" in self.data_name:
+        if "sem" in self.data_name:
             table = self.semantic_evaluate(predictions)
-        elif "instance" in self.data_name:
+        elif "ins" in self.data_name:
             table = self.instance_evaluate(predictions)
+        elif "pan" in self.data_name:
+            table = self.panoptic_evaluate(predictions)
         else:
             raise ValueError(f"Unknown dataset name: {self.data_name}")
 

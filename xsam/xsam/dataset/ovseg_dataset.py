@@ -76,10 +76,8 @@ class OVSegDataset(GenSegDataset):
                 categories.append({"id": int(id), "name": name})
             return categories
 
-        def _sample_cat_ids(cat_ids, sample_num=-1):
-            if sample_num == -1:
-                sample_num = len(cat_ids)
-            cat_ids = random.sample(cat_ids, min(len(cat_ids), sample_num))
+        def _sample_cat_ids(cat_ids, num_sample=10000):
+            cat_ids = random.sample(cat_ids, min(len(cat_ids), num_sample))
             return cat_ids
 
         if self.label_file is not None and self.data_path is None:
@@ -152,14 +150,14 @@ class OVSegDataset(GenSegDataset):
                 pil_image = Image.open(img_path)
                 width, height = pil_image.size
 
-                if len(cat_ids) > self.sample_num:
+                if len(cat_ids) > self.num_sample:
                     semseg_map = Image.open(
                         osp.join(self.semseg_map_folder, img_file.replace(".jpg", self.semseg_sufix))
                     )
                     semseg_map = np.array(semseg_map, dtype=np.uint32)
                     pos_cat_ids = np.unique(semseg_map[semseg_map != self.ignore_label]).tolist()
                     neg_cat_ids = sorted(list(set(cat_ids) - set(pos_cat_ids)))
-                    neg_cat_ids = _sample_cat_ids(neg_cat_ids, self.sample_num - len(pos_cat_ids))
+                    neg_cat_ids = _sample_cat_ids(neg_cat_ids, max(0, self.num_sample - len(pos_cat_ids)))
                     sampled_cat_ids = sorted(pos_cat_ids + neg_cat_ids)
                 else:
                     sampled_cat_ids = cat_ids

@@ -512,7 +512,7 @@ def main():
 
             except Exception as e:
                 print_log(
-                    f"Model {model_name} x Dataset {dataset_name} combination failed: {e}\n{traceback.format_exc()}",
+                    f"Model {model_name} x Dataset {dataset_name} combination failed\n: {e}\n{traceback.format_exc()}",
                     logger="current",
                 )
                 continue

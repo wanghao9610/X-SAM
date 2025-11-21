@@ -5,6 +5,7 @@ import os
 import os.path as osp
 import warnings
 from functools import partial
+from types import FunctionType
 
 from mmengine.config import Config, DictAction
 from mmengine.config.lazy import LazyObject
@@ -20,7 +21,7 @@ from xtuner.dataset.collate_fns import default_collate_fn
 from xtuner.model.modules import dispatch_modules
 from xtuner.model.modules.dispatch import SUPPORT_FLASH2
 from xtuner.model.utils import LoadWoInit, find_all_linear_names, traverse_dict
-from xtuner.registry import BUILDER
+from xtuner.registry import BUILDER, MAP_FUNC
 from xtuner.tools.utils import auto_dtype_of_deepspeed_config, get_seed_from_checkpoint, set_model_resource
 
 from xsam.utils.logging import print_log, set_default_logging_format

@@ -15,7 +15,7 @@ def prepare_inputs_labels_for_multimodal(
     past_key_values: Optional[List[torch.FloatTensor]] = None,
     labels: Optional[torch.LongTensor] = None,
     pixel_values: Optional[torch.FloatTensor] = None,
-    seg_pixel_values: Optional[torch.FloatTensor] = None,
+    extra_pixel_values: Optional[torch.FloatTensor] = None,
     cond_ids: Optional[torch.LongTensor] = None,
     seg_ids: Optional[torch.LongTensor] = None,
     vprompt_feats: Optional[torch.FloatTensor] = None,
@@ -34,8 +34,8 @@ def prepare_inputs_labels_for_multimodal(
             "labels": labels,
         }
 
-    if seg_pixel_values is not None:
-        pixel_values = torch.cat([pixel_values, seg_pixel_values], dim=1)
+    if extra_pixel_values is not None:
+        pixel_values = torch.cat([pixel_values, extra_pixel_values], dim=1)
 
     _input_ids = input_ids
     _cond_ids = cond_ids

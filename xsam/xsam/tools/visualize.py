@@ -113,7 +113,7 @@ def process_batch(
     data_dict = {
         "input_ids": data["data_dict"].get("input_ids", None),
         "pixel_values": data["data_dict"].get("pixel_values", None),
-        "seg_pixel_values": data["data_dict"].get("seg_pixel_values", None),
+        "extra_pixel_values": data["data_dict"].get("extra_pixel_values", None),
         "cond_ids": data["data_dict"].get("cond_ids", None),
         "seg_ids": data["data_dict"].get("seg_ids", None),
         "vprompt_masks": data["data_dict"].get("vprompt_masks", None),
@@ -228,7 +228,7 @@ def visualize_dataset(
                     **segmentation_output,
                 )
             except Exception as e:
-                print_log(f"Error visualizing {file_name}: {e}\n{traceback.format_exc()}", logger="current")
+                print_log(f"Error visualizing {file_name}\n: {e}\n{traceback.format_exc()}", logger="current")
                 continue
 
 
@@ -280,15 +280,15 @@ def main():
     # Visualize all datasets
     print_log(f"Visualizing {len(cfg.vis_datasets)} datasets...", logger="current")
     for dataset_cfg in cfg.vis_datasets:
-        # Build dataset and visualizer
-        dataset = BUILDER.build(dataset_cfg)
-        model.postprocess_fn = dataset.postprocess_fn
-
-        visualizer = BUILDER.build(cfg.visualizer)
-        visualizer.metadata = dataset.metadata
-
-        output_dir = osp.join(args.work_dir, "vis_data", dataset.data_name)
         try:
+            # Build dataset and visualizer
+            dataset = BUILDER.build(dataset_cfg)
+            model.postprocess_fn = dataset.postprocess_fn
+
+            visualizer = BUILDER.build(cfg.visualizer)
+            visualizer.metadata = dataset.metadata
+
+            output_dir = osp.join(args.work_dir, "vis_data", dataset.data_name)
             visualize_dataset(
                 model,
                 dataset,
@@ -302,7 +302,7 @@ def main():
                 stop_criteria,
             )
         except Exception as e:
-            print_log(f"Error visualizing {dataset.data_name}: {e}\n{traceback.format_exc()}", logger="current")
+            print_log(f"Error visualizing {dataset_cfg.data_name}\n: {e}\n{traceback.format_exc()}", logger="current")
             continue
 
 

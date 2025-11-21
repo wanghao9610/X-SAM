@@ -5,40 +5,39 @@
 ```
 datas
 ├── gcgseg_data
-│   ├── annotations
-│   │   ├── train
-│   │   └── val_test
-│   └── images
-│       ├── coco2014
-│       ├── coco2017
-│       ├── flickr30k
-│       └── GranDf_HA_images
+│   └── grand_f
+│       ├── annotations
+│       │   ├── train
+│       │   └── val_test
+│       └── images
+│           ├── coco2014
+│           ├── coco2017
+│           ├── flickr30k
+│           └── GranDf_HA_images
 ├── genseg_data
-│   ├── ade20k
-│   │   ├── ade20k_panoptic_train
-│   │   ├── ade20k_panoptic_val
-│   │   ├── annotations
-│   │   ├── annotations_detectron2
-│   │   └── images
-│   ├── coco2017
-│   │   ├── annotations
-│   │   ├── panoptic_train2017
-│   │   ├── panoptic_val2017
-│   │   ├── train2017
-│   │   └── val2017
-├── imgconv_data
-│   ├── llava_images
-│   │   ├── coco
-│   │   ├── gqa
-│   │   ├── ocr_vqa
-│   │   ├── textvqa
-│   │   └── vg
-│   ├── LLaVA-Instruct-150K
-│   └── LLaVA-Pretrain
-│       └── 558k_images
-├── intseg_data
-│   ├── annotations
 │   └── coco2017
+│       ├── annotations
+│       ├── panoptic_train2017
+│       ├── panoptic_val2017
+│       ├── train2017
+│       └── val2017
+├── imgconv_data
+│   └── llava
+│       ├── llava_images
+│       │   ├── coco
+│       │   ├── gqa
+│       │   ├── ocr_vqa
+│       │   ├── text_vqa
+│       │   ├── vg
+│       │   ├── text_vqa
+│       │   └── vg
+│       ├── LLaVA-Instruct-150K
+│       └── LLaVA-Pretrain
+│           └── 558k_images
+├── intseg_data
+│   └── coco_int
+│       ├── annotations
+│       └── coco2017
 ├── LMUData
 │   └── images
 │       ├── AI2D_TEST
@@ -47,7 +46,17 @@ datas
 │       ├── POPE
 │       └── SEEDBench_IMG
 ├── ovseg_data
-│   └── ade20k
+│   ├── ade20k
+│   │   ├── ade20k_panoptic_train
+│   │   ├── ade20k_panoptic_val
+│   │   ├── annotations
+│   │   ├── annotations_detectron2
+│   │   └── images
+│   └── pascal_ctx
+│       ├── annotations_ctx459
+│       ├── annotations_ctx59
+│       ├── images
+│       └── labels
 ├── reaseg_data
 │   ├── explanatory
 │   ├── test
@@ -62,8 +71,9 @@ datas
 │   ├── refcoco+
 │   └── refcocog
 └── vgdseg_data
-    ├── annotations
-    └── coco2017
+    └── coco_int
+        ├── annotations
+        └── coco2017
 ```
 
 ## Image Segmentation Dataset
@@ -145,18 +155,20 @@ unset temp_data_dir
 ```
 
 ### 4. Reasoning Segmentation Dataset
-Download the [Dataset](https://drive.google.com/drive/folders/125mewyg5Ao6tZ3ZdJ-1-E3n04LGVELqy) (train.zip, val.zip, test.zip, explanatory/train.json) from Google Drive and put it in $root_dir/datas/reaseg_data.
+Download the [Dataset](https://drive.google.com/drive/folders/125mewyg5Ao6tZ3ZdJ-1-E3n04LGVELqy) (train.zip, val.zip, test.zip, explanatory/train.json) from Google Drive and put it in $root_dir/datas/reaseg_data/lisa.
 ```bash
 cd $root_dir
-mkdir -p datas/reaseg_data
-export temp_data_dir=$root_dir/datas/reaseg_data
+mkdir -p datas/reaseg_data/lisa
+export temp_data_dir=$root_dir/datas/reaseg_data/lisa
 mkdir -p $temp_data_dir/explanatory
 # suppose you have downloaded the dataset and put them in $temp_data_dir as below structure
 # reaseg_data
-# ├── train.zip
-# ├── val.zip
-# ├── test.zip
-# └── train.json
+# └── lisa
+#     ├── train.zip
+#     ├── val.zip
+#     ├── test.zip
+#     └── explanatory
+#         └── train.json
 
 # unzip dataset
 unzip $temp_data_dir/train.zip -d $temp_data_dir
@@ -172,7 +184,7 @@ unset temp_data_dir
 Download the [Dataset](https://drive.usercontent.google.com/download?id=1abdxVhrbNQhjJQ8eAcuPrOUBzhGaFsF_&export=download&authuser=0&confirm=t&uuid=bb3fe3db-b08c-48f0-9280-2e56c0910987&at=AN8xHooqlXNOUCiIJYVHFMBLtmVn%3A1754293785835)(GranDf_HA_images.zip) from Google Drive and put it in $root_dir/datas/gcgseg_data.
 ```bash
 cd $root_dir
-mkdir -p datas/gcgseg_data datas/gcgseg_data/images
+mkdir -p datas/gcgseg_data datas/gcgseg_data/grand_f/images
 export temp_data_dir=$root_dir/datas/gcgseg_data
 # download dataset
 hfd MBZUAI/GranD-f --tools aria2c -x 8 --save_dir $temp_data_dir --dataset
@@ -195,14 +207,19 @@ unset temp_data_dir
 ```
 
 ### 6. Interactive Segmentation Dataset
-Download the [Dataset](https://drive.usercontent.google.com/download?id=1EcC1tl1OQRgIqqy7KFG7JZz2KHujAQB3&export=download&authuser=0) (PSALM_data.zip) from Google Drive and put it in $root_dir/datas/intseg_data.
+Download the [Dataset](https://drive.usercontent.google.com/download?id=1EcC1tl1OQRgIqqy7KFG7JZz2KHujAQB3&export=download&authuser=0) (PSALM_data.zip) from Google Drive and put it in $root_dir/datas/intseg_data/coco_int.
 ```bash
 cd $root_dir
-mkdir -p datas/intseg_data datas/intseg_data/annotations
-export temp_data_dir=$root_dir/datas/intseg_data
+mkdir -p datas/intseg_data datas/intseg_data/coco_int/annotations
+export temp_data_dir=$root_dir/datas/intseg_data/coco_int
 # suppose you have downloaded the dataset and put them in $temp_data_dir as below structure
 # intseg_data
-# └── PSALM_data.zip
+# └── coco_int
+#     ├── annotations
+#     |    ├── coco_interactive_train_psalm.json
+#     |    ├── coco_interactive_val_psalm.json
+#     |    └── intseg_val.json
+#     └── coco2017
 
 # unzip dataset
 unzip $temp_data_dir/PSALM_data.zip -d $temp_data_dir
@@ -214,18 +231,19 @@ unset temp_data_dir
 ```
 
 ### 7. VGD Segmentation Dataset
-Download the [Dataset](https://huggingface.co/hao9610/X-SAM/tree/main/vgdseg_annotations) (vgdseg_annotations) from HuggingFace and put it in $root_dir/datas/vgdseg_data.
+Download the [Dataset](https://huggingface.co/hao9610/X-SAM/tree/main/vgdseg_annotations) (vgdseg_annotations) from HuggingFace and put it in $root_dir/datas/vgdseg_data/coco_vgd.
 ```bash
 cd $root_dir
-mkdir -p datas/vgdseg_data
-export temp_data_dir=$root_dir/datas/vgdseg_data
+mkdir -p datas/vgdseg_data/coco_vgd
+export temp_data_dir=$root_dir/datas/vgdseg_data/coco_vgd
 mkdir -p $temp_data_dir/images
 # suppose you have downloaded the dataset and put them in $temp_data_dir as below structure
 # vgdseg_data
-# ├── annotations
-# |   ├──vgdseg_train.json
-# |   └──vgdseg_val.json
-# └── coco2017
+# └── coco_int
+#     ├── annotations
+#     |   ├──vgdseg_train.json
+#     |   └──vgdseg_val.json
+#     └── coco2017
 
 # unzip dataset
 unzip $temp_data_dir/vgd_seg_annotations.zip -d $temp_data_dir
@@ -241,8 +259,8 @@ We provide an awesome [script](hfd.sh) to download datasets, thanks to [hfd](htt
 ### 1. LLaVA Training Dataset
 ```bash
 cd $root_dir
-mkdir -p datas/imgconv_data
-export temp_data_dir=$root_dir/datas/imgconv_data
+mkdir -p datas/imgconv_data/llava
+export temp_data_dir=$root_dir/datas/imgconv_data/llava
 chmod +x hfd.sh
 alias hfd="$PWD/hfd.sh"
 
@@ -250,7 +268,7 @@ hfd liuhaotian/LLaVA-Instruct-150K --tools aria2c -x 8 --save_dir $temp_data_dir
 hfd liuhaotian/LLaVA-Pretrain --tools aria2c -x 8 --save_dir $temp_data_dir --dataset
 ln -s $root_dir/datas/genseg_data/coco2017 $temp_data_dir/coco
 mkdir $temp_data_dir/llava_images
-# please prepare the GQA, OCR_VQA, TEXT_VQA, VG datasets and put them in $temp_data_dir/llava_images as below structure
+# please prepare the GQA, OCR_VQA, TEXT_VQA, VG datasets and put them in $temp_data_dir as below structure
 # llava_images
 # ├── coco
 # ├── gqa

@@ -123,7 +123,7 @@ class VGDSegDataset(BaseDataset):
             encode_mask(mask_visual_prompt),
         )
 
-    def _process_batch_images(self, img_ids_batch, coco_api):
+    def _process_batch_data(self, img_ids_batch, coco_api):
         current_process = mp.current_process()
         pid = current_process.pid
 
@@ -202,7 +202,7 @@ class VGDSegDataset(BaseDataset):
         if self.use_threads:
             print_log(f"Using ThreadPoolExecutor with {num_workers} threads for I/O-intensive tasks", logger="current")
             with ThreadPoolExecutor(max_workers=num_workers) as executor:
-                process_func = partial(self._process_batch_images, coco_api=coco_api)
+                process_func = partial(self._process_batch_data, coco_api=coco_api)
                 futures = [executor.submit(process_func, batch) for batch in img_id_batches]
                 for future in tqdm(futures, desc=f"Processing {self.data_name}", ncols=80):
                     batch_results = future.result()
@@ -211,7 +211,7 @@ class VGDSegDataset(BaseDataset):
         else:
             chunksize = max(1, len(img_id_batches) // num_workers // 2)
             with mp.Pool(num_workers) as pool:
-                process_func = partial(self._process_batch_images, coco_api=coco_api)
+                process_func = partial(self._process_batch_data, coco_api=coco_api)
                 for i, batch_results in enumerate(
                     tqdm(
                         pool.imap_unordered(process_func, img_id_batches, chunksize=chunksize),
@@ -237,7 +237,7 @@ class VGDSegDataset(BaseDataset):
         if self.data_mode == "train":
             if self.use_negative_sample and random.random() < 0.5:
                 neg_cat_ids = sorted(set(cat_ids) - set(pos_cat_ids))
-                num_neg = random.randint(0, max(self.sample_num, self.sample_num - len(neg_cat_ids)))
+                num_neg = random.randint(0, max(self.num_sample, self.num_sample - len(neg_cat_ids)))
                 sampled_neg_cat_ids = _sample(neg_cat_ids, num_neg)
                 sampled_cat_ids = _sample(pos_cat_ids + sampled_neg_cat_ids)
             else:
@@ -391,7 +391,7 @@ class VGDSegDataset(BaseDataset):
                 seg_output = self.extra_image_processor.preprocess(
                     pil_image, data_dict["mask_labels"], data_dict["vprompt_masks"], return_tensors="pt"
                 )
-                data_dict["seg_pixel_values"] = seg_output["pixel_values"][0]
+                data_dict["extra_pixel_values"] = seg_output["pixel_values"][0]
                 data_dict["scaled_size"] = tuple(seg_output["scaled_sizes"][0].tolist())
                 data_dict["mask_labels"] = seg_output.get("mask_labels", None)
                 data_dict["vprompt_masks"] = seg_output.get("vprompt_masks", None)
@@ -410,7 +410,7 @@ class VGDSegDataset(BaseDataset):
                     crop_size = self.extra_image_processor.crop_size
                 else:
                     crop_size = self.extra_image_processor.size
-                data_dict["seg_pixel_values"] = torch.zeros(3, crop_size["height"], crop_size["width"])
+                data_dict["extra_pixel_values"] = torch.zeros(3, crop_size["height"], crop_size["width"])
                 data_dict["image_info"] = {"image_file": None}
                 data_dict["scaled_size"] = (crop_size["height"], crop_size["width"])
                 data_dict["image_size"] = {"height": crop_size["height"], "width": crop_size["width"]}

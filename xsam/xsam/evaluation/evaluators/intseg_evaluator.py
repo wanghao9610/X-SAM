@@ -3,7 +3,7 @@ import json
 from xsam.utils.logging import print_log
 
 from ...dataset.utils.mask import calculate_iou, decode_mask
-from .refer_seg_evaluator import RefSegEvaluator
+from .refseg_evaluator import RefSegEvaluator
 
 
 class IntSegEvaluator(RefSegEvaluator):

@@ -318,12 +318,14 @@ class XSam_XTuner(BaseModel):
             visual_outputs.hidden_states[self.visual_select_layer][:, self.visual_select_indx :]
         )
         if self.segmentor_projector is not None:
-            seg_pixel_values = self.extra_image_processor.preprocess(pil_image, return_tensors="pt")["pixel_values"][0]
-            seg_pixel_values = seg_pixel_values.cuda().unsqueeze(0)
-            seg_outputs = self.segmentor_encoder(seg_pixel_values, output_hidden_states=True)
-            seg_pixel_values = self.segmentor_projector(seg_outputs.hidden_states[self.visual_select_layer])
+            extra_pixel_values = self.extra_image_processor.preprocess(pil_image, return_tensors="pt")["pixel_values"][
+                0
+            ]
+            extra_pixel_values = extra_pixel_values.cuda().unsqueeze(0)
+            seg_outputs = self.segmentor_encoder(extra_pixel_values, output_hidden_states=True)
+            extra_pixel_values = self.segmentor_projector(seg_outputs.hidden_states[self.visual_select_layer])
         else:
-            seg_pixel_values = None
+            extra_pixel_values = None
         inputs = DEFAULT_IMAGE_TOKEN + "\n" + prompt
 
         if self.prompt_template:
@@ -344,7 +346,7 @@ class XSam_XTuner(BaseModel):
                 ids.append(IMAGE_TOKEN_INDEX)
         ids = torch.tensor(ids).cuda().unsqueeze(0)
         mm_inputs = prepare_inputs_labels_for_multimodal(
-            llm=self.llm, input_ids=ids, pixel_values=pixel_values, seg_pixel_values=seg_pixel_values
+            llm=self.llm, input_ids=ids, pixel_values=pixel_values, extra_pixel_values=extra_pixel_values
         )
         if mm_inputs.get("input_ids", None) is not None:
             mm_inputs["input_ids"] = None

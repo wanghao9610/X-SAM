@@ -25,7 +25,7 @@ from .utils.encode import encode_fn
 TASK_MODALITY_LENGTH = {k: int(i * 512) for i, k in enumerate(DEFAULT_TASKS)}
 
 debug_mode = os.getenv("DEBUG_MODE", "false").lower() == "true"
-debug_iter = 200
+debug_iter = 40
 
 
 class BaseDataset(Dataset):
@@ -52,7 +52,7 @@ class BaseDataset(Dataset):
         pad_image_to_square=False,
         output_ids_with_output=True,
         ignore_label=255,
-        sample_num=134,
+        num_sample=10000,
         repeats_scale=1.0,
         **kwargs,
     ):
@@ -72,7 +72,7 @@ class BaseDataset(Dataset):
         self.max_length = max_length
         self.task_length = TASK_MODALITY_LENGTH[task_name] if task_length is None else task_length
         self.ignore_label = ignore_label
-        self.sample_num = sample_num
+        self.num_sample = num_sample
         self.output_ids_with_output = output_ids_with_output
         self.cond_type = cond_type
         self.repeats_scale = repeats_scale
@@ -155,6 +155,11 @@ class BaseDataset(Dataset):
             self.extra_image_processor = BUILDER.build(extra_image_processor)
         else:
             self.extra_image_processor = extra_image_processor
+
+        if self.image_processor and hasattr(self.image_processor, "image_processor"):
+            self.image_processor = self.image_processor.image_processor
+        if self.extra_image_processor and hasattr(self.extra_image_processor, "image_processor"):
+            self.extra_image_processor = self.extra_image_processor.image_processor
 
         self.custom_init(**kwargs)
         self.woann_cnt = 0
@@ -278,7 +283,7 @@ class BaseDataset(Dataset):
                 seg_output = self.extra_image_processor.preprocess(
                     pil_image, data_dict["mask_labels"], return_tensors="pt"
                 )
-                data_dict["seg_pixel_values"] = seg_output["pixel_values"][0]
+                data_dict["extra_pixel_values"] = seg_output["pixel_values"][0]
                 data_dict["scaled_size"] = tuple(seg_output["scaled_sizes"][0].tolist())
                 data_dict["mask_labels"] = seg_output.get("mask_labels", None)
                 data_dict["task_name"] = self.task_name
@@ -296,7 +301,7 @@ class BaseDataset(Dataset):
                     crop_size = self.extra_image_processor.crop_size
                 else:
                     crop_size = self.extra_image_processor.size
-                data_dict["seg_pixel_values"] = torch.zeros(3, crop_size["height"], crop_size["width"])
+                data_dict["extra_pixel_values"] = torch.zeros(3, crop_size["height"], crop_size["width"])
                 data_dict["image_info"] = {"image_file": None}
                 data_dict["scaled_size"] = (crop_size["height"], crop_size["width"])
                 data_dict["image_size"] = {"height": crop_size["height"], "width": crop_size["width"]}

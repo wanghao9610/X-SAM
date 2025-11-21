@@ -1,3 +1,4 @@
+import logging
 import math
 import os.path as osp
 import warnings
@@ -125,8 +126,14 @@ class LLaVAModel(BaseModel):
             self.load_state_dict(pretrained_state_dict, strict=False)
 
             matched_keys = [k for k in pretrained_state_dict.keys() if k in state_dict.keys()]
+            mismatched_keys = [k for k in pretrained_state_dict.keys() if k not in state_dict.keys()]
+            missed_keys = [k for k in state_dict.keys() if k not in pretrained_state_dict.keys()]
             print_log(f"Load s1_pretrained_pth from {s1_pretrained_pth}", logger="current")
             print_log(f"Matched keys: {len(matched_keys)} / {len(pretrained_state_dict.keys())}", logger="current")
+            if len(mismatched_keys) > 0:
+                print_log(f"Mismatched keys: {mismatched_keys}", logger="current", level=logging.WARNING)
+            if len(missed_keys) > 0:
+                print_log(f"Missed keys: {missed_keys}", logger="current", level=logging.WARNING)
 
         self.visual_select_layer = visual_select_layer
         self.visual_select_indx = visual_select_indx

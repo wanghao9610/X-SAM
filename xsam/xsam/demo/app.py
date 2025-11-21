@@ -390,7 +390,7 @@ class GradioApp:
                             [{"background": image, "layers": [mask], "composite": image}, text_prompt, task_name]
                         )
                     except Exception as e:
-                        print(f"Error loading example image {image_path}: {e}\n{traceback.format_exc()}")
+                        print(f"Error loading example image {image_path}\n: {e}\n{traceback.format_exc()}")
                         continue
                 else:
                     # Skip examples with missing images
@@ -632,13 +632,13 @@ class GradioApp:
                     mask = Image.fromarray(np.zeros((image.height, image.width, 4), dtype=np.uint8)).convert("RGBA")
                     return {"background": image, "layers": [mask], "composite": image}, text_prompt
                 except Exception as e:
-                    print(f"Error loading image {image_path}: {e}\n{traceback.format_exc()}")
+                    print(f"Error loading image {image_path}\n: {e}\n{traceback.format_exc()}")
                     return {"background": None, "layers": [None], "composite": None}, text_prompt
             else:
                 return {"background": None, "layers": [None], "composite": None}, text_prompt
 
         except Exception as e:
-            print(f"Error processing example for task {task_name}: {e}\n{traceback.format_exc()}")
+            print(f"Error processing example for task {task_name}\n: {e}\n{traceback.format_exc()}")
             return {"background": None, "layers": [None], "composite": None}, ""
 
 

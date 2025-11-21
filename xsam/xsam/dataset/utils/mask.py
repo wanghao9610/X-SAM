@@ -5,16 +5,16 @@ from pycocotools import mask as mask_utils
 
 
 def decode_mask(segmentation, height, width):
-    binary_mask = np.zeros((height, width), dtype=np.int8)
+    binary_mask = np.zeros((height, width), dtype=np.uint8)
     if isinstance(segmentation, dict):
         if isinstance(segmentation["counts"], list):
             segmentation = mask_utils.frPyObjects(segmentation, *segmentation["size"])
             segmentation["counts"] = segmentation["counts"].decode("utf-8")
-        mask = mask_utils.decode(segmentation).astype(np.int8)
+        mask = mask_utils.decode(segmentation).astype(np.uint8)
         binary_mask = np.maximum(binary_mask, mask.squeeze())
     elif isinstance(segmentation[0], dict):
         for seg in segmentation:
-            mask = mask_utils.decode(seg).astype(np.int8)
+            mask = mask_utils.decode(seg).astype(np.uint8)
             binary_mask = np.maximum(binary_mask, mask.squeeze())
     elif isinstance(segmentation[0], list):
         for seg in segmentation:

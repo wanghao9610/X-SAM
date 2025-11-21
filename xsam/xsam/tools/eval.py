@@ -115,7 +115,7 @@ def process_batch(
     data_dict = {
         "input_ids": data["data_dict"].get("input_ids", None),
         "pixel_values": data["data_dict"].get("pixel_values", None),
-        "seg_pixel_values": data["data_dict"].get("seg_pixel_values", None),
+        "extra_pixel_values": data["data_dict"].get("extra_pixel_values", None),
         "cond_ids": data["data_dict"].get("cond_ids", None),
         "seg_ids": data["data_dict"].get("seg_ids", None),
         "vprompt_masks": data["data_dict"].get("vprompt_masks", None),
@@ -259,17 +259,16 @@ def main():
     ), f"len(cfg.val_datasets) = {len(cfg.val_datasets)}, len(cfg.val_evaluators) = {len(cfg.val_evaluators)}"
     print_log(f"Evaluating {len(cfg.val_datasets)} datasets...", logger="current")
     for dataset_cfg, evaluator_cfg in zip(cfg.val_datasets, cfg.val_evaluators):
-        dataset = BUILDER.build(dataset_cfg)
-        model.postprocess_fn = dataset.postprocess_fn
-
-        evaluator = BUILDER.build(evaluator_cfg)
-        evaluator.metadata = dataset.metadata
-        evaluator.output_dir = osp.join(args.work_dir, "pred_data", evaluator.data_name)
-
         try:
+            dataset = BUILDER.build(dataset_cfg)
+            model.postprocess_fn = dataset.postprocess_fn
+
+            evaluator = BUILDER.build(evaluator_cfg)
+            evaluator.metadata = dataset.metadata
+            evaluator.output_dir = osp.join(args.work_dir, "pred_data", evaluator.data_name)
             evaluate_dataset(model, dataset, evaluator, rank, world_size, generation_config, stop_criteria)
         except Exception as e:
-            print_log(f"Error evaluating {evaluator.data_name}: {e}\n{traceback.format_exc()}", logger="current")
+            print_log(f"Error evaluating {dataset_cfg.data_name}\n: {e}\n{traceback.format_exc()}", logger="current")
             continue
 
 

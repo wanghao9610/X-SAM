@@ -270,7 +270,7 @@ class GCGSegEvaluator(BaseEvaluator):
             best_matches = self._find_best_matches(gt_anns, cap_gt_labels, dt_anns, cap_dt_labels, height, width)
             return len(cap_gt_labels), len(best_matches)
         except Exception as e:
-            print_log(f"Error processing image {imgid}: {e}\n{traceback.format_exc()}", logger="current")
+            print_log(f"Error processing image {imgid}\n: {e}\n{traceback.format_exc()}", logger="current")
             return 0, 0
 
     def _eval_recall(self, mask_preds, caption_preds, gt_json, cap_gt_json):

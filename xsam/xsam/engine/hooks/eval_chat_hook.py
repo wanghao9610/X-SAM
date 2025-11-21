@@ -44,6 +44,7 @@ class EvaluateChatHook(Hook):
         image_processor=None,
         extra_image_processor=None,
         visualizer=None,
+        expand2square=True,
         system="",
         prompt_template=None,
         every_n_iters=None,
@@ -130,6 +131,7 @@ class EvaluateChatHook(Hook):
         self.max_new_tokens = max_new_tokens
         self.tokenizer = BUILDER.build(tokenizer)
         self.extra_image_processor = None
+        self.expand2square = expand2square
         self.visualizer = None
         if image_processor is not None:
             self.image_processor = BUILDER.build(image_processor)
@@ -137,6 +139,11 @@ class EvaluateChatHook(Hook):
             self.extra_image_processor = BUILDER.build(extra_image_processor)
         if visualizer is not None:
             self.visualizer = BUILDER.build(visualizer)
+
+        if self.image_processor and hasattr(self.image_processor, "image_processor"):
+            self.image_processor = self.image_processor.image_processor
+        if self.extra_image_processor and hasattr(self.extra_image_processor, "image_processor"):
+            self.extra_image_processor = self.extra_image_processor.image_processor
 
         # default generation config
         default_generation_kwargs = dict(
@@ -215,10 +222,12 @@ class EvaluateChatHook(Hook):
             self.postprocess_fns,
         ):
             data_name = osp.splitext(osp.basename(sample_image_file))[0]
-            image = expand2square(
-                sample_image,
-                tuple(int(x * 255) for x in self.image_processor.image_mean),
-            )
+            image = sample_image
+            if self.expand2square:
+                image = expand2square(
+                    image,
+                    tuple(int(x * 255) for x in self.image_processor.image_mean),
+                )
             pixel_values = self.image_processor.preprocess(image, return_tensors="pt")["pixel_values"][0]
             pixel_values = pixel_values.unsqueeze(0).to(device)
 
@@ -252,15 +261,15 @@ class EvaluateChatHook(Hook):
             data_samples.image_files = [sample_image_file]
             data_samples.image_sizes = [(sample_image.size[1], sample_image.size[0])]
 
-            seg_pixel_values = None
+            extra_pixel_values = None
             vprompt_masks = None
 
             if hasattr(model, "segmentor") and self.extra_image_processor is not None:
                 seg_output = self.extra_image_processor.preprocess(
                     sample_image, condition_maps=sample_vprompt_mask, return_tensors="pt"
                 )
-                seg_pixel_values = seg_output["pixel_values"][0]
-                seg_pixel_values = seg_pixel_values.unsqueeze(0).to(device)
+                extra_pixel_values = seg_output["pixel_values"][0]
+                extra_pixel_values = extra_pixel_values.unsqueeze(0).to(device)
                 vprompt_masks = seg_output["vprompt_masks"] if "vprompt_masks" in seg_output else None
 
                 data_samples.scaled_sizes = [tuple(seg_output["scaled_sizes"][0].tolist())]
@@ -273,7 +282,7 @@ class EvaluateChatHook(Hook):
                     data_samples.contiguous_labels = [[i for i in range(len(vprompt_masks))]]
                     vprompt_masks = [vprompt_masks.to(device)]
 
-                data_dict["seg_pixel_values"] = seg_pixel_values
+                data_dict["extra_pixel_values"] = extra_pixel_values
                 data_dict["vprompt_masks"] = vprompt_masks
 
             output_suffix = f"{data_name}"
@@ -307,7 +316,7 @@ class EvaluateChatHook(Hook):
                         do_postprocess=True,
                     )
                 except Exception as e:
-                    print_log(f"Error in {data_name} prediction: {e}\n{traceback.format_exc()}", logger="current")
+                    print_log(f"Error in {data_name} prediction\n: {e}\n{traceback.format_exc()}", logger="current")
                     continue
             output_ids = llm_outputs.sequences
             generation_output = self.tokenizer.decode(output_ids[0]).strip()
@@ -340,7 +349,7 @@ class EvaluateChatHook(Hook):
                         **(seg_outputs[0]),
                     )
                 except Exception as e:
-                    print_log(f"Error in {data_name} visualization: {e}\n{traceback.format_exc()}", logger="current")
+                    print_log(f"Error in {data_name} visualization\n: {e}\n{traceback.format_exc()}", logger="current")
                     continue
             if save_eval_output:
                 eval_outputs.append(f"{inputs + generation_output}\n")

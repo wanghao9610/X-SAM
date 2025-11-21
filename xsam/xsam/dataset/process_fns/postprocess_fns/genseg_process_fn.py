@@ -217,22 +217,7 @@ def genseg_postprocess_fn(
 
         return results
 
-    if "pan" in task_name:
-        metadata = kwargs.pop("metadata", None)
-        label_ids_to_fuse = None
-        if metadata is not None and hasattr(metadata, "stuff_dataset_id_to_contiguous_id"):
-            label_ids_to_fuse = metadata.stuff_dataset_id_to_contiguous_id.values()
-        return _genseg_postprocess(
-            outputs,
-            image_sizes,
-            scaled_sizes,
-            threshold,
-            mask_threshold,
-            overlap_mask_area_threshold,
-            label_ids_to_fuse,
-            **kwargs,
-        )
-    elif "sem" in task_name:
+    if "sem" in task_name:
         sampled_labels = kwargs.pop("sampled_labels", None)
         return _semantic_genseg_postprocess(outputs, image_sizes, scaled_sizes, sampled_labels=sampled_labels)
     elif "ins" in task_name:
@@ -248,4 +233,17 @@ def genseg_postprocess_fn(
             **kwargs,
         )
     else:
-        raise ValueError(f"Task name {task_name} not supported")
+        metadata = kwargs.pop("metadata", None)
+        label_ids_to_fuse = None
+        if metadata is not None and hasattr(metadata, "stuff_dataset_id_to_contiguous_id"):
+            label_ids_to_fuse = metadata.stuff_dataset_id_to_contiguous_id.values()
+        return _genseg_postprocess(
+            outputs,
+            image_sizes,
+            scaled_sizes,
+            threshold,
+            mask_threshold,
+            overlap_mask_area_threshold,
+            label_ids_to_fuse,
+            **kwargs,
+        )

@@ -20,7 +20,7 @@ def xsam_collate_fn(
     data_samples = DataSample()
     has_input_ids = any(inst.get("input_ids") is not None for inst in instances)
     has_image = any(inst.get("pixel_values") is not None for inst in instances)
-    has_seg_image = any(inst.get("seg_pixel_values") is not None for inst in instances)
+    has_seg_image = any(inst.get("extra_pixel_values") is not None for inst in instances)
     has_cond_id = any(inst.get("cond_ids") is not None for inst in instances)
     has_vprompt_mask = any(inst.get("vprompt_masks") is not None for inst in instances)
     has_seg_id = any(inst.get("seg_ids") is not None for inst in instances)
@@ -43,7 +43,7 @@ def xsam_collate_fn(
     if has_image:
         pixel_values = []
     if has_seg_image:
-        seg_pixel_values = []
+        extra_pixel_values = []
         image_files = []
         image_sizes = []
         scaled_sizes = []
@@ -75,7 +75,7 @@ def xsam_collate_fn(
         if has_image:
             pixel_values.append(example["pixel_values"])
         if has_seg_image:
-            seg_pixel_values.append(example["seg_pixel_values"])
+            extra_pixel_values.append(example["extra_pixel_values"])
             image_files.append(example["image_file"])
             image_sizes.append(example["image_size"])
             scaled_sizes.append(example["scaled_size"])
@@ -161,9 +161,9 @@ def xsam_collate_fn(
         data_dict["pixel_values"] = pixel_values
 
     if has_seg_image:
-        if all(x.shape == seg_pixel_values[0].shape for x in seg_pixel_values):
-            seg_pixel_values = torch.stack(seg_pixel_values, dim=0)
-        data_dict["seg_pixel_values"] = seg_pixel_values
+        if all(x.shape == extra_pixel_values[0].shape for x in extra_pixel_values):
+            extra_pixel_values = torch.stack(extra_pixel_values, dim=0)
+        data_dict["extra_pixel_values"] = extra_pixel_values
         data_samples.set_metainfo(
             {
                 "image_files": image_files,

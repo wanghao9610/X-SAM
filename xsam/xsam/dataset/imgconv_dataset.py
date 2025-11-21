@@ -122,7 +122,7 @@ class ImgConvDataset(BaseDataset):
             if self.extra_image_processor is not None:
                 seg_output = self.extra_image_processor.preprocess(pil_image, return_tensors="pt")
                 data_dict["image_info"] = {"image_file": image_file}
-                data_dict["seg_pixel_values"] = seg_output["pixel_values"][0]
+                data_dict["extra_pixel_values"] = seg_output["pixel_values"][0]
                 data_dict["image_size"] = seg_output["original_sizes"][0]
                 data_dict["scaled_size"] = tuple(seg_output["scaled_sizes"][0].tolist())
                 data_dict["task_name"] = self.task_name
@@ -140,7 +140,7 @@ class ImgConvDataset(BaseDataset):
                     crop_size = self.extra_image_processor.pad_size
                 else:
                     crop_size = self.extra_image_processor.size
-                data_dict["seg_pixel_values"] = torch.zeros(3, crop_size["height"], crop_size["width"])
+                data_dict["extra_pixel_values"] = torch.zeros(3, crop_size["height"], crop_size["width"])
                 data_dict["image_file"] = None
                 data_dict["image_size"] = {"height": crop_size["height"], "width": crop_size["width"]}
                 data_dict["image_info"] = {"image_file": None}

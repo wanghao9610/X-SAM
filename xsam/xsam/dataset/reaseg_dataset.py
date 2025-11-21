@@ -124,7 +124,7 @@ class ReaSegDataset(BaseDataset):
         binary_mask = np.where(binary_mask == 255, 0, binary_mask).astype(np.uint8)
         return questions, binary_mask, ignore_mask, data.get("is_sentence", False)
 
-    def process_batch_images_worker(self, args):
+    def _process_batch_data(self, args):
         image_folder, image_names, name2explain = args
         get_ann_from_json = self._get_ann_from_json_static
 
@@ -216,7 +216,7 @@ class ReaSegDataset(BaseDataset):
         if self.use_threads:
             print_log(f"Using ThreadPoolExecutor with {num_workers} threads for I/O-intensive tasks", logger="current")
             with ThreadPoolExecutor(max_workers=num_workers) as executor:
-                futures = [executor.submit(self.process_batch_images_worker, batch) for batch in batches]
+                futures = [executor.submit(self._process_batch_data, batch) for batch in batches]
                 for future in tqdm(futures, desc=f"Processing {self.data_name}", ncols=80):
                     res = future.result()
                     if res is not None:
@@ -229,7 +229,7 @@ class ReaSegDataset(BaseDataset):
             with mp.Pool(num_workers) as pool:
                 chunksize = max(1, min(4, len(batches) // num_workers))
                 for res in tqdm(
-                    pool.imap_unordered(self.process_batch_images_worker, batches, chunksize=chunksize),
+                    pool.imap_unordered(self._process_batch_data, batches, chunksize=chunksize),
                     total=len(batches),
                     desc=f"Processing {self.data_name}",
                     ncols=80,

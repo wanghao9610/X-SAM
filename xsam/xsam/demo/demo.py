@@ -454,7 +454,7 @@ class XSamDemo:
             seg_output = self.extra_image_processor.preprocess(
                 pil_image, condition_maps=data_dict["vprompt_masks"], return_tensors="pt"
             )
-            data_dict["seg_pixel_values"] = seg_output["pixel_values"][0]
+            data_dict["extra_pixel_values"] = seg_output["pixel_values"][0]
             data_dict["scaled_size"] = tuple(seg_output["scaled_sizes"][0].tolist())
             data_dict["vprompt_masks"] = seg_output.get("vprompt_masks", None)
 
@@ -550,7 +550,7 @@ class XSamDemo:
                 torch.cuda.empty_cache()
                 torch.cuda.synchronize()
             except Exception as e:
-                print_log(f"Error in {task_name} prediction: {e}\n{traceback.format_exc()}", logger="current")
+                print_log(f"Error in {task_name} prediction\n: {e}\n{traceback.format_exc()}", logger="current")
                 return None, None, None
 
         output_ids = llm_outputs.sequences
@@ -582,7 +582,7 @@ class XSamDemo:
                 **(seg_outputs[0]),
             )
         except Exception as e:
-            print_log(f"Error in {task_name} visualization: {e}\n{traceback.format_exc()}", logger="current")
+            print_log(f"Error in {task_name} visualization\n: {e}\n{traceback.format_exc()}", logger="current")
             return llm_input, generation_output, None
 
         return llm_input, generation_output, visualized_image.get_image()

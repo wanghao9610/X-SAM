@@ -1,4 +1,4 @@
-from .generic_seg_evaluator import GenSegEvaluator
+from .genseg_evaluator import GenSegEvaluator
 
 
 class OVSegEvaluator(GenSegEvaluator):

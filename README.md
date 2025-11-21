@@ -152,7 +152,7 @@ echo -e "cuda version:\n$(nvcc -V)"
 # create conda env for X-SAM
 conda create -n xsam python=3.10 -y
 conda activate xsam
-conda install pytorch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 pytorch-cuda=12.4 -c pytorch -c nvidia
+pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124
 # install gcc11(optional)
 conda install gcc=11 gxx=11 -c conda-forge -y
 # install xtuner0.2.0
@@ -166,7 +166,7 @@ pip install -r requirements/deepspeed.txt
 # install xsam requirements
 pip install -r requirements/xsam.txt
 # install flash-attention
-pip install https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.3/flash_attn-2.7.3+cu12torch2.5cxx11abiFALSE-cp310-cp310-linux_x86_64.whl
+pip install https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.3/flash_attn-2.7.3+cu12torch2.6cxx11abiFALSE-cp310-cp310-linux_x86_64.whl
 
 # install VLMEvalKit for evaluation on VLM benchmarks(optional)
 cd $root_dir
@@ -191,6 +191,7 @@ bash runs/run.sh --modes MODES --config CONFIG_FILE --work-dir WORK_DIR --suffix
 # MODES: train, segeval, vlmeval, visualize, demo
 # bash runs/run.sh -h # echo help.
 # Read the runs/run.sh for more details.
+# debug mode: export DEBUG_MODE=true
 ```
 Prepare the [Datasets](docs/dataset_preparing.md) and [Models](docs/model_preparing.md), and then refer to the following commands to start training and evaluation.
 
@@ -226,7 +227,6 @@ bash runs/run.sh --modes train,segeval,vlmeval,visualize --config xsam/configs/x
 ```bash
 cd $root_dir
 # Evaluate on all segmentation benchmarks.
-# NOTE: ONLY generic segmentation and VGD segmentation are supported NOW.
 bash runs/run.sh --modes segeval --config xsam/configs/xsam/phi3_mini_4k_instruct_siglip2_so400m_p14_384/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py --work-dir $root_dir/inits/X-SAM/s3_mixed_finetune/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune
 ```
 
@@ -313,6 +313,7 @@ bash runs/run.sh --modes demo --config xsam/configs/xsam/phi3_mini_4k_instruct_s
 - [x] Release the code for [Demo Deployment](#computer-demo).
 - [x] Release the code for [Evaluation on All Segmentation Benchmarks](#evaluate-on-all-segmentation-benchmarks).
 - [x] Release the code for [Training X-SAM](#stage-3-mixed-fine-tuning).
+- [ ] Release the code and weight for X-SAM with Qwen3.
 - [ ] Release the code and weight for X-SAM with Qwen3VL.
 - [ ] Relaese the inference and demo code supporting transformers.
 

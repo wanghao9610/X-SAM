@@ -135,8 +135,8 @@ train_dataloader = dict(
     sampler=dict(
         type=LengthGroupedSampler,
         length_property="modality_length",
-        per_device_batch_size=batch_size * accumulative_counts,
         mega_batch_mult=1,
+        per_device_batch_size=batch_size * accumulative_counts,
     ),
     collate_fn=dict(type=xsam_collate_fn),
 )

@@ -5,3 +5,4 @@ tabulate
 scikit-learn
 pycocoevalcap
 gradio>=5.41.1
+mmcv-lite>=2.0.0

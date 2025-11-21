@@ -128,12 +128,10 @@ class RefSegDataset(BaseDataset):
                 "width": _img_info["width"],
             }
 
-            ann_sents = [sorted(list(set(x["sent"] for x in ann.pop("refer_sents")))) for ann in _anns]
+            ann_sents = [sorted(list(set(x["sent"].lower() for x in ann.pop("refer_sents")))) for ann in _anns]
             if self.data_split == "train":
-                sent_combinations = list(itertools.product(*ann_sents))
-                sent_combinations = random.sample(
-                    sent_combinations, min(len(sent_combinations), sum(len(x) for x in ann_sents))
-                )
+                num_combinations = sum(len(x) for x in ann_sents)
+                sent_combinations = list(itertools.islice(itertools.product(*ann_sents), num_combinations))
                 anns = [copy.deepcopy(ann) for ann in _anns]
             else:
                 sent_combinations = [sum(ann_sents, [])]
@@ -146,7 +144,7 @@ class RefSegDataset(BaseDataset):
                 sampled_anns = copy.deepcopy(anns)
                 sampled_sents = list(sent_combination)
 
-                sampled_inds = random.sample(range(len(sampled_sents)), min(len(sampled_sents), self.sample_num))
+                sampled_inds = random.sample(range(len(sampled_sents)), min(len(sampled_sents), self.num_sample))
                 sampled_sents = [sampled_sents[i] for i in sampled_inds]
                 sampled_anns = [sampled_anns[i] for i in sampled_inds]
 

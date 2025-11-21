@@ -24,6 +24,7 @@ export INIT_DIR="$init_dir/"
 export WORK_DIR="$work_dir/"
 export LMUData="$data_dir/LMUData"
 export HF_HOME="$init_dir/huggingface"
+export HF_HUB_OFFLINE="${HF_HUB_OFFLINE:-1}"
 export TRANSFORMERS_OFFLINE="${TRANSFORMERS_OFFLINE:-1}"
 export TRANSFORMERS_VERBOSITY=error
 export TOKENIZERS_PARALLELISM=false
@@ -138,7 +139,7 @@ if [[ "$work_dir" == "$root_dir/wkdrs" || "$work_dir" == "$root_dir/wkdrs/" ]]; 
         if [[ "$suffix" == -* ]]; then
             suffix_norm="$suffix"
         else
-            suffix_norm="-$suffix"
+            suffix_norm="_$suffix"
         fi
     fi
     work_dir="$work_dir/$prefix/$model_name$suffix_norm"
@@ -190,10 +191,10 @@ do
         find "$work_dir/$code_name" -type f -exec chmod 664 {} +
         find "$work_dir/$code_name" -type d -exec chmod 775 {} +
     fi
-    if [ -d "$work_dir/$code_name" ]; then
-        code_dir="$work_dir/$code_name"
-        cp $(realpath $0) $work_dir
-    fi
+    # if [ -d "$work_dir/$code_name" ]; then
+    #     code_dir="$work_dir/$code_name"
+    #     cp $(realpath $0) $work_dir
+    # fi
     cd $code_dir
     export CODE_DIR="$code_dir/"
     echo -e "$log_format code_dir: $code_dir"

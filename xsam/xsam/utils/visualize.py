@@ -440,8 +440,6 @@ class Visualizer:
             return self.draw_sem_seg(**kwargs)
         elif "ins" in data_name:
             return self.draw_ins_seg(**kwargs)
-        elif "pan" in data_name:
-            return self.draw_pan_seg(**kwargs)
         else:
             return self.draw_pan_seg(**kwargs)
 

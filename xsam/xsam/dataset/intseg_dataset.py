@@ -3,6 +3,8 @@ import multiprocessing as mp
 import os
 import os.path as osp
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 
 from tqdm import tqdm
 
@@ -95,18 +97,29 @@ class IntSegDataset(VGDSegDataset):
         print_log(f"Processing {len(json_data)} samples with {num_workers} workers...", logger="current")
 
         results = []
-        chunksize = max(1, len(batches) // num_workers // 2)
-        with mp.Pool(num_workers) as pool:
-            for i, batch_result in enumerate(
-                tqdm(
-                    pool.imap_unordered(self._process_batch_data, batches, chunksize=chunksize),
-                    total=len(batches),
-                    desc=f"Processing {self.data_name}",
-                    ncols=80,
-                )
-            ):
-                if batch_result is not None:
-                    results.extend(batch_result)
+
+        if self.use_threads:
+            print_log(f"Using ThreadPoolExecutor with {num_workers} threads for I/O-intensive tasks", logger="current")
+            with ThreadPoolExecutor(max_workers=num_workers) as executor:
+                futures = [executor.submit(self._process_batch_data, batch) for batch in batches]
+                for future in tqdm(futures, desc=f"Processing {self.data_name}", ncols=80):
+                    batch_results = future.result()
+                    if batch_results is not None:
+                        results.extend(batch_results)
+        else:
+            chunksize = max(1, len(batches) // num_workers // 2)
+            with mp.Pool(num_workers) as pool:
+                for i, batch_results in enumerate(
+                    tqdm(
+                        pool.imap_unordered(self._process_batch_data, batches, chunksize=chunksize),
+                        total=len(batches),
+                        desc=f"Processing {self.data_name}",
+                        ncols=80,
+                    )
+                ):
+                    if batch_results is not None:
+                        results.extend(batch_results)
+
         rets = [r for r in results if r is not None]
         return rets
 

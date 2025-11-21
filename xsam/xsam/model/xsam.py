@@ -1,3 +1,4 @@
+import logging
 import math
 import os.path as osp
 from collections import OrderedDict
@@ -84,7 +85,7 @@ class XSamModel(BaseModel):
         connector_hidden_dim=256,
         connector_scale_factor=[4, 2, 1, 0.5],
         sampler_type="naive",
-        sampler_input_feat="seg_pixel_values",
+        sampler_input_feat="extra_pixel_values",
         cond_type: Literal["phrase", "cls", "all"] = "phrase",
         use_dual_encoder=False,
         use_vision_sampler=False,
@@ -225,16 +226,28 @@ class XSamModel(BaseModel):
             self.load_state_dict(pretrained_state_dict, strict=False)
 
             matched_keys = [k for k in pretrained_state_dict.keys() if k in state_dict.keys()]
+            mismatched_keys = [k for k in pretrained_state_dict.keys() if k not in state_dict.keys()]
+            missed_keys = [k for k in state_dict.keys() if k not in pretrained_state_dict.keys()]
             print_log(f"Load s1_pretrained_pth from {s1_pretrained_pth}", logger="current")
             print_log(f"Matched keys: {len(matched_keys)} / {len(pretrained_state_dict.keys())}", logger="current")
+            if len(mismatched_keys) > 0:
+                print_log(f"Mismatched keys: {mismatched_keys}", logger="current", level=logging.WARNING)
+            if len(missed_keys) > 0:
+                print_log(f"Missed keys: {missed_keys}", logger="current", level=logging.WARNING)
 
         if s2_pretrained_pth is not None:
             pretrained_state_dict = guess_load_checkpoint(s2_pretrained_pth)
             self.load_state_dict(pretrained_state_dict, strict=False)
 
             matched_keys = [k for k in pretrained_state_dict.keys() if k in state_dict.keys()]
+            mismatched_keys = [k for k in pretrained_state_dict.keys() if k not in state_dict.keys()]
+            missed_keys = [k for k in state_dict.keys() if k not in pretrained_state_dict.keys()]
             print_log(f"Load s2_pretrained_pth from {s2_pretrained_pth}", logger="current")
             print_log(f"Matched keys: {len(matched_keys)} / {len(pretrained_state_dict.keys())}", logger="current")
+            if len(mismatched_keys) > 0:
+                print_log(f"Mismatched keys: {mismatched_keys}", logger="current", level=logging.WARNING)
+            if len(missed_keys) > 0:
+                print_log(f"Missed keys: {missed_keys}", logger="current", level=logging.WARNING)
 
         self.visual_select_layer = visual_select_layer
         self.visual_select_indx = visual_select_indx
@@ -438,10 +451,10 @@ class XSamModel(BaseModel):
             )
             data_dict["pixel_values"] = pixel_values.to(self.llm.dtype)
 
-        if "seg_pixel_values" in data_dict and self.segmentor is not None:
+        if "extra_pixel_values" in data_dict and self.segmentor is not None:
             if self.extract_seg_embeds:
                 seg_visual_outputs = self.segmentor.encoder(
-                    data_dict["seg_pixel_values"].to(self.segmentor.dtype),
+                    data_dict["extra_pixel_values"].to(self.segmentor.dtype),
                     output_hidden_states=True,
                     output_attentions=False,
                 )
@@ -450,10 +463,10 @@ class XSamModel(BaseModel):
                     if hasattr(seg_visual_outputs, "last_hidden_state")
                     else seg_visual_outputs.hidden_states[-1].transpose(1, 2)
                 )
-                seg_pixel_values = None
+                extra_pixel_values = None
                 if hasattr(self, "seg_projector"):
-                    seg_pixel_values = self.seg_projector(seg_visual_outputs.hidden_states[self.visual_select_layer])
-                    seg_pixel_values = seg_pixel_values.to(self.llm.dtype)
+                    extra_pixel_values = self.seg_projector(seg_visual_outputs.hidden_states[self.visual_select_layer])
+                    extra_pixel_values = extra_pixel_values.to(self.llm.dtype)
 
                 if hasattr(self, "seg_connector"):
                     seg_image_embeddings = self.seg_connector(
@@ -462,22 +475,22 @@ class XSamModel(BaseModel):
                 elif self.segmentor.pixel_decoder is not None and hasattr(seg_visual_outputs, "feature_maps"):
                     seg_image_embeddings = seg_visual_outputs.feature_maps
 
-                # here, seg_pixel_values is seg_projector output
-                data_dict["seg_pixel_values"] = seg_pixel_values
+                # here, extra_pixel_values is seg_projector output
+                data_dict["extra_pixel_values"] = extra_pixel_values
                 extra_data_dict = {
-                    "seg_pixel_values": None,
+                    "extra_pixel_values": None,
                     "seg_image_embeddings": seg_image_embeddings,
                 }
                 del seg_visual_outputs
             else:
-                # here, seg_pixel_values is image_processor output
+                # here, extra_pixel_values is image_processor output
                 extra_data_dict = {
-                    "seg_pixel_values": data_dict["seg_pixel_values"].to(self.segmentor.dtype),
+                    "extra_pixel_values": data_dict["extra_pixel_values"].to(self.segmentor.dtype),
                     "seg_image_embeddings": None,
                 }
-                data_dict["seg_pixel_values"] = None
+                data_dict["extra_pixel_values"] = None
         else:
-            data_dict["seg_pixel_values"] = None
+            data_dict["extra_pixel_values"] = None
 
         if data_dict.get("vprompt_masks", None) is not None and hasattr(self, "vision_sampler"):
             vprompt_masks = data_dict.pop("vprompt_masks")
@@ -519,7 +532,7 @@ class XSamModel(BaseModel):
 
         cond_ids = data_dict.pop("cond_ids", None)
         seg_ids = data_dict.pop("seg_ids", None)
-        seg_pixel_values = data_dict.pop("seg_pixel_values", None)
+        extra_pixel_values = data_dict.pop("extra_pixel_values", None)
         seg_image_embeddings = data_dict.pop("seg_image_embeddings", None)
         task_names, image_size, scaled_size, mask_labels, class_labels = self._get_attrs_from_data_samples(
             data_samples,
@@ -590,7 +603,7 @@ class XSamModel(BaseModel):
                 seg_outputs = None
             else:
                 seg_outputs = self.segmentor(
-                    pixel_values=seg_pixel_values,
+                    pixel_values=extra_pixel_values,
                     image_embeddings=seg_image_embeddings,
                     cond_embeddings=cond_embeds,
                     seg_embeddings=seg_embeds,
@@ -625,7 +638,7 @@ class XSamModel(BaseModel):
             data_dict["attention_mask"] = None
 
         seg_ids = data_dict.pop("seg_ids", None)
-        seg_pixel_values = data_dict.pop("seg_pixel_values", None)
+        extra_pixel_values = data_dict.pop("extra_pixel_values", None)
         seg_image_embeddings = data_dict.pop("seg_image_embeddings", None)
         input_cond_ids = data_dict.pop("cond_ids", None)
         task_names, image_size, scaled_size = self._get_attrs_from_data_samples(
@@ -694,7 +707,7 @@ class XSamModel(BaseModel):
             if len(seg_idx) > 0:
                 # fmt: off
                 B = (seg_image_embeddings.shape[0] if isinstance(seg_image_embeddings, torch.Tensor) 
-                    else seg_image_embeddings[0].shape[0]) if self.extract_seg_embeds else seg_pixel_values.shape[0]
+                    else seg_image_embeddings[0].shape[0]) if self.extract_seg_embeds else extra_pixel_values.shape[0]
                 assert B == 1, "Only support batch size 1 for prediction"
                 # fmt: on
                 seg_ids = torch.full_like(
@@ -717,7 +730,7 @@ class XSamModel(BaseModel):
                 seg_outputs = None
             else:
                 seg_outputs = self.segmentor(
-                    pixel_values=seg_pixel_values,
+                    pixel_values=extra_pixel_values,
                     image_embeddings=seg_image_embeddings,
                     cond_embeddings=cond_embeds,
                     seg_embeddings=seg_embeds,
@@ -1057,6 +1070,10 @@ class XSamModel(BaseModel):
                 self.segmentor.save_pretrained(segmentor_encoder_path, state_dict=state_dict, **save_pretrained_kwargs)
 
             # Segmentor Projector
+            if hasattr(self, "seg_projector"):
+                seg_projector_path = osp.join(save_dir, "segmentor_projector")
+                print_log(f"Saving segmentor_projector to {seg_projector_path}", "current")
+                self.seg_projector.save_pretrained(seg_projector_path, **save_pretrained_kwargs)
             if hasattr(self, "seg_projector"):
                 seg_projector_path = osp.join(save_dir, "segmentor_projector")
                 print_log(f"Saving segmentor_projector to {seg_projector_path}", "current")
