@@ -46,17 +46,12 @@ datas
 │       ├── POPE
 │       └── SEEDBench_IMG
 ├── ovseg_data
-│   ├── ade20k
-│   │   ├── ade20k_panoptic_train
-│   │   ├── ade20k_panoptic_val
-│   │   ├── annotations
-│   │   ├── annotations_detectron2
-│   │   └── images
-│   └── pascal_ctx
-│       ├── annotations_ctx459
-│       ├── annotations_ctx59
-│       ├── images
-│       └── labels
+│   └── ade20k
+│       ├── ade20k_panoptic_train
+│       ├── ade20k_panoptic_val
+│       ├── annotations
+│       ├── annotations_detectron2
+│       └── images
 ├── reaseg_data
 │   ├── explanatory
 │   ├── test
