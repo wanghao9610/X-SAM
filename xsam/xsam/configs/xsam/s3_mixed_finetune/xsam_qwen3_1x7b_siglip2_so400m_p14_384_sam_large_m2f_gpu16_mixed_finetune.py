@@ -77,7 +77,7 @@ seg_encoder_name_or_path = init_dir + "sam-vit-large"
 seg_decoder_name_or_path = init_dir + "mask2former-swin-large-coco-panoptic"
 
 # Specify the pretrained pth
-# Case1: Comment the following for training from scratch
+# Case1: Uncomment the following for training from scratch
 s1_pretrained_pth = work_dir + "s1_seg_finetune/xsam_sam_large_m2f_e36_gpu16_seg_finetune/pytorch_model.bin"
 s2_pretrained_pth = (
     work_dir

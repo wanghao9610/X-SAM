@@ -6,7 +6,6 @@ from mmengine.hooks import CheckpointHook, DistSamplerSeedHook, IterTimerHook, L
 from mmengine.optim import AmpOptimWrapper, CosineAnnealingLR, LinearLR
 from torch.optim import AdamW
 from transformers import AutoModelForCausalLM, AutoTokenizer, SiglipProcessor, SiglipVisionModel
-from xtuner.utils import PROMPT_TEMPLATE
 
 from xsam.dataset import (
     ConcatDataset,
@@ -59,6 +58,7 @@ from xsam.model import XSamModel
 from xsam.model.segmentors import XSegmentor
 from xsam.model.segmentors.mask2former import Mask2FormerConfig, Mask2FormerModel
 from xsam.model.segmentors.sam import SamModel
+from xsam.utils.template import PROMPT_TEMPLATE
 from xsam.utils.visualize import Visualizer
 
 #######################################################################
@@ -71,7 +71,7 @@ init_dir = getenv("INIT_DIR", "./inits/")
 work_dir = getenv("WORK_DIR", "./wkdrs/")
 
 # Model
-llm_name_or_path = init_dir + "Phi-3-mini-4k-instruct"
+llm_name_or_path = init_dir + "vicuna-7b-v1.5"
 visual_encoder_name_or_path = init_dir + "siglip2-so400m-patch14-384"
 seg_encoder_name_or_path = init_dir + "sam-vit-large"
 seg_decoder_name_or_path = init_dir + "mask2former-swin-large-coco-panoptic"
@@ -81,7 +81,7 @@ seg_decoder_name_or_path = init_dir + "mask2former-swin-large-coco-panoptic"
 s1_pretrained_pth = work_dir + "s1_seg_finetune/xsam_sam_large_m2f_e36_gpu16_seg_finetune/pytorch_model.bin"
 s2_pretrained_pth = (
     work_dir
-    + "s2_align_pretrain/xsam_phi3_mini_4k_instruct_siglip2_so400m_p14_384_sam_large_e1_gpu16_align_pretrain/pytorch_model.bin"
+    + "s2_align_pretrain/xsam_vicuna_7b_v1x5_instruct_siglip2_so400m_p14_384_sam_large_e1_gpu16_align_pretrain/pytorch_model.bin"
 )  # noqa: E501
 
 # Case2: Uncomment the following for evaluating from our pretrained model
@@ -89,8 +89,8 @@ s2_pretrained_pth = (
 # s2_pretrained_pth = None
 
 # Prompt
-prompt_template = PROMPT_TEMPLATE.phi3_chat
-max_length = int(4096 - (384 / 14) ** 2 - 1024)
+prompt_template = PROMPT_TEMPLATE.vicuna
+max_length = int(40960 - (384 / 14) ** 2 - 1024)
 
 # Scheduler & Optimizer
 batch_size = 4  # per_device
