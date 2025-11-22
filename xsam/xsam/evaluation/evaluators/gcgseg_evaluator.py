@@ -182,7 +182,10 @@ class GCGSegEvaluator(BaseEvaluator):
                 raise ValueError(f"Metric {metric} not supported")
 
     def _eval_miou(self, preds, gt_json):
-        coco_gt = COCO(gt_json)
+        with open(gt_json, "r") as f:
+            gt_data = json.load(f)
+            gt_data["info"] = {"description": "GCGSeg dataset"}
+        coco_gt = COCO(dataset=gt_data)
         coco_dt = coco_gt.loadRes(preds)
         imgids = sorted(list(set([pred["image_id"] for pred in preds])))
 
@@ -215,7 +218,10 @@ class GCGSegEvaluator(BaseEvaluator):
         print_log(f"{self.data_name} mIoU results:\n{table}", logger="current")
 
     def _eval_map(self, preds, gt_json):
-        coco_gt = COCO(gt_json)
+        with open(gt_json, "r") as f:
+            gt_data = json.load(f)
+            gt_data["info"] = {"description": "GCGSeg dataset"}
+        coco_gt = COCO(dataset=gt_data)
         coco_dt = coco_gt.loadRes(preds)
         coco_eval = COCOeval(coco_gt, coco_dt, "segm")
         imgids = sorted(list(set([pred["image_id"] for pred in preds])))
@@ -227,7 +233,10 @@ class GCGSegEvaluator(BaseEvaluator):
         coco_eval.summarize()
 
     def _eval_caption(self, preds, gt_json):
-        coco_gt = COCO(gt_json)
+        with open(gt_json, "r") as f:
+            gt_data = json.load(f)
+            gt_data["info"] = {"description": "GCGSeg dataset"}
+        coco_gt = COCO(dataset=gt_data)
         coco_dt = coco_gt.loadRes(preds)
         coco_eval = COCOEvalCap(coco_gt, coco_dt)
         imgids = sorted(list(set([pred["image_id"] for pred in preds])))
@@ -274,8 +283,14 @@ class GCGSegEvaluator(BaseEvaluator):
             return 0, 0
 
     def _eval_recall(self, mask_preds, caption_preds, gt_json, cap_gt_json):
-        coco_gt = COCO(gt_json)
-        cap_coco_gt = COCO(cap_gt_json)
+        with open(gt_json, "r") as f:
+            gt_data = json.load(f)
+            gt_data["info"] = {"description": "GCGSeg dataset"}
+        with open(cap_gt_json, "r") as f:
+            cap_gt_data = json.load(f)
+            cap_gt_data["info"] = {"description": "GCGSeg dataset"}
+        coco_gt = COCO(dataset=gt_data)
+        cap_coco_gt = COCO(dataset=cap_gt_data)
         coco_dt = coco_gt.loadRes(mask_preds)
         cap_coco_dt = cap_coco_gt.loadRes(caption_preds)
         imgids = sorted(list(set([pred["image_id"] for pred in mask_preds])))
