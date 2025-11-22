@@ -577,9 +577,12 @@ class Visualizer:
 
         if self._instance_mode == ColorMode.SEGMENTATION and self.metadata.get("thing_colors"):
             colors = (
-                [self._jitter([x / 255 for x in self.metadata.thing_colors[c]]) for c in classes]
+                [self._jitter([x / 255 for x in self.metadata.thing_colors.get(c, (0, 0, 0))]) for c in classes]
                 if jittering
-                else [tuple(mplc.to_rgb([x / 255 for x in self.metadata.thing_colors[c]])) for c in classes]
+                else [
+                    tuple(mplc.to_rgb([x / 255 for x in self.metadata.thing_colors.get(c, (0, 0, 0))]))
+                    for c in classes
+                ]
             )
 
             alpha = 0.8
