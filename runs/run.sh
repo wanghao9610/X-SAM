@@ -191,13 +191,16 @@ do
         find "$work_dir/$code_name" -type f -exec chmod 664 {} +
         find "$work_dir/$code_name" -type d -exec chmod 775 {} +
     fi
-    # if [ -d "$work_dir/$code_name" ]; then
-    #     code_dir="$work_dir/$code_name"
-    #     cp $(realpath $0) $work_dir
-    # fi
+    if [ -d "$work_dir/$code_name" ]; then
+        code_dir="$work_dir/$code_name"
+        cp $(realpath $0) $work_dir
+    fi
     cd $code_dir
     export CODE_DIR="$code_dir/"
     echo -e "$log_format code_dir: $code_dir"
+
+    [ -f "$config_file" ] || config_file="${config_file#$code_name/}"
+    [ -f "$config_file" ] || { echo -e "$log_format Config file not found: $config_file" >&2; exit 1; }
     
     # mode: train
     trained_flag=0
