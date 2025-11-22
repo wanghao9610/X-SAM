@@ -315,8 +315,9 @@ bash runs/run.sh --modes demo --config xsam/configs/xsam/s3_mixed_finetune/xsam_
 - [x] Release the code for [Evaluation on All Segmentation Benchmarks](#evaluate-on-all-segmentation-benchmarks).
 - [x] Release the code for [Training X-SAM](#stage-3-mixed-fine-tuning).
 - [x] Release the code and weight for X-SAM with Qwen3.
-- [ ] Release the code and weight for X-SAM with Qwen3VL.
 - [ ] Relaese the inference and demo code supporting transformers.
+- [ ] Release the code and instructions for training with Ascend NPU.
+- [ ] Release the code and weight for X-SAM with Qwen3VL.
 
 ## :blush: Acknowledge
 This project has referenced some excellent open-sourced repos ([xtuner](https://github.com/InternLM/xtuner), [VLMEvalKit](https://github.com/open-compass/VLMEvalKit), [Sa2VA](https://github.com/magic-research/Sa2VA)). Thanks for their wonderful works and contributions to the community.
