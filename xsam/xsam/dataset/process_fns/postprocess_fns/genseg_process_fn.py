@@ -149,7 +149,7 @@ def genseg_postprocess_fn(
             )
         return results
 
-    def _genseg_postprocess(
+    def _panoptic_genseg_postprocess(
         outputs,
         image_sizes,
         scaled_sizes,
@@ -237,7 +237,7 @@ def genseg_postprocess_fn(
         label_ids_to_fuse = None
         if metadata is not None and hasattr(metadata, "stuff_dataset_id_to_contiguous_id"):
             label_ids_to_fuse = metadata.stuff_dataset_id_to_contiguous_id.values()
-        return _genseg_postprocess(
+        return _panoptic_genseg_postprocess(
             outputs,
             image_sizes,
             scaled_sizes,
