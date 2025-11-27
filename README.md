@@ -334,7 +334,7 @@ If you find X-SAM is helpful for your research or applications, please consider 
 }
 ```
 
-## :star2: Star History
+<!-- ## :star2: Star History
 
 <a href="https://www.star-history.com/#wanghao9610/X-SAM&Date">
  <picture>
@@ -342,4 +342,4 @@ If you find X-SAM is helpful for your research or applications, please consider 
    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=wanghao9610/X-SAM&type=Date" />
    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=wanghao9610/X-SAM&type=Date" />
  </picture>
-</a>
+</a> -->
