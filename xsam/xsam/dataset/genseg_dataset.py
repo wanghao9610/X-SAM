@@ -174,7 +174,7 @@ class GenSegDataset(BaseDataset):
         if self.data_mode == "train":
             if self.use_full_cat and self.use_variant_cat:
                 if random.random() < 0.5:
-                    neg_num = max(self.num_sample - len(pos_cat_ids), 0)
+                    neg_num = max(self.num_class - len(pos_cat_ids), 0)
                     neg_cat_ids = _sample(neg_cat_ids, random.randint(0, neg_num))
                     sampled_cat_ids = _sample(pos_cat_ids + neg_cat_ids)
                 else:
@@ -182,11 +182,11 @@ class GenSegDataset(BaseDataset):
             elif self.use_full_cat and not self.use_variant_cat:
                 sampled_cat_ids = _sample(cat_ids)
             elif not self.use_full_cat and self.use_variant_cat:
-                neg_num = max(self.num_sample - len(pos_cat_ids), 0)
+                neg_num = max(self.num_class - len(pos_cat_ids), 0)
                 neg_cat_ids = _sample(neg_cat_ids, random.randint(0, neg_num))
                 sampled_cat_ids = _sample(pos_cat_ids + neg_cat_ids)
             elif not self.use_full_cat and not self.use_variant_cat:
-                sampled_cat_ids = _sample(pos_cat_ids, self.num_sample)
+                sampled_cat_ids = _sample(pos_cat_ids, self.num_class)
                 sampled_anns = [anns[ann_cat_ids.index(cat_id)] for cat_id in sampled_cat_ids]
         else:
             sampled_cat_ids = cat_ids

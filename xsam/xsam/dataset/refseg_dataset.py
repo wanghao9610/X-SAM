@@ -144,7 +144,7 @@ class RefSegDataset(BaseDataset):
                 sampled_anns = copy.deepcopy(anns)
                 sampled_sents = list(sent_combination)
 
-                sampled_inds = random.sample(range(len(sampled_sents)), min(len(sampled_sents), self.num_sample))
+                sampled_inds = random.sample(range(len(sampled_sents)), min(len(sampled_sents), self.num_class))
                 sampled_sents = [sampled_sents[i] for i in sampled_inds]
                 sampled_anns = [sampled_anns[i] for i in sampled_inds]
 

@@ -237,7 +237,7 @@ class VGDSegDataset(BaseDataset):
         if self.data_mode == "train":
             if self.use_negative_sample and random.random() < 0.5:
                 neg_cat_ids = sorted(set(cat_ids) - set(pos_cat_ids))
-                num_neg = random.randint(0, max(self.num_sample, self.num_sample - len(neg_cat_ids)))
+                num_neg = random.randint(0, max(self.num_class, self.num_class - len(neg_cat_ids)))
                 sampled_neg_cat_ids = _sample(neg_cat_ids, num_neg)
                 sampled_cat_ids = _sample(pos_cat_ids + sampled_neg_cat_ids)
             else:

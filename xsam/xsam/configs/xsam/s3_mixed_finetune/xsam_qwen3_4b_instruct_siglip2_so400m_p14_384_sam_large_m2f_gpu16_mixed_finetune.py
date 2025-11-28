@@ -532,7 +532,7 @@ coco_vgdseg_dataset = dict(
     ),
     template_map_fn=dict(type=template_map_fn_factory, template=prompt_template),
     use_negative_sample=True,
-    num_sample=5,
+    num_class=5,
     max_length=max_length,
     pad_image_to_square=False,
 )
@@ -1165,7 +1165,7 @@ val_datasets = [
             type=template_map_fn_factory, template=prompt_template, output_suffix=output_ids_with_output
         ),
         use_negative_sample=False,
-        num_sample=5,
+        num_class=5,
         max_length=max_length,
         pad_image_to_square=True,
     ),
@@ -1199,7 +1199,7 @@ val_datasets = [
             type=template_map_fn_factory, template=prompt_template, output_suffix=output_ids_with_output
         ),
         use_negative_sample=False,
-        num_sample=5,
+        num_class=5,
         max_length=max_length,
         pad_image_to_square=True,
     ),
@@ -1233,7 +1233,7 @@ val_datasets = [
             type=template_map_fn_factory, template=prompt_template, output_suffix=output_ids_with_output
         ),
         use_negative_sample=False,
-        num_sample=5,
+        num_class=5,
         max_length=max_length,
         pad_image_to_square=True,
     ),
@@ -1267,7 +1267,7 @@ val_datasets = [
             type=template_map_fn_factory, template=prompt_template, output_suffix=output_ids_with_output
         ),
         use_negative_sample=False,
-        num_sample=5,
+        num_class=5,
         max_length=max_length,
         pad_image_to_square=True,
     ),

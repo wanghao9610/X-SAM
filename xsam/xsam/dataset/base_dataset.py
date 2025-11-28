@@ -52,7 +52,7 @@ class BaseDataset(Dataset):
         pad_image_to_square=False,
         output_ids_with_output=True,
         ignore_label=255,
-        num_sample=10000,
+        num_class=10000,
         repeats_scale=1.0,
         **kwargs,
     ):
@@ -72,7 +72,7 @@ class BaseDataset(Dataset):
         self.max_length = max_length
         self.task_length = TASK_MODALITY_LENGTH[task_name] if task_length is None else task_length
         self.ignore_label = ignore_label
-        self.num_sample = num_sample
+        self.num_class = num_class
         self.output_ids_with_output = output_ids_with_output
         self.cond_type = cond_type
         self.repeats_scale = repeats_scale
