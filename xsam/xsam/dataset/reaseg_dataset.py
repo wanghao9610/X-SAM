@@ -128,7 +128,7 @@ class ReaSegDataset(BaseDataset):
         image_folder, image_names, name2explain = args
         get_ann_from_json = self._get_ann_from_json_static
 
-        results = []
+        rets = []
         for image_name in image_names:
             image_path = osp.join(image_folder, image_name)
             json_path = image_path.replace(".jpg", ".json")
@@ -169,12 +169,12 @@ class ReaSegDataset(BaseDataset):
                             "iscrowd": 0,
                         }
                     )
-                results.append((image_info, annotations))
+                rets.append((image_info, annotations))
             except Exception as e:
                 print_log(f"Error processing {image_name}: {e}", logger="current")
                 continue
 
-        return results if results else None
+        return rets if rets else None
 
     def _create_polygon_mask(self, mask, points, label_value=1):
         points_array = np.array([points], dtype=np.int32)

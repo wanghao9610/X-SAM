@@ -92,12 +92,13 @@ class IntSegDataset(VGDSegDataset):
         return _rets
 
     def _mp_process_ann_data(self, json_data, batch_size=1024):
-        batches = [json_data[i : i + batch_size] for i in range(0, len(json_data), batch_size)]
         num_workers = min(16, max(1, mp.cpu_count() // 2))
         print_log(f"Processing {len(json_data)} samples with {num_workers} workers...", logger="current")
 
-        results = []
+        batch_size = max(32, min(128, len(json_data) // (num_workers * 4)))
+        batches = [json_data[i : i + batch_size] for i in range(0, len(json_data), batch_size)]
 
+        rets = []
         if self.use_threads:
             print_log(f"Using ThreadPoolExecutor with {num_workers} threads for I/O-intensive tasks", logger="current")
             with ThreadPoolExecutor(max_workers=num_workers) as executor:
@@ -105,7 +106,7 @@ class IntSegDataset(VGDSegDataset):
                 for future in tqdm(futures, desc=f"Processing {self.data_name}", ncols=80):
                     batch_results = future.result()
                     if batch_results is not None:
-                        results.extend(batch_results)
+                        rets.extend(batch_results)
         else:
             chunksize = max(1, len(batches) // num_workers // 2)
             with mp.Pool(num_workers) as pool:
@@ -118,9 +119,9 @@ class IntSegDataset(VGDSegDataset):
                     )
                 ):
                     if batch_results is not None:
-                        results.extend(batch_results)
+                        rets.extend(batch_results)
 
-        rets = [r for r in results if r is not None]
+        rets = [r for r in rets if r is not None]
         return rets
 
     def _load_ann_data(self):

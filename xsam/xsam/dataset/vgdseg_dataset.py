@@ -127,7 +127,7 @@ class VGDSegDataset(BaseDataset):
         current_process = mp.current_process()
         pid = current_process.pid
 
-        results = []
+        rets = []
         for img_id in tqdm(img_ids_batch, desc=f"Process {pid}"):
             _img_info = coco_api.loadImgs(img_id)[0]
             ann_ids = coco_api.getAnnIds(imgIds=[img_id])
@@ -174,7 +174,7 @@ class VGDSegDataset(BaseDataset):
                 }
                 ann["visual_prompts"] = visual_prompts
 
-            results.append(
+            rets.append(
                 {
                     "image_file": _img_info["file_name"],
                     "image_id": _img_info["id"],
@@ -184,12 +184,9 @@ class VGDSegDataset(BaseDataset):
                 }
             )
 
-        return results
+        return rets
 
     def _mp_process_ann_data(self, img_ids, coco_api):
-        batch_size = 1024
-        img_id_batches = [img_ids[i : i + batch_size] for i in range(0, len(img_ids), batch_size)]
-
         num_workers = min(16, max(1, mp.cpu_count() // 2))
         print_log(
             f"Creating {self.data_name} gt_json, which will take a while, you can download the gt_json from https://huggingface.co/hao9610/X-SAM/resolve/main/vgdseg_annotations",
@@ -197,8 +194,10 @@ class VGDSegDataset(BaseDataset):
         )
         print_log(f"Processing {len(img_ids)} images with {num_workers} workers...", logger="current")
 
-        results = []
+        batch_size = max(32, min(128, len(img_ids) // (num_workers * 4)))
+        img_id_batches = [img_ids[i : i + batch_size] for i in range(0, len(img_ids), batch_size)]
 
+        rets = []
         if self.use_threads:
             print_log(f"Using ThreadPoolExecutor with {num_workers} threads for I/O-intensive tasks", logger="current")
             with ThreadPoolExecutor(max_workers=num_workers) as executor:
@@ -207,7 +206,7 @@ class VGDSegDataset(BaseDataset):
                 for future in tqdm(futures, desc=f"Processing {self.data_name}", ncols=80):
                     batch_results = future.result()
                     if batch_results is not None:
-                        results.extend(batch_results)
+                        rets.extend(batch_results)
         else:
             chunksize = max(1, len(img_id_batches) // num_workers // 2)
             with mp.Pool(num_workers) as pool:
@@ -221,9 +220,9 @@ class VGDSegDataset(BaseDataset):
                     )
                 ):
                     if batch_results is not None:
-                        results.extend(batch_results)
+                        rets.extend(batch_results)
 
-        rets = [r for r in results if r is not None]
+        rets = [r for r in rets if r is not None]
         return rets
 
     def _sample_cats(self, cat_ids, anns):
