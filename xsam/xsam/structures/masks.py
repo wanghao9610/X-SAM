@@ -8,7 +8,6 @@ import pycocotools.mask as mask_util
 import torch
 from torch import device
 
-from ..model.layers import ROIAlign
 from .boxes import Boxes
 from .utils import retry_if_cuda_oom
 
@@ -201,6 +200,8 @@ class BitMasks:
                 A bool tensor of shape (N, mask_size, mask_size), where
                 N is the number of predicted boxes for this image.
         """
+        from ..model.layers import ROIAlign
+
         assert len(boxes) == len(self), "{} != {}".format(len(boxes), len(self))
         device = self.tensor.device
 
