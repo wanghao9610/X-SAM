@@ -17,9 +17,9 @@
         "**/CVS": true,
         "**/.DS_Store": true,
         "**/Thumbs.db": true,
-        // "**/.*/**": true,
+        "**/.*/**": true,
         "datas/**": true,
-        // "inits/**": true,
+        "inits/**": true,
     },
     "search.exclude": {
         "**/node_modules": true,
