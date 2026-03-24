@@ -1,4 +1,4 @@
-# :bookmark_tabs: Model Preparing
+# :bookmark_tabs: Models
 
 We provide an awesome [script](hfd.sh) to download models, thanks to [hfd](https://gist.github.com/padeoe/697678ab8e528b85a2a7bddafea1fa4f).
 

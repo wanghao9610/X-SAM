@@ -183,7 +183,7 @@ pip install aria2
 </details>
 
 ### 3. Preparing
-There are many datasets and models to prepare, please refer to [Dataset Preparing](docs/mds/dataset.md) and [Model Preparing](docs/mds/model.md) for more details.
+There are many datasets and models to prepare, please refer to [Datasets](docs/mds/dataset.md) and [Models](docs/mds/model.md) for more details.
 
 ### 4. Training & Evaluation
 :sparkles: **One Script for All !**

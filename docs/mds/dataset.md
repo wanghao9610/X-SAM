@@ -1,6 +1,6 @@
-# :bookmark_tabs: Dataset Preparing
+# :bookmark_tabs: Datasets
 
-## Dataset Structure
+## File Structure
 
 ```
 datas

@@ -1,4 +1,4 @@
-# :bar_chart: Benchmark Results
+# :bar_chart: Benchmarks
 
 ## Segmentation Benchmarks
 ### Overall Performance
