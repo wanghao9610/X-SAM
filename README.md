@@ -183,7 +183,7 @@ pip install aria2
 </details>
 
 ### 3. Preparing
-There are many datasets and models to prepare, please refer to [Datasets](docs/mds/dataset.md) and [Models](docs/mds/model.md) for more details.
+There are many datasets and models to prepare, please refer to [Datasets](docs/mds/datasets.md) and [Models](docs/mds/models.md) for more details.
 
 ### 4. Training & Evaluation
 :sparkles: **One Script for All !**
@@ -195,7 +195,7 @@ bash runs/run.sh --modes MODES --config CONFIG_FILE --work-dir WORK_DIR --suffix
 # Read the runs/run.sh for more details.
 # debug mode: export DEBUG_MODE=true
 ```
-Prepare the [Datasets](docs/mds/dataset.md) and [Models](docs/mds/model.md), and then refer to the following commands to start training and evaluation.
+Prepare the [Datasets](docs/mds/datasets.md) and [Models](docs/mds/models.md), and then refer to the following commands to start training and evaluation.
 
 
 #### X-SAM
