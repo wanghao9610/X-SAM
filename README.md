@@ -73,11 +73,11 @@ Large Language Models (LLMs) demonstrate strong capabilities in broad knowledge 
 
 ## :mag: Overview
 
-<img src="docs/images/xsam_framework.png" width="800">
+<img src="docs/srcs/images/framework.png" width="800">
 
 ## :bar_chart: Benchmarks
 
-Please refer to the [Benchmark Results](docs/benchmark_results.md) for more details.
+Please refer to the [Benchmark Results](docs/mds/benchmark.md) for more details.
 
 ## :checkered_flag: Getting Started
 ### 1. Structure
@@ -183,7 +183,7 @@ pip install aria2
 </details>
 
 ### 3. Preparing
-There are many datasets and models to prepare, please refer to [Dataset Preparing](docs/dataset_preparing.md) and [Model Preparing](docs/model_preparing.md) for more details.
+There are many datasets and models to prepare, please refer to [Dataset Preparing](docs/mds/dataset.md) and [Model Preparing](docs/mds/model.md) for more details.
 
 ### 4. Training & Evaluation
 :sparkles: **One Script for All !**
@@ -195,7 +195,7 @@ bash runs/run.sh --modes MODES --config CONFIG_FILE --work-dir WORK_DIR --suffix
 # Read the runs/run.sh for more details.
 # debug mode: export DEBUG_MODE=true
 ```
-Prepare the [Datasets](docs/dataset_preparing.md) and [Models](docs/model_preparing.md), and then refer to the following commands to start training and evaluation.
+Prepare the [Datasets](docs/mds/dataset.md) and [Models](docs/mds/model.md), and then refer to the following commands to start training and evaluation.
 
 
 #### X-SAM

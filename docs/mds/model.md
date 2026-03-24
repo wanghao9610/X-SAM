@@ -6,8 +6,8 @@ We provide an awesome [script](hfd.sh) to download models, thanks to [hfd](https
 ```bash
 cd $root_dir/docs
 mkdir -p $root_dir/inits
-chmod +x hfd.sh
-alias hfd="$PWD/hfd.sh"
+chmod +x srcs/tools/hfd.sh
+alias hfd="$PWD/srcs/tools/hfd.sh"
 
 hfd hao9610/X-SAM --tools aria2c -x 8 --save_dir $root_dir/inits
 ```
@@ -16,8 +16,8 @@ hfd hao9610/X-SAM --tools aria2c -x 8 --save_dir $root_dir/inits
 ```bash
 cd $root_dir/docs
 mkdir -p $root_dir/inits
-chmod +x hfd.sh
-alias hfd="$PWD/hfd.sh"
+chmod +x srcs/tools/hfd.sh
+alias hfd="$PWD/srcs/tools/hfd.sh"
 
 hfd microsoft/Phi-3-mini-4k-instruct --tools aria2c -x 8 --save_dir $root_dir/inits
 ```
@@ -26,8 +26,8 @@ hfd microsoft/Phi-3-mini-4k-instruct --tools aria2c -x 8 --save_dir $root_dir/in
 ```bash
 cd $root_dir/docs
 mkdir -p $root_dir/inits
-chmod +x hfd.sh
-alias hfd="$PWD/hfd.sh"
+chmod +x srcs/tools/hfd.sh
+alias hfd="$PWD/srcs/tools/hfd.sh"
 
 hfd Qwen/Qwen3-4B-Instruct-2507 --tools aria2c -x 8 --save_dir $root_dir/inits
 ```
@@ -36,8 +36,8 @@ hfd Qwen/Qwen3-4B-Instruct-2507 --tools aria2c -x 8 --save_dir $root_dir/inits
 ```bash
 cd $root_dir/docs
 mkdir -p $root_dir/inits
-chmod +x hfd.sh
-alias hfd="$PWD/hfd.sh"
+chmod +x srcs/tools/hfd.sh
+alias hfd="$PWD/srcs/tools/hfd.sh"
 
 hfd google/siglip2-so400m-patch14-384 --tools aria2c -x 8 --save_dir $root_dir/inits
 ```
@@ -46,8 +46,8 @@ hfd google/siglip2-so400m-patch14-384 --tools aria2c -x 8 --save_dir $root_dir/i
 ```bash
 cd $root_dir/docs
 mkdir -p $root_dir/inits
-chmod +x hfd.sh
-alias hfd="$PWD/hfd.sh"
+chmod +x srcs/tools/hfd.sh
+alias hfd="$PWD/srcs/tools/hfd.sh"
 
 hfd facebook/sam-vit-large --tools aria2c -x 8 --save_dir $root_dir/inits
 ```
@@ -56,8 +56,8 @@ hfd facebook/sam-vit-large --tools aria2c -x 8 --save_dir $root_dir/inits
 ```bash
 cd $root_dir/docs
 mkdir -p $root_dir/inits
-chmod +x hfd.sh
-alias hfd="$PWD/hfd.sh"
+chmod +x srcs/tools/hfd.sh
+alias hfd="$PWD/srcs/tools/hfd.sh"
 
 hfd facebook/mask2former-swin-large-coco-panoptic --tools aria2c -x 8 --save_dir $root_dir/inits
 ```

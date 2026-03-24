@@ -256,8 +256,8 @@ We provide an awesome [script](hfd.sh) to download datasets, thanks to [hfd](htt
 cd $root_dir
 mkdir -p datas/imgconv_data/llava
 export temp_data_dir=$root_dir/datas/imgconv_data/llava
-chmod +x hfd.sh
-alias hfd="$PWD/hfd.sh"
+chmod +x srcs/tools/hfd.sh
+alias hfd="$PWD/srcs/tools/hfd.sh"
 
 hfd liuhaotian/LLaVA-Instruct-150K --tools aria2c -x 8 --save_dir $temp_data_dir --dataset
 hfd liuhaotian/LLaVA-Pretrain --tools aria2c -x 8 --save_dir $temp_data_dir --dataset
