@@ -42,7 +42,7 @@ We recommend that everyone use English to communicate in issues, as this helps d
 
 ## :boom: Updates
 
-- **`2026-04-28`**: 🎊 We release [X2SAM](https://github.com/wanghao9610/X2SAM), a new project for any segmentation in images and videos. Welcome to try it!
+- **`2026-04-28`**: ✨ We release [X2SAM](https://github.com/wanghao9610/X2SAM), a new project for any segmentation in images and videos. Welcome to try it!
 - **`2026-01-29`**: We update the [camera-ready version](https://arxiv.org/abs/2508.04655) of our paper and uploaded the official [paper poster](https://github.com/user-attachments/files/24925624/AAAI2026_X-SAM_Poster.pdf) for AAAI 2026.
 - **`2025-11-21`**: We release the code for X-SAM with [Qwen3-4B-Instruct-2507](xsam/xsam/configs/xsam/s3_mixed_finetune/xsam_qwen3_4b_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py) and [Qwen3-1.7B](xsam/xsam/configs/xsam/s3_mixed_finetune/xsam_qwen3_1x7b_instruct_siglip2_so400m_p14_384_sam_large_m2f_gpu16_mixed_finetune.py). We will release the weights soon.
 - **`2025-11-19`**: We release the code for [Training X-SAM](#stage-3-mixed-fine-tuning). Welcome to try it! If you have any questions, please feel free to open an issue.
