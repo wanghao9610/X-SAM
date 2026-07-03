@@ -54,7 +54,7 @@ def _get_gcg_caption(llm_generation_output):
 
 
 # Refer to https://github.com/open-mmlab/mmengine/pull/1548
-class XSamInfiniteDataloaderIterator(_InfiniteDataloaderIterator):
+class X2SamInfiniteDataloaderIterator(_InfiniteDataloaderIterator):
     def skip_iter(self, iters: int) -> None:
         if iters <= 0:
             return
@@ -129,10 +129,10 @@ class XSamInfiniteDataloaderIterator(_InfiniteDataloaderIterator):
         return data
 
 
-class XSamIterBasedTrainLoop(IterBasedTrainLoop):
+class X2SamIterBasedTrainLoop(IterBasedTrainLoop):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.dataloader_iterator = XSamInfiniteDataloaderIterator(self.dataloader)
+        self.dataloader_iterator = X2SamInfiniteDataloaderIterator(self.dataloader)
 
     def run(self) -> None:
         """Launch training."""
@@ -171,7 +171,7 @@ class XSamIterBasedTrainLoop(IterBasedTrainLoop):
         return self.runner.model
 
 
-class TrainLoop(XSamIterBasedTrainLoop):
+class TrainLoop(X2SamIterBasedTrainLoop):
     def __init__(
         self,
         runner,
@@ -310,6 +310,9 @@ class ValLoop(BaseLoop):
             work_dir = getattr(self.runner, "work_dir", None)
             if data_name is not None and work_dir is not None and getattr(evaluator, "output_dir", None) is None:
                 evaluator.output_dir = osp.join(work_dir, "pred_data", data_name)
+            # Online val/test always evaluates in-memory predictions, never cached files.
+            if hasattr(evaluator, "support_loading"):
+                evaluator.support_loading = False
 
     @staticmethod
     def _get_unique_metainfo_value(data_batch: Sequence[dict], key: str):
@@ -448,8 +451,7 @@ class ValLoop(BaseLoop):
         # compute metrics
         metrics = {}
         for evaluator in self.evaluator:
-            eval_metrics = evaluator.evaluate()
-            if eval_metrics:
+            if eval_metrics := evaluator.evaluate():
                 metrics.update(eval_metrics)
 
         if self.val_loss:
@@ -539,8 +541,7 @@ class TestLoop(ValLoop):
         # compute metrics
         metrics = {}
         for evaluator in self.evaluator:
-            eval_metrics = evaluator.evaluate()
-            if eval_metrics:
+            if eval_metrics := evaluator.evaluate():
                 metrics.update(eval_metrics)
 
         if self.val_loss:
