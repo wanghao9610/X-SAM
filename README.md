@@ -50,7 +50,7 @@ We strongly recommend that everyone uses **English** to communicate in issues. T
 - **`2026-01-29`**: We update the [camera-ready version](https://arxiv.org/abs/2508.04655) of our paper and uploaded the official [paper poster](https://github.com/user-attachments/files/24925624/AAAI2026_X-SAM_Poster.pdf) for AAAI 2026.
 - **`2025-11-21`**: We release the code for X-SAM with [Qwen3-4B-Instruct-2507](xsam/xsam/configs/xsam/s3_train/xsam_qwen3_4b_instruct_siglip2_so400m_p14_384_sam_vit_large_m2f_e1_gpu16.py) and [Qwen3-1.7B](xsam/xsam/configs/xsam/s3_train/xsam_qwen3_1x7b_wothinking_siglip2_so400m_p14_384_sam_vit_large_m2f_e1_gpu16.py). We will release the weights soon.
 - **`2025-11-19`**: We release the code for [Training X-SAM](#5-training). Welcome to try it! If you have any questions, please feel free to open an issue.
-- **`2025-11-08`**: Congratulations! 🎉🎉🎉 X-SAM has been accepted by AAAI 2026! We will release all the code in the coming week!
+- **`2025-11-08`**: 🎉🎉🎉 Congratulations! 🎉🎉🎉 X-SAM has been accepted by AAAI 2026! We will release all the code in the coming week!
 - **`2025-09-28`**: We update the [Local Demo](#local-demo) inference script — you can run local inference instead of on the Web Demo.
 - **`2025-08-11`**: Thanks for your great attention to our work! We have deployed another [Online Demo2](http://121.43.252.12:7862). You can also try it if [Online Demo1](http://47.115.200.157:7861) is not available.
 - **`2025-08-11`**: We released the effective code for [Evaluation on Segmentation Benchmarks](#6-evaluation). We have updated all code except for [Training X-SAM](#5-training).
