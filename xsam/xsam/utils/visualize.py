@@ -1,4 +1,3 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
 import colorsys
 import logging
 import math
@@ -17,8 +16,9 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 from mmengine.dist import master_only
 from PIL import Image
 
-from ..dataset.utils.catalog import MetadataCatalog
-from ..structures import BitMasks, Boxes, BoxMode, Keypoints, PolygonMasks
+from xsam.dataset.utils.catalog import MetadataCatalog
+from xsam.structures import BitMasks, Boxes, BoxMode, Keypoints, PolygonMasks
+
 from .colormap import random_color
 
 logger = logging.getLogger(__name__)
@@ -227,13 +227,13 @@ class _PanopticPrediction:
                 yield mask, sinfo
 
 
-def _create_text_labels(classes, scores, class_names, is_crowd=None):
+def _create_text_labels(classes, scores, class_names, iscrowd=None):
     """
     Args:
         classes (list[int] or None):
         scores (list[float] or None):
         class_names (list[str] or None):
-        is_crowd (list[bool] or None):
+        iscrowd (list[bool] or None):
 
     Returns:
         list[str] or None
@@ -252,8 +252,8 @@ def _create_text_labels(classes, scores, class_names, is_crowd=None):
             labels = ["{:.0f}%".format(s * 100) for s in scores]
         else:
             labels = ["{} {:.0f}%".format(l, s * 100) for l, s in zip(labels, scores)]
-    if labels is not None and is_crowd is not None:
-        labels = [l + ("|crowd" if crowd else "") for l, crowd in zip(labels, is_crowd)]
+    if labels is not None and iscrowd is not None:
+        labels = [l + ("|crowd" if crowd else "") for l, crowd in zip(labels, iscrowd)]
     return labels
 
 
@@ -404,7 +404,61 @@ class Visualizer:
         """Close an opened object."""
         pass
 
-    def draw_predictions(self, img_rgb, aux_img_rgb=None, data_name="genseg", output_file=None, **kwargs):
+    def draw_labels(
+        self,
+        img_rgb,
+        aux_img_rgb=None,
+        mask_labels=None,
+        class_labels=None,
+        class_names=None,
+        vprompt_masks=None,
+        output_file=None,
+        **kwargs,
+    ):
+        self.set_image(img_rgb, aux_img_rgb)
+        if aux_img_rgb is None:
+            self.aux_output = None
+        for key, value in kwargs.items():
+            if isinstance(value, torch.Tensor):
+                kwargs[key] = value.to(self.cpu_device)
+
+        for mask_label, class_label in zip(mask_labels, class_labels):
+            if isinstance(mask_label, torch.Tensor):
+                mask_label = mask_label.numpy()
+            if isinstance(class_label, torch.Tensor):
+                class_label = class_label.item()
+            self.draw_binary_mask(
+                mask_label, color=None, edge_color=_OFF_WHITE, text=class_names[class_label], alpha=0.8
+            )
+
+        if vprompt_masks is not None:
+            for i, vprompt_mask in enumerate(vprompt_masks):
+                if isinstance(vprompt_mask, torch.Tensor):
+                    vprompt_mask = vprompt_mask.numpy()
+                self.draw_binary_mask(
+                    vprompt_mask,
+                    color=None,
+                    output_image=self.aux_output,
+                    edge_color=_OFF_WHITE,
+                    text=f"vprompt_{i}",
+                    alpha=0.8,
+                )
+
+        if output_file is not None and self.aux_output is None:
+            self.output.save(output_file)
+        elif output_file is not None and isinstance(self.aux_output, VisImage):
+            output, aux_output = self.output.get_image(), self.aux_output.get_image()
+            if aux_output.shape != output.shape:
+                aux_output = cv2.resize(aux_output, (output.shape[1], output.shape[0]), interpolation=cv2.INTER_LINEAR)
+            concat = np.concatenate([aux_output, output], axis=1)
+            output = Image.fromarray(concat)
+            output.save(output_file)
+        else:
+            return self.output
+
+    def draw_predictions(
+        self, img_rgb, aux_img_rgb=None, concat_aux_img=True, data_name="genseg", output_file=None, **kwargs
+    ):
         self.set_image(img_rgb, aux_img_rgb)
         for key, value in kwargs.items():
             if isinstance(value, torch.Tensor):
@@ -412,44 +466,53 @@ class Visualizer:
 
         aux_output_img = None
         if "genseg" in data_name:
-            output_img = self.draw_gen_seg(data_name, **kwargs)
+            output_img = self.draw_genseg(data_name, **kwargs)
         elif "refseg" in data_name or "reaseg" in data_name:
-            output_img = self.draw_ref_seg(**kwargs)
+            output_img = self.draw_refseg(**kwargs)
         elif "gcgseg" in data_name:
-            output_img = self.draw_gcg_seg(**kwargs)
+            output_img = self.draw_gcgseg(**kwargs)
         elif "ovseg" in data_name:
-            output_img = self.draw_ov_seg(data_name, **kwargs)
+            output_img = self.draw_ovseg(data_name, **kwargs)
         elif "intseg" in data_name:
-            output_img, aux_output_img = self.draw_inter_seg(**kwargs)
+            output_img, aux_output_img = self.draw_intseg(**kwargs)
         elif "vgdseg" in data_name:
-            output_img, aux_output_img = self.draw_vgd_seg(**kwargs)
+            output_img, aux_output_img = self.draw_vgdseg(**kwargs)
         else:
             raise ValueError(f"Unsupported task: {data_name}")
 
-        if output_file is not None and aux_output_img is None:
-            output_img.save(output_file)
-        elif output_file is not None and isinstance(aux_output_img, VisImage):
-            output, aux_output = output_img.get_image(), aux_output_img.get_image()
-            if aux_output.shape != output.shape:
-                aux_output = cv2.resize(aux_output, (output.shape[1], output.shape[0]), interpolation=cv2.INTER_LINEAR)
-            concat = np.concatenate([aux_output, output], axis=1)
-            output = Image.fromarray(concat)
-            output.save(output_file)
+        if output_file is not None:
+            # Always save the main visualization when `output_file` is provided.
+            # If `aux_output_img` exists and `concat_aux_img=True`, also concatenate and save.
+            if aux_output_img is None:
+                output_img.save(output_file)
+            elif isinstance(aux_output_img, VisImage) and concat_aux_img:
+                output, aux_output = output_img.get_image(), aux_output_img.get_image()
+                if aux_output.shape != output.shape:
+                    aux_output = cv2.resize(
+                        aux_output, (output.shape[1], output.shape[0]), interpolation=cv2.INTER_LINEAR
+                    )
+                concat = np.concatenate([aux_output, output], axis=1)
+                output = Image.fromarray(concat)
+                output.save(output_file)
+            else:
+                # `aux_output_img` exists but we are not concatenating; keep behavior consistent by saving
+                # the main prediction image.
+                output_img.save(output_file)
         else:
             return output_img
 
-    def draw_gen_seg(self, data_name, **kwargs):
-        if "semantics" in data_name:
-            return self.draw_sem_seg(**kwargs)
+    def draw_genseg(self, data_name, **kwargs):
+        if "semantic" in data_name:
+            return self.draw_sem_genseg(**kwargs)
         elif "instance" in data_name:
-            return self.draw_ins_seg(**kwargs)
+            return self.draw_ins_genseg(**kwargs)
         else:
-            return self.draw_pan_seg(**kwargs)
+            return self.draw_pan_genseg(**kwargs)
 
-    def draw_ov_seg(self, data_name, **kwargs):
-        return self.draw_gen_seg(data_name, **kwargs)
+    def draw_ovseg(self, data_name, **kwargs):
+        return self.draw_genseg(data_name, **kwargs)
 
-    def draw_pan_seg(self, segmentation, segments_info, area_threshold=None, alpha=0.7, **kwargs):
+    def draw_pan_genseg(self, segmentation, segments_info, area_threshold=None, alpha=0.7, **kwargs):
         """
         Draw panoptic prediction annotations or results.
 
@@ -501,7 +564,7 @@ class Visualizer:
         except KeyError:
             scores = None
         labels = _create_text_labels(
-            category_ids, scores, self.metadata.thing_classes, [x.get("iscrowd", 0) for x in sinfo]
+            category_ids, scores, self.metadata.get("thing_classes", None), [x.get("iscrowd", 0) for x in sinfo]
         )
 
         try:
@@ -512,7 +575,7 @@ class Visualizer:
 
         return self.output
 
-    def draw_sem_seg(self, segmentation, area_threshold=None, alpha=0.8, **kwargs):
+    def draw_sem_genseg(self, segmentation, area_threshold=None, alpha=0.8, **kwargs):
         """
         Draw semantic segmentation predictions/labels.
 
@@ -527,6 +590,13 @@ class Visualizer:
         """
         if isinstance(segmentation, torch.Tensor):
             segmentation = segmentation.numpy()
+        label_shift = self.metadata.get("label_shift", 0)
+        sampled_labels = kwargs.get("sampled_labels", None)
+        map_labels = kwargs.get("map_labels", False)
+        # map contiguous id to dataset id
+        if sampled_labels is not None and map_labels:
+            for unique_label in np.unique(segmentation).tolist():
+                segmentation[segmentation == unique_label] = sampled_labels[unique_label] - label_shift
         labels, areas = np.unique(segmentation, return_counts=True)
         sorted_idxs = np.argsort(-areas).tolist()
         labels = labels[sorted_idxs]
@@ -548,7 +618,7 @@ class Visualizer:
             )
         return self.output
 
-    def draw_ins_seg(self, instances, jittering: bool = True, **kwargs):
+    def draw_ins_genseg(self, instances, jittering: bool = True, **kwargs):
         """
         Draw instance-level prediction results on an image.
 
@@ -608,7 +678,9 @@ class Visualizer:
         )
         return self.output
 
-    def draw_ref_seg(self, segmentation, segments_info, phrases=[], area_threshold=None, alpha=0.8, **kwargs):
+    def draw_refseg(
+        self, segmentation, segments_info, phrases=[], area_threshold=None, alpha=0.8, colors=None, **kwargs
+    ):
         """
         Draw semantic segmentation predictions/labels.
 
@@ -631,11 +703,11 @@ class Visualizer:
         score = segments_info["score"]
         text = f"{phrases[0]} {score:.2f}"
         text = "\n".join(textwrap3.wrap(text, width=32))
-        for label in filter(lambda l: l != self.metadata.get("ignore_label", 255), labels):
+        for label in filter(lambda l: l != self.metadata.get("ignore_value", 255), labels):
             binary_mask = (segmentation == label).astype(np.uint8)
             self.draw_binary_mask(
                 binary_mask,
-                color=None,
+                color=colors[0] if colors is not None else None,
                 edge_color=_OFF_WHITE,
                 text=text,
                 alpha=alpha,
@@ -643,7 +715,7 @@ class Visualizer:
             )
         return self.output
 
-    def draw_gcg_seg(self, segmentation, segments_info, phrases=[], alpha=0.8, **kwargs):
+    def draw_gcgseg(self, segmentation, segments_info, phrases=[], alpha=0.8, colors=None, **kwargs):
         pred = _PanopticPrediction(segmentation, segments_info, self.metadata)
 
         # draw mask for all instances second
@@ -661,11 +733,13 @@ class Visualizer:
             phrases = [""] * len(category_ids)
         labels = _create_text_labels(category_ids, scores, phrases, [x.get("iscrowd", 0) for x in sinfo])
 
-        self.overlay_instances(masks=masks, labels=labels, assigned_colors=None, alpha=alpha)
+        self.overlay_instances(masks=masks, labels=labels, assigned_colors=colors, alpha=alpha)
 
         return self.output
 
-    def draw_vgd_seg(self, instances, vprompt_masks=None, jittering: bool = True, area_threshold=None, **kwargs):
+    def draw_vgdseg(
+        self, instances, vprompt_masks=None, jittering: bool = True, area_threshold=None, colors=None, **kwargs
+    ):
         """
         Draw panoptic prediction annotations or results.
 
@@ -701,21 +775,19 @@ class Visualizer:
         else:
             masks = None
 
+        alpha = 0.5
         if (
             self._instance_mode == ColorMode.SEGMENTATION
             and self.metadata.get("thing_colors", None) is not None
             and return_contiguous_labels
+            and colors is None
         ):
             colors = (
                 [self._jitter([x / 255 for x in self.metadata.thing_colors[c]]) for c in classes]
                 if jittering
                 else [tuple(mplc.to_rgb([x / 255 for x in self.metadata.thing_colors[c]])) for c in classes]
             )
-
             alpha = 0.8
-        else:
-            colors = None
-            alpha = 0.5
 
         if self._instance_mode == ColorMode.IMAGE_BW:
             self.output.reset_image(
@@ -732,6 +804,8 @@ class Visualizer:
 
             if self.metadata.get("thing_colors", None) is not None:
                 color = [x / 255 for x in self.metadata.thing_colors[sampled_label]]
+            elif colors is not None:
+                color = colors[i]
             else:
                 color = _RED
 
@@ -750,6 +824,22 @@ class Visualizer:
                 area_threshold=area_threshold,
             )
 
+        if colors is not None:
+            num_preds = len(masks) if masks is not None else (len(labels) if labels is not None else 0)
+            if len(colors) < num_preds:
+                thing_colors = self.metadata.get("thing_colors", None)
+                extra = []
+                for i in range(len(colors), num_preds):
+                    c = classes[i] if classes is not None else 0
+                    if thing_colors is not None:
+                        base = [x / 255 for x in thing_colors[c]]
+                        extra.append(self._jitter(base) if jittering else tuple(mplc.to_rgb(base)))
+                    else:
+                        extra.append(random_color(rgb=True, maximum=1))
+                colors = list(colors) + extra
+            elif len(colors) > num_preds:
+                colors = colors[:num_preds]
+
         self.overlay_instances(
             masks=masks,
             labels=labels,
@@ -759,9 +849,7 @@ class Visualizer:
         )
         return self.output, self.aux_output
 
-    def draw_inter_seg(
-        self, segmentation, segments_info, vprompt_masks=None, area_threshold=None, alpha=0.8, **kwargs
-    ):
+    def draw_intseg(self, segmentation, segments_info, vprompt_masks=None, area_threshold=None, alpha=0.8, **kwargs):
         """
         Draw panoptic prediction annotations or results.
 
@@ -802,7 +890,7 @@ class Visualizer:
             colors = None
             alpha = 0.5
 
-        for i, label in enumerate(sorted(filter(lambda l: l != self.metadata.get("ignore_label", 255), labels))):
+        for i, label in enumerate(sorted(filter(lambda l: l != self.metadata.get("ignore_value", 255), labels))):
             binary_mask = (segmentation == label).astype(np.uint8)
             text = texts[i]
             color = colors[i] if colors is not None else None
@@ -877,7 +965,7 @@ class Visualizer:
                 category_ids,
                 scores=None,
                 class_names=names,
-                is_crowd=[x.get("iscrowd", 0) for x in annos],
+                iscrowd=[x.get("iscrowd", 0) for x in annos],
             )
             self.overlay_instances(labels=labels, boxes=boxes, masks=masks, keypoints=keypts, assigned_colors=colors)
 
@@ -887,7 +975,7 @@ class Visualizer:
                 sem_seg = Image.open(f)
                 sem_seg = np.asarray(sem_seg, dtype="uint8")
         if sem_seg is not None:
-            self.draw_sem_seg(sem_seg, area_threshold=0, alpha=0.5)
+            self.draw_sem_genseg(sem_seg, area_threshold=0, alpha=0.5)
 
         pan_seg = dic.get("pan_seg", None)
         if pan_seg is None and "pan_seg_file_name" in dic:
@@ -900,7 +988,7 @@ class Visualizer:
         if pan_seg is not None:
             segments_info = dic["segments_info"]
             pan_seg = torch.tensor(pan_seg)
-            self.draw_gen_seg(pan_seg, segments_info, area_threshold=0, alpha=0.5)
+            self.draw_genseg(pan_seg, segments_info, area_threshold=0, alpha=0.5)
         return self.output
 
     def overlay_instances(

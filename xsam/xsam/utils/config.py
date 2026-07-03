@@ -3,7 +3,8 @@ from typing import Optional, Tuple
 from mmengine.config import Config
 from mmengine.utils.misc import get_object_from_string
 from transformers import GenerationConfig, StoppingCriteriaList
-from xtuner.utils import StopWordStoppingCriteria
+
+from .criteria import StopWordStoppingCriteria
 
 
 def setup_model_config(model, cfg: Config) -> Tuple[Optional[StoppingCriteriaList], Optional[GenerationConfig]]:
@@ -11,7 +12,7 @@ def setup_model_config(model, cfg: Config) -> Tuple[Optional[StoppingCriteriaLis
     stop_criteria = None
     generation_config = None
 
-    if model.llm is not None:
+    if (model.llm or model.vlm) is not None:
         prompt_template = cfg.prompt_template
         stop_words = []
         if isinstance(prompt_template, str):
@@ -23,7 +24,7 @@ def setup_model_config(model, cfg: Config) -> Tuple[Optional[StoppingCriteriaLis
             stop_criteria.append(StopWordStoppingCriteria(model.tokenizer, word))
 
         generation_config = GenerationConfig(
-            max_new_tokens=512,
+            max_new_tokens=2048,
             do_sample=False,
             num_beams=1,
             temperature=1,

@@ -1,4 +1,3 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
 import math
 from enum import IntEnum, unique
 from typing import List, Tuple, Union
@@ -329,7 +328,7 @@ def pairwise_intersection(boxes1: Boxes, boxes2: Boxes) -> torch.Tensor:
 
 # implementation from https://github.com/kuangliu/torchcv/blob/master/torchcv/utils/box.py
 # with slight modifications
-def pairwise_iou(boxes1: Boxes, boxes2: Boxes) -> torch.Tensor:
+def pairwise_box_iou(boxes1: Boxes, boxes2: Boxes) -> torch.Tensor:
     """
     Given two lists of boxes of size N and M, compute the IoU
     (intersection over union) between **all** N x M pairs of boxes.
@@ -391,11 +390,11 @@ def pairwise_point_box_distance(points: torch.Tensor, boxes: Boxes):
     return torch.stack([x - x0, y - y0, x1 - x, y1 - y], dim=2)
 
 
-def matched_pairwise_iou(boxes1: Boxes, boxes2: Boxes) -> torch.Tensor:
+def matched_pairwise_box_iou(boxes1: Boxes, boxes2: Boxes) -> torch.Tensor:
     """
     Compute pairwise intersection over union (IOU) of two sets of matched
     boxes that have the same number of boxes.
-    Similar to :func:`pairwise_iou`, but computes only diagonal elements of the matrix.
+    Similar to :func:`pairwise_box_iou`, but computes only diagonal elements of the matrix.
 
     Args:
         boxes1 (Boxes): bounding boxes, sized [N,4].

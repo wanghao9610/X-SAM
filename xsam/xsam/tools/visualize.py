@@ -2,6 +2,7 @@
 
 
 import argparse
+import logging
 import os
 import os.path as osp
 import traceback
@@ -15,18 +16,18 @@ from mmengine.runner.utils import set_random_seed
 from torch.utils.data import DataLoader, DistributedSampler
 from tqdm import tqdm
 from transformers import GenerationConfig, StoppingCriteriaList
-from xtuner.configs import cfgs_name_path
-from xtuner.registry import BUILDER
-from xtuner.tools.utils import set_model_resource
-from xtuner.utils.device import get_device
 
 from xsam.dataset.collate_fns import xsam_collate_fn
+from xsam.registry import BUILDER
 from xsam.utils.checkpoint import load_checkpoint
+from xsam.utils.colormap import random_color
 from xsam.utils.config import setup_model_config
+from xsam.utils.configs import cfgs_name_path
+from xsam.utils.device import get_device
 from xsam.utils.dist import setup_distributed
 from xsam.utils.logging import print_log, set_default_logging_format
 from xsam.utils.misc import data_dict_to_device
-from xsam.utils.utils import register_function
+from xsam.utils.utils import register_function, set_model_resource
 
 # Global setup
 set_default_logging_format()
@@ -44,9 +45,12 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="path to model checkpoint for visualization",
     )
+    parser.add_argument("--output-dir", type=str, default=None, help="directory to save visualizations")
     parser.add_argument("--seed", type=int, default=None, help="random seed")
     parser.add_argument("--max-samples", type=int, default=200, help="maximum samples to visualize")
     parser.add_argument("--batch-size", type=int, default=1, help="batch size")
+    parser.add_argument("--rerun", action="store_true", help="rerun the visualization")
+    parser.add_argument("--concat-aux-img", action="store_true", help="concat auxiliary image with main image")
     parser.add_argument(
         "--cfg-options",
         nargs="+",
@@ -112,8 +116,10 @@ def process_batch(
 
     data_dict = {
         "input_ids": data["data_dict"].get("input_ids", None),
+        "attention_mask": data["data_dict"].get("attention_mask", None),
         "pixel_values": data["data_dict"].get("pixel_values", None),
         "extra_pixel_values": data["data_dict"].get("extra_pixel_values", None),
+        "image_grid_thw": data["data_dict"].get("image_grid_thw", None),
         "cond_ids": data["data_dict"].get("cond_ids", None),
         "seg_ids": data["data_dict"].get("seg_ids", None),
         "vprompt_masks": data["data_dict"].get("vprompt_masks", None),
@@ -147,7 +153,7 @@ def process_batch(
     # Process outputs
     llm_generation_output = ""
     output_phrases = []
-    if llm_outputs is not None and hasattr(llm_outputs, "sequences"):
+    if "gcg" in data_name and llm_outputs is not None and hasattr(llm_outputs, "sequences"):
         output_ids = llm_outputs.sequences
         llm_generation_output = model.tokenizer.batch_decode(output_ids)[0]
 
@@ -165,7 +171,7 @@ def process_batch(
         return False, None, [], llm_generation_output
 
     phrases = output_phrases or input_phrases
-    return True, seg_outputs, phrases, llm_generation_output
+    return True, seg_outputs, phrases, [llm_question_input + "\n" + llm_generation_output]
 
 
 def visualize_dataset(
@@ -179,63 +185,113 @@ def visualize_dataset(
     world_size: int,
     generation_config: Optional[GenerationConfig] = None,
     stop_criteria: Optional[StoppingCriteriaList] = None,
+    concat_aux_img: Optional[bool] = True,
 ) -> None:
     """Visualize model predictions on a single dataset."""
     data_name = dataset.data_name
     metadata = dataset.metadata
     output_ids_with_output = dataset.output_ids_with_output
     mode = "tensor" if output_ids_with_output else "predict"
-    os.makedirs(output_dir, exist_ok=True)
 
     # Setup dataloader
     sampler = DistributedSampler(dataset=dataset, rank=rank, num_replicas=world_size, shuffle=False)
-    dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=4, sampler=sampler, collate_fn=xsam_collate_fn)
+    dataloader = DataLoader(
+        dataset, batch_size=batch_size, num_workers=4, sampler=sampler, collate_fn=xsam_collate_fn
+    )
 
     # Visualization loop
-    for i, data in tqdm(enumerate(dataloader), total=max_samples, desc=f"Visualizing {data_name}", disable=rank != 0):
-        if i >= max_samples:
-            break
+    vis_cnt = 0
+    with tqdm(total=max_samples, desc=f"Visualizing {data_name}", disable=rank != 0) as pbar:
+        input_texts = []
+        for data in dataloader:
+            if vis_cnt >= max_samples:
+                break
 
-        success, seg_outputs, phrases, _ = process_batch(
-            model, data, data_name, metadata, generation_config, stop_criteria, mode
-        )
-        if not success:
-            continue
-
-        # Draw predictions
-        image_infos = data["data_samples"].metainfo["image_infos"]
-
-        for i, (image_info, segmentation_output) in enumerate(zip(image_infos, seg_outputs)):
-            file_name = image_info["file_name"]
-            image = mmcv.imread(osp.join(dataset.image_folder, file_name))
-            image = mmcv.imconvert(image, "bgr", "rgb")
-
-            aux_image = None
-            aux_image = mmcv.imread(osp.join(dataset.image_folder, image_infos[1 - i]["file_name"]))
-            aux_image = mmcv.imconvert(aux_image, "bgr", "rgb")
-
-            sample_id = image_info.get("sample_id", "")
-            if "phrases" not in image_info:
-                image_info.update({"phrases": phrases})
-
-            try:
-                visualizer.draw_predictions(
-                    image,
-                    aux_img_rgb=aux_image,
-                    data_name=data_name,
-                    output_file=osp.join(output_dir, f"{osp.splitext(file_name)[0]}{sample_id}.png"),
-                    **image_info,
-                    **segmentation_output,
-                )
-            except Exception as e:
-                print_log(f"Error visualizing {file_name}\n: {e}\n{traceback.format_exc()}", logger="current")
+            success, seg_outputs, phrases, text_inputs = process_batch(
+                model, data, data_name, metadata, generation_config, stop_criteria, mode
+            )
+            if not success:
                 continue
+
+            input_infos = data["data_samples"].metainfo["image_infos"]
+            vprompt_indices = getattr(data["data_samples"], "vprompt_indices", None)
+            scaled_sizes = data["data_samples"].scaled_sizes
+            image_sizes = data["data_samples"].image_sizes
+
+            if image_sizes is not None and isinstance(image_sizes[0][0], int):
+                image_sizes = [image_sizes]
+            if scaled_sizes is not None and isinstance(scaled_sizes[0][0], int):
+                scaled_sizes = [scaled_sizes]
+
+            for i, (input_info, seg_output, text_input) in enumerate(zip(input_infos, seg_outputs, text_inputs)):
+                seg_output = [seg_output] if not isinstance(seg_output, list) else seg_output
+                file_name = [input_info["file_name"]] if "file_name" in input_info else input_info["file_names"]
+                extra_file_name = (
+                    [input_info["extra_file_name"]]
+                    if "extra_file_name" in input_info
+                    else input_info.get("extra_file_names", None)
+                )
+                file_name = extra_file_name if extra_file_name is not None else file_name
+                sample_id = input_info.get("sample_id", "")
+                subdir = sample_id or osp.splitext(osp.basename(file_name[0]))[0]
+                os.makedirs(osp.join(output_dir, subdir), exist_ok=True)
+
+                vprompt_image = None
+                if vprompt_indices is not None:
+                    vprompt_index = vprompt_indices[i]
+                    vprompt_image = mmcv.imread(osp.join(dataset.image_folder, file_name[vprompt_index]))
+                    vprompt_image = mmcv.imconvert(vprompt_image, "bgr", "rgb")
+
+                if len(phrases) > 0:
+                    colors = [random_color(rgb=True, maximum=1) for _ in range(len(phrases))]
+                elif seg_output[0].get("vprompt_masks") is not None:
+                    vprompt_masks = seg_output[0].get("vprompt_masks")
+                    colors = [random_color(rgb=True, maximum=1) for _ in range(len(vprompt_masks))]
+                else:
+                    colors = [random_color(rgb=True, maximum=1)]
+                for _file_name, _seg_output in tqdm(
+                    zip(file_name, seg_output), desc=f"{subdir}", disable=rank != 0
+                ):
+                    input_texts.append((_file_name, text_input))
+                    image = mmcv.imread(osp.join(dataset.image_folder, _file_name))
+                    image = mmcv.imconvert(image, "bgr", "rgb")
+                    output_file = osp.join(
+                        output_dir, subdir, f"{osp.splitext(osp.basename(_file_name))[0]}.png"
+                    )
+                    if "phrases" not in input_info:
+                        input_info.update({"phrases": phrases})
+
+                    try:
+                        visualizer.draw_predictions(
+                            image,
+                            aux_img_rgb=vprompt_image,
+                            concat_aux_img=concat_aux_img,
+                            data_name=data_name,
+                            output_file=output_file,
+                            colors=colors,
+                            **input_info,
+                            **_seg_output,
+                        )
+                    except Exception as e:
+                        print_log(
+                            f"Error visualizing {osp.join(subdir, _file_name)}: {e}\n{traceback.format_exc()}",
+                            logger="current",
+                        )
+                        continue
+
+                vis_cnt += 1
+                pbar.update(1)
+
+            input_texts = list(dict((item[1], item) for item in input_texts).values())
+            with open(osp.join(output_dir, "input_texts.txt"), "w", encoding="utf-8") as f:
+                for input_text in input_texts:
+                    f.write(f"{input_text[0]}: \n {input_text[1]}\n\n")
 
 
 def main():
     """Main visualization function."""
     args = parse_args()
-    rank, local_rank, world_size = setup_distributed(args)
+    rank, local_rank, world_size = setup_distributed(args, kwargs={"timeout": 18000})
 
     # Load and process config
     if not osp.isfile(args.config):
@@ -271,24 +327,34 @@ def main():
     model = BUILDER.build(cfg.model)
     if "llm" in cfg.model:
         model.llm.to(cfg.model.llm.torch_dtype)
+    if "vlm" in cfg.model:
+        model.vlm.to(cfg.model.vlm.torch_dtype)
     model.eval()
     model = model.to(get_device())
 
-    load_checkpoint(model, args.pth_model)
+    if args.pth_model is not None:
+        load_checkpoint(model, args.pth_model)
+    else:
+        print_log("No checkpoint provided, using random initialization", logger="current", level=logging.WARNING)
     stop_criteria, generation_config = setup_model_config(model, cfg)
 
     # Visualize all datasets
     print_log(f"Visualizing {len(cfg.vis_datasets)} datasets...", logger="current")
     for dataset_cfg in cfg.vis_datasets:
         try:
-            # Build dataset and visualizer
+            base_output_dir = args.output_dir or osp.join(args.work_dir, "vis_data")
+            output_dir = osp.join(base_output_dir, dataset_cfg.data_name)
+            print(f"output_dir: {output_dir}")
+            if osp.exists(output_dir) and not args.rerun:
+                print_log(f"{dataset_cfg.data_name} is already visualized, skipping...", logger="current")
+                continue
+
             dataset = BUILDER.build(dataset_cfg)
             model.postprocess_fn = dataset.postprocess_fn
 
             visualizer = BUILDER.build(cfg.visualizer)
             visualizer.metadata = dataset.metadata
 
-            output_dir = osp.join(args.work_dir, "vis_data", dataset.data_name)
             visualize_dataset(
                 model,
                 dataset,
@@ -300,9 +366,10 @@ def main():
                 world_size,
                 generation_config,
                 stop_criteria,
+                args.concat_aux_img,
             )
         except Exception as e:
-            print_log(f"Error visualizing {dataset_cfg.data_name}\n: {e}\n{traceback.format_exc()}", logger="current")
+            print_log(f"Error visualizing {dataset_cfg.data_name}: {e}\n{traceback.format_exc()}", logger="current")
             continue
 
 

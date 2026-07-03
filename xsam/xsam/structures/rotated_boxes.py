@@ -1,4 +1,3 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
 import math
 from typing import List, Tuple
 
@@ -482,7 +481,7 @@ class RotatedBoxes(Boxes):
         yield from self.tensor
 
 
-def pairwise_iou_rotated(boxes1, boxes2):
+def pairwise_box_iou_rotated(boxes1, boxes2):
     """
     Return intersection-over-union (Jaccard index) of boxes.
 
@@ -500,7 +499,7 @@ def pairwise_iou_rotated(boxes1, boxes2):
     return torch.ops.detectron2.box_iou_rotated(boxes1, boxes2)
 
 
-def pairwise_iou(boxes1: RotatedBoxes, boxes2: RotatedBoxes) -> None:
+def pairwise_box_iou(boxes1: RotatedBoxes, boxes2: RotatedBoxes) -> None:
     """
     Given two lists of rotated boxes of size N and M,
     compute the IoU (intersection over union)
@@ -515,4 +514,4 @@ def pairwise_iou(boxes1: RotatedBoxes, boxes2: RotatedBoxes) -> None:
         Tensor: IoU, sized [N,M].
     """
 
-    return pairwise_iou_rotated(boxes1.tensor, boxes2.tensor)
+    return pairwise_box_iou_rotated(boxes1.tensor, boxes2.tensor)

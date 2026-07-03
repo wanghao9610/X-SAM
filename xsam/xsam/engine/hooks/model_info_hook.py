@@ -5,19 +5,6 @@ from mmengine.model import is_model_wrapper
 from tabulate import tabulate
 
 
-def split_list(lst, value):
-    res = []
-    tmp_res = []
-    for i in lst:
-        if i == value:
-            res.append(tmp_res)
-            tmp_res = []
-        else:
-            tmp_res.append(i)
-    res.append(tmp_res)
-    return res
-
-
 class ModelInfoHook(Hook):
     def __init__(self, module_names: List[str] = ["llm"], display_params: bool = False):
         self.module_names = module_names
@@ -100,22 +87,6 @@ class ModelInfoHook(Hook):
         runner.logger.info(f"Model summary:\n{num_table}")
 
     def before_train(self, runner) -> None:
-        if is_model_wrapper(runner.model):
-            model = runner.model.module
-        else:
-            model = runner.model
-
-        self.log(runner, model)
-
-    def before_val(self, runner) -> None:
-        if is_model_wrapper(runner.model):
-            model = runner.model.module
-        else:
-            model = runner.model
-
-        self.log(runner, model)
-
-    def before_test(self, runner) -> None:
         if is_model_wrapper(runner.model):
             model = runner.model.module
         else:

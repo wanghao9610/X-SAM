@@ -3,10 +3,12 @@ from typing import Callable, Dict, Sequence
 
 import torch
 from torch.nn.utils.rnn import pad_sequence
-from xtuner.parallel.sequence import get_sequence_parallel_world_size, pad_for_sequence_parallel
-from xtuner.utils import DEFAULT_PAD_TOKEN_INDEX, IGNORE_INDEX
 
-from ...structures import DataSample
+from xsam.structures.data_sample import DataSample
+from xsam.utils.constants import DEFAULT_PAD_TOKEN_INDEX, IGNORE_INDEX
+from xsam.utils.dist import get_sequence_parallel_world_size
+
+from ..utils.collate import pad_for_sequence_parallel
 
 
 def xsam_collate_fn(
@@ -18,16 +20,18 @@ def xsam_collate_fn(
     seq_parallel_world_size = get_sequence_parallel_world_size()
 
     data_samples = DataSample()
-    has_input_ids = any(inst.get("input_ids") is not None for inst in instances)
-    has_image = any(inst.get("pixel_values") is not None for inst in instances)
-    has_seg_image = any(inst.get("extra_pixel_values") is not None for inst in instances)
-    has_cond_id = any(inst.get("cond_ids") is not None for inst in instances)
-    has_vprompt_mask = any(inst.get("vprompt_masks") is not None for inst in instances)
-    has_seg_id = any(inst.get("seg_ids") is not None for inst in instances)
-    has_mask_label = any(inst.get("mask_labels") is not None for inst in instances)
-    has_class_label = any(inst.get("class_labels") is not None for inst in instances)
-    has_sampled_labels = any(inst.get("sampled_labels") is not None for inst in instances)
-    has_contiguous_labels = any(inst.get("contiguous_labels") is not None for inst in instances)
+    metainfo = {}
+    has_input_ids = any(inst.get("input_ids", None) is not None for inst in instances)
+    has_image = any(inst.get("pixel_values", None) is not None for inst in instances)
+    has_image_grid_thw = any(inst.get("image_grid_thw", None) is not None for inst in instances)
+    has_seg_image = any(inst.get("extra_pixel_values", None) is not None for inst in instances)
+    has_cond_id = any(inst.get("cond_ids", None) is not None for inst in instances)
+    has_vprompt_mask = any(inst.get("vprompt_masks", None) is not None for inst in instances)
+    has_seg_id = any(inst.get("seg_ids", None) is not None for inst in instances)
+    has_mask_label = any(inst.get("mask_labels", None) is not None for inst in instances)
+    has_class_label = any(inst.get("class_labels", None) is not None for inst in instances)
+    has_sampled_labels = any(inst.get("sampled_labels", None) is not None for inst in instances)
+    has_contiguous_labels = any(inst.get("contiguous_labels", None) is not None for inst in instances)
 
     if use_varlen_attn:
         position_ids, cumulative_len = [], []
@@ -42,19 +46,24 @@ def xsam_collate_fn(
         labels = []
     if has_image:
         pixel_values = []
-    if has_seg_image:
-        extra_pixel_values = []
+    if has_image or has_seg_image:
         image_files = []
         image_sizes = []
+    if has_image_grid_thw:
+        image_grid_thw = []
+    if has_seg_image:
+        extra_pixel_values = []
         scaled_sizes = []
         image_infos = []
         task_names = []
+        data_names = []
     if has_cond_id:
         cond_ids = []
     if has_seg_id:
         seg_ids = []
     if has_vprompt_mask:
         vprompt_masks = []
+        vprompt_indices = []
     if has_mask_label:
         mask_labels = []
     if has_class_label:
@@ -74,19 +83,26 @@ def xsam_collate_fn(
 
         if has_image:
             pixel_values.append(example["pixel_values"])
+            image_files.append(example.get("image_file", None))
+            image_sizes.append(example.get("image_size", None))
+        if has_image_grid_thw:
+            image_grid_thw.append(example["image_grid_thw"])
         if has_seg_image:
+            if not has_image:
+                image_files.append(example.get("image_file", None))
+                image_sizes.append(example.get("image_size", None))
             extra_pixel_values.append(example["extra_pixel_values"])
-            image_files.append(example["image_file"])
-            image_sizes.append(example["image_size"])
-            scaled_sizes.append(example["scaled_size"])
-            image_infos.append(example["image_info"])
-            task_names.append(example["task_name"])
+            scaled_sizes.append(example.get("scaled_size", None))
+            image_infos.append(example.get("image_info", None))
+            task_names.append(example.get("task_name", None))
+            data_names.append(example.get("data_name", None))
         if has_cond_id:
             cond_ids.append(torch.LongTensor(example["cond_ids"]))
         if has_seg_id:
             seg_ids.append(torch.LongTensor(example["seg_ids"]))
         if has_vprompt_mask:
             vprompt_masks.append(example["vprompt_masks"])
+            vprompt_indices.append(example.get("vprompt_index", 0))
         if has_mask_label:
             mask_labels.append(example["mask_labels"])
         if has_class_label:
@@ -156,23 +172,32 @@ def xsam_collate_fn(
         data_dict = {}
 
     if has_image:
-        if all(x.shape == pixel_values[0].shape for x in pixel_values):
+        # For CLIP-like image processing
+        if pixel_values[0].ndim == 3 and all(x.shape == pixel_values[0].shape for x in pixel_values):
             pixel_values = torch.stack(pixel_values, dim=0)
+        # For qwen_vl image processing
+        elif pixel_values[0].ndim == 2 and all(x.shape[1] == pixel_values[0].shape[1] for x in pixel_values):
+            pixel_values = torch.cat(pixel_values, dim=0)
+        else:
+            raise ValueError(
+                f"Pixel_values have different shapes: {[pixel_value.shape for pixel_value in pixel_values]}"
+            )
         data_dict["pixel_values"] = pixel_values
+
+    if has_image or has_seg_image:
+        metainfo = {"image_files": image_files, "image_sizes": image_sizes}
+
+    if has_image_grid_thw:
+        data_dict["image_grid_thw"] = torch.cat(image_grid_thw, dim=0)
 
     if has_seg_image:
         if all(x.shape == extra_pixel_values[0].shape for x in extra_pixel_values):
             extra_pixel_values = torch.stack(extra_pixel_values, dim=0)
         data_dict["extra_pixel_values"] = extra_pixel_values
-        data_samples.set_metainfo(
-            {
-                "image_files": image_files,
-                "image_sizes": image_sizes,
-                "scaled_sizes": scaled_sizes,
-                "image_infos": image_infos,
-                "task_names": task_names,
-            }
-        )
+        metainfo["scaled_sizes"] = scaled_sizes
+        metainfo["image_infos"] = image_infos
+        metainfo["task_names"] = task_names
+        metainfo["data_names"] = data_names
 
     if has_cond_id:
         data_dict["cond_ids"] = cond_ids
@@ -182,6 +207,7 @@ def xsam_collate_fn(
 
     if has_vprompt_mask:
         data_dict["vprompt_masks"] = vprompt_masks
+        metainfo["vprompt_indices"] = vprompt_indices
 
     if has_mask_label:
         data_samples.mask_labels = mask_labels
@@ -194,6 +220,8 @@ def xsam_collate_fn(
 
     if has_contiguous_labels:
         data_samples.contiguous_labels = contiguous_labels
+
+    data_samples.set_metainfo(metainfo)
 
     if return_hf_format:
         return data_dict

@@ -1,4 +1,3 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
 import itertools
 import warnings
 from typing import Any, Dict, List, Tuple, Union

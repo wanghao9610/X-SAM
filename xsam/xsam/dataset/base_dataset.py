@@ -1,17 +1,11 @@
-import copy
 import os
 
-import torch
 from mmengine.config import Config, ConfigDict
 from mmengine.utils.misc import get_object_from_string
-from PIL import Image
 from torch.utils.data import Dataset
-from xtuner.dataset.utils import expand2square
-from xtuner.registry import BUILDER, MAP_FUNC
 
-from xsam.utils.logging import print_log
-
-from ..utils.constants import (
+from xsam.registry import BUILDER, MAP_FUNC
+from xsam.utils.constants import (
     DEFAULT_CLS_TOKEN,
     DEFAULT_PEND_TOKEN,
     DEFAULT_PSTART_TOKEN,
@@ -19,20 +13,23 @@ from ..utils.constants import (
     DEFAULT_SPECIAL_TOKENS,
     DEFAULT_TASKS,
 )
+from xsam.utils.logging import print_log
+
 from .utils.catalog import MetadataCatalog
 from .utils.encode import encode_fn
 
 TASK_MODALITY_LENGTH = {k: int(i * 512) for i, k in enumerate(DEFAULT_TASKS)}
 
 debug_mode = os.getenv("DEBUG_MODE", "false").lower() == "true"
-debug_iter = 200
+debug_item = int(os.getenv("DEBUG_ITEM", 64))
 
 
 class BaseDataset(Dataset):
     def __init__(
         self,
         data_path,
-        image_folder,
+        data_root=None,
+        image_folder=None,
         gt_image_folder=None,
         image_processor=None,
         tokenizer=None,
@@ -49,11 +46,18 @@ class BaseDataset(Dataset):
         template_map_fn=None,
         max_length=2048,
         task_length=None,
-        pad_image_to_square=False,
+        expand2square=False,
+        use_placeholder=False,
         output_ids_with_output=True,
-        ignore_label=255,
+        ignore_value=255,  # value for ignored mask
+        ignore_label=-100,  # label for ignored class
+        background_label=-1,  # label for background class
         num_class=10000,
-        repeats_scale=1.0,
+        repeats_mult=1.0,
+        batch_mult=1,
+        per_device_batch_size=None,
+        pixel_values_ndim=3,
+        ptoken_shift=0,
         **kwargs,
     ):
         super().__init__()
@@ -66,16 +70,22 @@ class BaseDataset(Dataset):
         self.data_mode = data_mode
         self.use_random_cat = use_random_cat
         self.data_path = data_path
+        self.data_root = data_root
         self.image_folder = image_folder
         self.gt_image_folder = gt_image_folder
-        self.pad_image_to_square = pad_image_to_square
+        self.expand2square = expand2square
+        self.use_placeholder = use_placeholder
         self.max_length = max_length
         self.task_length = TASK_MODALITY_LENGTH[task_name] if task_length is None else task_length
+        self.ignore_value = ignore_value
         self.ignore_label = ignore_label
+        self.background_label = background_label
         self.num_class = num_class
         self.output_ids_with_output = output_ids_with_output
         self.cond_type = cond_type
-        self.repeats_scale = repeats_scale
+        self.repeats_mult = repeats_mult
+        self.batch_mult = batch_mult
+        self.per_device_batch_size = per_device_batch_size
         self.repeats = 1.0
 
         if isinstance(tokenizer, dict) or isinstance(tokenizer, Config) or isinstance(tokenizer, ConfigDict):
@@ -118,6 +128,10 @@ class BaseDataset(Dataset):
         self.postprocess_fn = postprocess_fn
         self.tokenizer = tokenizer
 
+        self.pixel_values_ndim = pixel_values_ndim
+        self.ptoken_shift = ptoken_shift
+        assert self.ptoken_shift in [0, 1], f"ptoken_shift must be 0 or 1, but got {self.ptoken_shift}"
+
         if special_tokens is not None:
             assert all(
                 token in DEFAULT_SPECIAL_TOKENS for token in special_tokens
@@ -156,24 +170,24 @@ class BaseDataset(Dataset):
         else:
             self.extra_image_processor = extra_image_processor
 
-        if self.image_processor and hasattr(self.image_processor, "image_processor"):
-            self.image_processor = self.image_processor.image_processor
-        if self.extra_image_processor and hasattr(self.extra_image_processor, "image_processor"):
-            self.extra_image_processor = self.extra_image_processor.image_processor
-
         self.custom_init(**kwargs)
         self.woann_cnt = 0
-        print_log(f"Loading {self.data_name} dataset from {self.data_path}...", logger="current")
+        print_log(
+            f"Loading {self.data_name} dataset from {self.data_path or self.gt_image_folder or self.image_folder}...",
+            logger="current",
+        )
         self.data = self.load_ann_data()
         if self.woann_cnt > 0:
-            print_log(f"Filtered {self.woann_cnt} images without annotations of {self.data_name}.", logger="current")
+            print_log(
+                f"Filtered {self.woann_cnt} images without annotations of {self.data_name}.", logger="current"
+            )
 
     def __len__(self):
         return int(len(self.data) * self.repeats)
 
     @property
     def repeats(self):
-        return self._repeats * self.repeats_scale
+        return self._repeats * self.repeats_mult
 
     @property
     def modality_length(self):
@@ -197,22 +211,30 @@ class BaseDataset(Dataset):
     def _set_metadata(self, **kwargs):
         metadata = MetadataCatalog.get(f"{self.data_name}")
         metadata.set(
+            ignore_value=self.ignore_value,
             ignore_label=self.ignore_label,
+            background_label=self.background_label,
             label_divisor=1000,
         )
         self._metadata = metadata
 
-    def _get_input_ids(self, data_dict, with_image_token=True):
+    def _get_input_ids(self, data_dict, use_vision_token=True):
         if self.tokenizer is None:
             return data_dict
 
         if self.dataset_map_fn is not None:
-            data_dict = self.dataset_map_fn(data_dict, self.output_ids_with_output)
+            data_dict.update(self.dataset_map_fn(data_dict, output_ids_with_output=self.output_ids_with_output))
         if self.template_map_fn is not None:
-            data_dict = self.template_map_fn(data_dict)
+            data_dict.update(self.template_map_fn(data_dict))
         if self.tokenizer is not None:
             data_dict = encode_fn(
-                data_dict, self.tokenizer, self.max_length, self.output_ids_with_output, with_image_token
+                data_dict,
+                self.tokenizer,
+                self.max_length,
+                self.image_processor,
+                input_ids_with_output=self.output_ids_with_output,
+                use_placeholder=self.use_placeholder,
+                use_vision_token=use_vision_token,
             )
         return data_dict
 
@@ -231,7 +253,9 @@ class BaseDataset(Dataset):
 
         if self.cond_type in ["phrase", "all"]:
             for i, (ps, pe) in enumerate(zip(pstart_idx, pend_idx)):
-                cond_ids[ps : pe + 1] = [i] * (pe - ps + 1)
+                cond_ids[ps + self.ptoken_shift : pe + 1 - self.ptoken_shift] = [i] * (
+                    pe - ps + 1 - self.ptoken_shift * 2
+                )
         if self.cond_type in ["cls", "all"]:
             for i, ci in enumerate(cls_idx):
                 cond_ids[ci] = i
@@ -256,59 +280,15 @@ class BaseDataset(Dataset):
     def load_ann_data(self):
         data = self._load_ann_data()
         if debug_mode:
-            data = data[:debug_iter] + data[-debug_iter:]
+            data = data[: debug_item * self.batch_mult] + data[-debug_item * self.batch_mult :]
         self.data_length = len(data)
         return data
 
     def _load_ann_data(self):
         pass
 
-    def _decode_mask(self):
+    def _decode_ann_data(self):
         pass
 
     def __getitem__(self, index):
-        index = index % self.data_length
-        data_dict = copy.deepcopy(self.data[index])
-        if data_dict.get("image_file", None) is not None:
-            image_file = data_dict["image_file"]
-            pil_image = Image.open(os.path.join(self.image_folder, image_file)).convert("RGB")
-            if self.image_processor is not None:
-                image = pil_image
-                if self.pad_image_to_square:
-                    image = expand2square(pil_image, tuple(int(x * 255) for x in self.image_processor.image_mean))
-                image = self.image_processor.preprocess(image, return_tensors="pt")["pixel_values"][0]
-                data_dict["pixel_values"] = image
-            if self.extra_image_processor is not None:
-                data_dict.update(self._decode_mask(data_dict))
-                seg_output = self.extra_image_processor.preprocess(
-                    pil_image, data_dict["mask_labels"], return_tensors="pt"
-                )
-                data_dict["extra_pixel_values"] = seg_output["pixel_values"][0]
-                data_dict["scaled_size"] = tuple(seg_output["scaled_sizes"][0].tolist())
-                data_dict["mask_labels"] = seg_output.get("mask_labels", None)
-                data_dict["task_name"] = self.task_name
-            data_dict.update(self._get_input_ids(data_dict, with_image_token=True))
-            data_dict.update(self._get_cond_ids(data_dict))
-            data_dict.update(self._get_seg_ids(data_dict))
-        else:
-            if hasattr(self.image_processor, "crop_size"):
-                crop_size = self.image_processor.crop_size
-            else:
-                crop_size = self.image_processor.size
-            data_dict["pixel_values"] = torch.zeros(3, crop_size["height"], crop_size["width"])
-            if self.extra_image_processor is not None:
-                if hasattr(self.extra_image_processor, "crop_size"):
-                    crop_size = self.extra_image_processor.crop_size
-                else:
-                    crop_size = self.extra_image_processor.size
-                data_dict["extra_pixel_values"] = torch.zeros(3, crop_size["height"], crop_size["width"])
-                data_dict["image_info"] = {"image_file": None}
-                data_dict["scaled_size"] = (crop_size["height"], crop_size["width"])
-                data_dict["image_size"] = {"height": crop_size["height"], "width": crop_size["width"]}
-                data_dict["mask_labels"] = torch.zeros(0, crop_size["height"], crop_size["width"])
-                data_dict["class_labels"] = torch.zeros(0)
-                data_dict["task_name"] = self.task_name
-            data_dict.update(self._get_input_ids(data_dict, with_image_token=False))
-            data_dict.update(self._get_cond_ids(data_dict))
-            data_dict.update(self._get_seg_ids(data_dict))
-        return data_dict
+        pass

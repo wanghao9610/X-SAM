@@ -9,13 +9,13 @@ from PIL import Image
 
 def convert(input, output):
     img = np.asarray(Image.open(input))
-    assert img.dtype == np.uint8
+    assert Image.dtype == np.uint8
     img = img - 1  # 0 (ignore) becomes 255. others are shifted by 1
     Image.fromarray(img).save(output)
 
 
 if __name__ == "__main__":
-    dataset_dir = osp.join(os.getenv("root_dir", "."), "datas/ovseg_data")
+    dataset_dir = osp.join(os.getenv("PROJ_HOME", "."), "datas")
     for name in ["training", "validation"]:
         annotation_dir = osp.join(dataset_dir, "ade20k/annotations", name)
         output_dir = osp.join(dataset_dir, "ade20k/annotations_detectron2", name)

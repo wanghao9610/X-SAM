@@ -14,7 +14,9 @@ class SamplerConfig(PretrainedConfig):
         num_sample_point=256,
         num_sub_point=[16, 32, 64, 128],
         num_neighbor=[16, 32, 64, 128],
-        pooler_mode="mean",
+        pooling_mode="mean",
+        pooling_kernel_size=None,
+        pooling_output_size=None,
         initializer_range=0.01,
         **kwargs,
     ):
@@ -26,5 +28,7 @@ class SamplerConfig(PretrainedConfig):
         self.num_sample_point = num_sample_point
         self.num_sub_point = num_sub_point
         self.num_neighbor = num_neighbor
-        self.pooler_mode = pooler_mode
+        self.pooling_mode = pooling_mode
+        self.pooling_kernel_size = pooling_kernel_size
+        self.pooling_output_size = pooling_output_size
         self.initializer_range = initializer_range

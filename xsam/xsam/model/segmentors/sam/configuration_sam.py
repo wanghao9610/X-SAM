@@ -119,6 +119,8 @@ class SamMaskDecoderConfig(PretrainedConfig):
         hidden_dim=256,
         layer_norm_eps=1e-6,
         ignore_value=255,
+        ignore_label=-100,
+        background_label=-1,
         num_queries=200,
         num_labels=133,
         oversample_ratio: float = 3.0,
@@ -150,6 +152,8 @@ class SamMaskDecoderConfig(PretrainedConfig):
         self.layer_norm_eps = layer_norm_eps
 
         self.ignore_value = ignore_value
+        self.ignore_label = ignore_label
+        self.background_label = background_label
         self.num_queries = num_queries
         self.num_labels = num_labels
         self.oversample_ratio = oversample_ratio

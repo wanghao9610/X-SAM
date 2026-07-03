@@ -1,6 +1,15 @@
+import argparse
+import copy as cp
+import datetime
 import json
+import logging
+import os
+import os.path as osp
+import shutil
 import traceback
 
+import pandas as pd
+import tabulate
 import torch
 import torch.distributed as dist
 from vlmeval.dataset import build_dataset
@@ -163,7 +172,6 @@ You can launch the evaluation by setting either --data and --model or --config.
 
 
 def main():
-    logger = get_logger("RUN")
     rank, world_size = get_rank_and_world_size()
     args = parse_args()
     use_config, cfg = False, None
@@ -512,7 +520,7 @@ def main():
 
             except Exception as e:
                 print_log(
-                    f"Model {model_name} x Dataset {dataset_name} combination failed\n: {e}\n{traceback.format_exc()}",
+                    f"Model {model_name} x Dataset {dataset_name} combination failed: {e}\n{traceback.format_exc()}",
                     logger="current",
                 )
                 continue

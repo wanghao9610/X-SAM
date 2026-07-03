@@ -1,3 +1,3 @@
-from .loops import TrainLoop
+from .loops import TestLoop, TrainLoop, ValLoop
 
-__all__ = ["TrainLoop"]
+__all__ = ["TrainLoop", "ValLoop", "TestLoop"]

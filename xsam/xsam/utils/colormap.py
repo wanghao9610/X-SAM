@@ -1,5 +1,3 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
-
 """
 An awesome colormap for really neat visualizations.
 Copied from Detectron, and removed gray colors.

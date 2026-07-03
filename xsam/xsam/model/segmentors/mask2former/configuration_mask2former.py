@@ -79,8 +79,10 @@ class Mask2FormerConfig(PretrainedConfig):
             in the Transformer decoder.
         common_stride (`int`, *optional*, defaults to 4):
             Parameter used for determining number of FPN levels used as part of pixel decoder.
-        ignore_value (`int`, *optional*, defaults to 255):
+        ignore_value (`int`, *optional*, defaults to -100):
             Category id to be ignored during training.
+        background_label (`int`, *optional*, defaults to -1):
+            Category id to be used as background during training.
         num_queries (`int`, *optional*, defaults to 100):
             Number of queries for the decoder.
         no_object_weight (`int`, *optional*, defaults to 0.1):
@@ -151,11 +153,14 @@ class Mask2FormerConfig(PretrainedConfig):
         enforce_input_projection: bool = False,
         common_stride: int = 4,
         ignore_value: int = 255,
+        ignore_label: int = -100,
+        background_label: int = -1,
         num_queries: int = 100,
         no_object_weight: float = 0.1,
         class_weight: float = 2.0,
         mask_weight: float = 5.0,
         dice_weight: float = 5.0,
+        temporal_weight: float = 1.0,
         train_num_points: int = 12544,
         oversample_ratio: float = 3.0,
         importance_sample_ratio: float = 0.75,
@@ -169,10 +174,17 @@ class Mask2FormerConfig(PretrainedConfig):
         use_timm_backbone: bool = False,
         backbone_kwargs: Optional[Dict] = None,
         use_sample_point: bool = True,
+        use_repeat_cond: bool = False,
+        use_text_cross_attn: bool = False,
+        use_zero_init: bool = False,
         use_nolabel_cls_loss: bool = True,
-        loss_cls_type: str = "ce_loss",  # [focal_loss, ce_loss]
+        loss_cls_type: str = "ce_loss",  # [focal_loss, binary_focal_loss, ce_loss, binary_ce_loss]
+        head_cls_type: str = "linear",  # [linear, exp_scale]
         alpha: float = 0.25,
         gamma: float = 2.0,
+        offset_scale: float = 0.5,
+        attn_implementation: str = "pytorch_v1",
+        attn_method: str = "discrete",
         **kwargs,
     ):
         if use_backbone:
@@ -230,11 +242,14 @@ class Mask2FormerConfig(PretrainedConfig):
         self.enforce_input_projection = enforce_input_projection
         self.common_stride = common_stride
         self.ignore_value = ignore_value
+        self.ignore_label = ignore_label
+        self.background_label = background_label
         self.num_queries = num_queries
         self.no_object_weight = no_object_weight
         self.class_weight = class_weight
         self.mask_weight = mask_weight
         self.dice_weight = dice_weight
+        self.temporal_weight = temporal_weight
         self.train_num_points = train_num_points
         self.oversample_ratio = oversample_ratio
         self.importance_sample_ratio = importance_sample_ratio
@@ -251,9 +266,17 @@ class Mask2FormerConfig(PretrainedConfig):
 
         self.use_sample_point = use_sample_point
         self.use_nolabel_cls_loss = use_nolabel_cls_loss
+        self.use_repeat_cond = use_repeat_cond
+        self.use_text_cross_attn = use_text_cross_attn
+        self.use_zero_init = use_zero_init
         self.loss_cls_type = loss_cls_type
+        self.head_cls_type = head_cls_type
         self.alpha = alpha
         self.gamma = gamma
+
+        self.offset_scale = offset_scale
+        self.attn_method = attn_method
+        self.attn_implementation = attn_implementation
 
         super().__init__(**kwargs)
 

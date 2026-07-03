@@ -2,7 +2,7 @@
 This interface provides access to four datasets:
 1) refclef
 2) refcoco
-3) refcoco+
+3) refcocop
 4) refcocog
 split by unc and google
 
@@ -46,11 +46,12 @@ class REFER:
         self.IMAGE_DIR = self._get_image_dir(data_root, dataset)
 
         splitBy = "umd" if dataset == "refcocog" else "unc"
+        self.dataset = dataset
         self.data = self._load_data(splitBy)
         self.createIndex()
 
     def _get_image_dir(self, data_root, dataset):
-        if dataset in ["refcoco", "refcoco+", "refcocog"]:
+        if dataset in ["refcoco", "refcocop", "refcocog", "grefcoco"]:
             return osp.join(data_root, "images/train2014")
         elif dataset == "refclef":
             return osp.join(data_root, "images/saiapr_tc-12")
@@ -62,10 +63,17 @@ class REFER:
         ref_file = osp.join(self.DATA_DIR, f"refs({splitBy}).p")
         instances_file = osp.join(self.DATA_DIR, "instances.json")
 
-        data = {
-            "refs": pickle.load(open(ref_file, "rb")),
-            **json.load(open(instances_file, "r")),
-        }
+        data = (
+            {
+                "refs": pickle.load(open(ref_file, "rb")),
+                **json.load(open(instances_file, "r")),
+            }
+            if self.dataset != "grefcoco"
+            else {
+                "refs": [x for x in pickle.load(open(ref_file, "rb")) if x["ann_id"][0] > 0],
+                **json.load(open(instances_file, "r")),
+            }
+        )
         # print_log(f"DONE (t={time.time() - tic:.2f}s)", logger="current")
         return data
 
@@ -81,8 +89,21 @@ class REFER:
         # Create reverse mappings
         self.imgToRefs = self._create_img_to_refs()
         self.imgToAnns = self._create_img_to_anns()
-        self.refToAnn = {ref["ref_id"]: self.Anns[ref["ann_id"]] for ref in self.data["refs"]}
-        self.annToRef = {ref["ann_id"]: ref for ref in self.data["refs"] for _ in range(len(ref["sentences"]))}
+        self.refToAnn = (
+            {ref["ref_id"]: self.Anns[ref["ann_id"]] for ref in self.data["refs"]}
+            if self.dataset != "grefcoco"
+            else {ref["ref_id"]: [self.Anns[ann_id] for ann_id in ref["ann_id"]] for ref in self.data["refs"]}
+        )
+        self.annToRef = (
+            {ref["ann_id"]: ref for ref in self.data["refs"] for _ in range(len(ref["sentences"]))}
+            if self.dataset != "grefcoco"
+            else {
+                ann_id: ref
+                for ref in self.data["refs"]
+                for ann_id in ref["ann_id"]
+                for _ in range(len(ref["sentences"]))
+            }
+        )
         self.catToRefs = self._create_cat_to_refs()
 
         # Create sentence related mappings
@@ -112,7 +133,11 @@ class REFER:
     def _create_cat_to_refs(self):
         catToRefs = {}
         for ref in self.data["refs"]:
-            catToRefs.setdefault(ref["category_id"], []).append(ref)
+            if self.dataset != "grefcoco":
+                catToRefs.setdefault(ref["category_id"], []).append(ref)
+            else:
+                for c in ref["category_id"]:
+                    catToRefs.setdefault(c, []).append(ref)
         return catToRefs
 
     def getRefIds(self, image_ids=[], cat_ids=[], ref_ids=[], split=""):
@@ -161,7 +186,11 @@ class REFER:
         ann_ids = [ann["id"] for ann in anns]
 
         if ref_ids:
-            ids = set(ann_ids) & set(self.Refs[ref_id]["ann_id"] for ref_id in ref_ids)
+            ids = set(ann_ids) & (
+                set(self.Refs[ref_id]["ann_id"] for ref_id in ref_ids)
+                if self.dataset != "grefcoco"
+                else set(ann_id for ref_id in ref_ids for ann_id in self.Refs[ref_id]["ann_id"])
+            )
             return list(ids)
 
         return ann_ids

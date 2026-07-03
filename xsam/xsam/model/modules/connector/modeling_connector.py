@@ -99,7 +99,7 @@ class ConnectorModel(PreTrainedModel):
             self.model = nn.ModuleList(
                 [
                     LinearConnectorLayer(
-                        config.segmentor_encoder_channels[i],
+                        config.segmention_encoder_channels[i],
                         config.scale_factor[i],
                         config.hidden_channels,
                         config.bias,
@@ -111,7 +111,7 @@ class ConnectorModel(PreTrainedModel):
             self.model = nn.ModuleList(
                 [
                     ConvConnectorLayer(
-                        config.segmentor_encoder_channels[i],
+                        config.segmention_encoder_channels[i],
                         config.scale_factor[i],
                         config.hidden_channels,
                         config.bias,

@@ -5,6 +5,7 @@ import argparse
 import json
 import multiprocessing
 import os
+import os.path as osp
 import time
 from collections import defaultdict
 
@@ -81,9 +82,9 @@ def pq_compute_single_core(proc_id, annotation_set, gt_folder, pred_folder, cate
             print("Core: {}, {} from {} images processed".format(proc_id, idx, len(annotation_set)))
         idx += 1
 
-        pan_gt = np.array(Image.open(os.path.join(gt_folder, gt_ann["file_name"])), dtype=np.uint32)
+        pan_gt = np.array(Image.open(osp.join(gt_folder, gt_ann["file_name"])), dtype=np.uint32)
         pan_gt = rgb2id(pan_gt)
-        pan_pred = np.array(Image.open(os.path.join(pred_folder, pred_ann["file_name"])), dtype=np.uint32)
+        pan_pred = np.array(Image.open(osp.join(pred_folder, pred_ann["file_name"])), dtype=np.uint32)
         pan_pred = rgb2id(pan_pred)
 
         gt_segms = {el["id"]: el for el in gt_ann["segments_info"]}
@@ -229,8 +230,6 @@ def pq_compute(gt_json_file, pred_json_file, gt_folder=None, pred_folder=None):
         if image_id not in pred_annotations:
             print("no prediction for the image with id: {}".format(image_id))
             continue
-        if image_id not in pred_annotations:
-            raise Exception("no prediction for the image with id: {}".format(image_id))
         matched_annotations_list.append((gt_ann, pred_annotations[image_id]))
 
     pq_stat = pq_compute_multi_core(matched_annotations_list, gt_folder, pred_folder, categories)
@@ -262,7 +261,7 @@ def pq_compute(gt_json_file, pred_json_file, gt_folder=None, pred_folder=None):
 
 
 def print_panoptic_results(pq_res):
-    headers = ["", "PQ", "SQ", "RQ", "# Categories"]
+    headers = ["Metric", "PQ", "SQ", "RQ", "# Categories"]
     data = []
     for name in ["All", "Things", "Stuff"]:
         row = [name] + [pq_res[name][k] * 100 for k in ["pq", "sq", "rq"]] + [pq_res[name]["n"]]

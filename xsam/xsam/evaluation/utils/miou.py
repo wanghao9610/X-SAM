@@ -1,6 +1,7 @@
 import json
 import multiprocessing
 import os
+import os.path as osp
 import time
 
 import numpy as np
@@ -9,7 +10,7 @@ from PIL import Image
 from tabulate import tabulate
 
 
-class MiouStat:
+class mIoUStat:
     """
     Class to store and aggregate mIoU statistics
     """
@@ -34,7 +35,7 @@ class MiouStat:
 
 
 def miou_compute_single_core(proc_id, annotation_set, gt_folder, pred_folder, categories):
-    miou_stat = MiouStat()
+    miou_stat = mIoUStat()
     num_classes = len(categories)
     miou_stat.num_classes = num_classes
     miou_stat.confusion_matrix = np.zeros((num_classes, num_classes), dtype=np.int64)
@@ -46,8 +47,8 @@ def miou_compute_single_core(proc_id, annotation_set, gt_folder, pred_folder, ca
         idx += 1
 
         # Load ground truth and prediction images
-        gt_path = os.path.join(gt_folder, gt_ann["file_name"])
-        pred_path = os.path.join(pred_folder, pred_ann["file_name"])
+        gt_path = osp.join(gt_folder, gt_ann["file_name"])
+        pred_path = osp.join(pred_folder, pred_ann["file_name"])
 
         pan_gt = np.array(Image.open(gt_path), dtype=np.uint32)
         pan_gt = rgb2id(pan_gt)
@@ -138,7 +139,7 @@ def miou_compute_multi_core(matched_annotations_list, gt_folder, pred_folder, ca
         )
         processes.append(p)
 
-    miou_stat = MiouStat()
+    miou_stat = mIoUStat()
     for p in processes:
         miou_stat += p.get()
 
@@ -164,7 +165,7 @@ def print_miou_results(miou_res, display_cats=False):
     Returns:
         str: Formatted table string
     """
-    headers = ["", "IoU"]
+    headers = ["Metric", "IoU"]
     data = []
 
     # Add mean IoU row
@@ -198,12 +199,12 @@ def compute_iou(mask1, mask2):
     return iou
 
 
-def compute_miou(pred_masks, gt_masks):
+def compute_miou(gt_masks, pred_masks):
     """Computing mIoU between predicted masks and ground truth masks"""
-    iou_matrix = np.zeros((len(pred_masks), len(gt_masks)))
-    for i, pred_mask in enumerate(pred_masks):
-        for j, gt_mask in enumerate(gt_masks):
-            iou_matrix[i, j] = compute_iou(pred_mask, gt_mask)
+    iou_matrix = np.zeros((len(gt_masks), len(pred_masks)))
+    for i, gt_mask in enumerate(gt_masks):
+        for j, pred_mask in enumerate(pred_masks):
+            iou_matrix[i, j] = compute_iou(gt_mask, pred_mask)
 
     # One-to-one pairing and mean IoU calculation
     paired_iou = []
@@ -216,10 +217,10 @@ def compute_miou(pred_masks, gt_masks):
     return np.mean(paired_iou) if paired_iou else 0.0
 
 
-def compute_iou_matrix(pred_masks, gt_masks):
-    iou_matrix = np.zeros((len(pred_masks), len(gt_masks)))
-    for i, pred_mask in enumerate(pred_masks):
-        for j, gt_mask in enumerate(gt_masks):
-            iou_matrix[i, j] = compute_iou(pred_mask, gt_mask)
+def compute_iou_matrix(gt_masks, pred_masks):
+    iou_matrix = np.zeros((len(gt_masks), len(pred_masks)))
+    for i, gt_mask in enumerate(gt_masks):
+        for j, pred_mask in enumerate(pred_masks):
+            iou_matrix[i, j] = compute_iou(gt_mask, pred_mask)
 
     return iou_matrix

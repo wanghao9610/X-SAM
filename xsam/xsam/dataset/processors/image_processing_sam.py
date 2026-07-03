@@ -1,5 +1,5 @@
 # Copied from https://github.com/huggingface/transformers/blob/main/src/transformers/models/sam/image_processing_sam.py
-"""Image processor class for SAM."""
+"""Img processor class for SAM."""
 
 import math
 import random
@@ -120,7 +120,7 @@ class SamImageProcessor(BaseImageProcessor):
         pad_size: int = None,
         mask_pad_size: int = None,
         do_convert_rgb: bool = True,
-        ignore_index: int = 255,
+        ignore_index: int = 0,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
@@ -173,7 +173,7 @@ class SamImageProcessor(BaseImageProcessor):
 
         Args:
             image (`np.ndarray`):
-                Image to pad.
+                Img to pad.
             pad_size (`Dict[str, int]`):
                 Size of the output image after padding.
             data_format (`str` or `ChannelDimension`, *optional*):
@@ -286,8 +286,12 @@ class SamImageProcessor(BaseImageProcessor):
         size: Dict[str, int],
         input_data_format: Optional[Union[str, ChannelDimension]] = None,
     ):
-        images = to_numpy_array(images)
-        input_size = get_image_size(images, channel_dim=input_data_format)
+        images = to_numpy_array(images[0]) if isinstance(images, list) else to_numpy_array(images)
+        input_size = (
+            get_image_size(images[0], channel_dim=input_data_format)
+            if isinstance(images, list)
+            else get_image_size(images, channel_dim=input_data_format)
+        )
         if "longest_edge" in size:
             output_height, output_width = self._get_longest_edge_preprocess_shape(input_size, size["longest_edge"])
         elif "shortest_edge" in size:
@@ -296,6 +300,8 @@ class SamImageProcessor(BaseImageProcessor):
             output_height, output_width = self._get_random_scale_preprocess_shape(
                 input_size, size["min_scale"], size["max_scale"], size["target_size"]
             )
+        elif "height" in size and "width" in size:
+            output_height, output_width = size["height"], size["width"]
         else:
             raise ValueError(
                 f"The `size` dictionary must contain the key `longest_edge` or `shortest_edge` or `target_size`. Got {size.keys()}"
@@ -326,7 +332,7 @@ class SamImageProcessor(BaseImageProcessor):
 
         Args:
             image (`np.ndarray`):
-                Image to resize.
+                Img to resize.
             size (`Dict[str, int]`):
                 Dictionary in the format `{"longest_edge": int}` specifying the size of the output image. The longest
                 edge of the image will be resized to the specified size, while the other edge will be resized to
@@ -485,7 +491,7 @@ class SamImageProcessor(BaseImageProcessor):
 
     def _preprocess_mask(
         self,
-        segmentation_map: ImageInput,
+        mask_label: ImageInput,
         do_resize: Optional[bool] = None,
         mask_size: Dict[str, int] = None,
         do_flip: Optional[bool] = False,
@@ -497,22 +503,22 @@ class SamImageProcessor(BaseImageProcessor):
         input_data_format: Optional[Union[str, ChannelDimension]] = None,
         ignore_index: Optional[int] = None,
     ) -> np.ndarray:
-        segmentation_map = to_numpy_array(segmentation_map)
+        mask_label = to_numpy_array(mask_label)
 
         # Add channel dimension if missing - needed for certain transformations
-        if segmentation_map.ndim == 2:
+        if mask_label.ndim == 2:
             added_channel_dim = True
-            segmentation_map = segmentation_map[None, ...]
+            mask_label = mask_label[None, ...]
             input_data_format = ChannelDimension.FIRST
         else:
             added_channel_dim = False
             if input_data_format is None:
-                input_data_format = infer_channel_dimension_format(segmentation_map, num_channels=1)
+                input_data_format = infer_channel_dimension_format(mask_label, num_channels=1)
 
-        original_size = get_image_size(segmentation_map, channel_dim=input_data_format)
+        original_size = get_image_size(mask_label, channel_dim=input_data_format)
 
-        segmentation_map, _ = self._preprocess(
-            image=segmentation_map,
+        mask_label, _ = self._preprocess(
+            image=mask_label,
             do_resize=do_resize,
             size=mask_size,
             resample=PILImageResampling.NEAREST,
@@ -530,17 +536,17 @@ class SamImageProcessor(BaseImageProcessor):
 
         # Remove extra channel dimension if added for processing
         if added_channel_dim:
-            segmentation_map = segmentation_map.squeeze(0)
-        segmentation_map = segmentation_map.astype(np.int64)
+            mask_label = mask_label.squeeze(0)
+        mask_label = mask_label.astype(np.int64)
 
-        return segmentation_map, original_size
+        return mask_label, original_size
 
     @filter_out_non_signature_kwargs()
     def preprocess(
         self,
         images: ImageInput,
-        segmentation_maps: Optional[ImageInput] = None,
-        condition_maps: Optional[ImageInput] = None,
+        mask_labels: Optional[ImageInput] = None,
+        vprompt_masks: Optional[ImageInput] = None,
         do_resize: Optional[bool] = None,
         size: Optional[Dict[str, int]] = None,
         mask_size: Optional[Dict[str, int]] = None,
@@ -569,9 +575,9 @@ class SamImageProcessor(BaseImageProcessor):
 
         Args:
             images (`ImageInput`):
-                Image to preprocess. Expects a single or batch of images with pixel values ranging from 0 to 255. If
+                Img to preprocess. Expects a single or batch of images with pixel values ranging from 0 to 255. If
                 passing in images with pixel values between 0 and 1, set `do_rescale=False`.
-            segmentation_maps (`ImageInput`, *optional*):
+            mask_labels (`ImageInput`, *optional*):
                 Segmentation map to preprocess.
             do_resize (`bool`, *optional*, defaults to `self.do_resize`):
                 Whether to resize the image.
@@ -590,9 +596,9 @@ class SamImageProcessor(BaseImageProcessor):
             do_normalize (`bool`, *optional*, defaults to `self.do_normalize`):
                 Whether to normalize the image.
             image_mean (`float` or `List[float]`, *optional*, defaults to `self.image_mean`):
-                Image mean to normalize the image by if `do_normalize` is set to `True`.
+                Img mean to normalize the image by if `do_normalize` is set to `True`.
             image_std (`float` or `List[float]`, *optional*, defaults to `self.image_std`):
-                Image standard deviation to normalize the image by if `do_normalize` is set to `True`.
+                Img standard deviation to normalize the image by if `do_normalize` is set to `True`.
             do_crop (`bool`, *optional*, defaults to `self.do_crop`):
                 Whether to crop the image.
             crop_size (`Dict[str, int]`, *optional*, defaults to `self.crop_size`):
@@ -673,25 +679,29 @@ class SamImageProcessor(BaseImageProcessor):
 
         if not valid_images(images):
             raise ValueError(
-                "Invalid image type. Must be of type PIL.Image.Image, numpy.ndarray, "
+                "Invalid image type. Must be of type PIL.Image.Img, numpy.ndarray, "
                 "torch.Tensor, tf.Tensor or jax.ndarray."
             )
 
-        if segmentation_maps is not None and len(segmentation_maps) > 0:
-            segmentation_maps = make_list_of_images(segmentation_maps, expected_ndims=2)
+        if mask_labels is not None and len(mask_labels) > 0:
+            mask_labels = (
+                make_list_of_images(mask_labels, expected_ndims=2)
+                if mask_labels[0].ndim == 2
+                else make_list_of_images(mask_labels, expected_ndims=3)
+            )
 
-            if not valid_images(segmentation_maps):
+            if not valid_images(mask_labels):
                 raise ValueError(
-                    "Invalid segmentation map type. Must be of type PIL.Image.Image, numpy.ndarray, "
+                    "Invalid segmentation map type. Must be of type PIL.Image.Img, numpy.ndarray, "
                     "torch.Tensor, tf.Tensor or jax.ndarray."
                 )
 
-        if condition_maps is not None and len(condition_maps) > 0:
-            condition_maps = make_list_of_images(condition_maps, expected_ndims=2)
+        if vprompt_masks is not None and len(vprompt_masks) > 0:
+            vprompt_masks = make_list_of_images(vprompt_masks, expected_ndims=2)
 
-            if not valid_images(condition_maps):
+            if not valid_images(vprompt_masks):
                 raise ValueError(
-                    "Invalid condition map type. Must be of type PIL.Image.Image, numpy.ndarray, "
+                    "Invalid condition map type. Must be of type PIL.Image.Img, numpy.ndarray, "
                     "torch.Tensor, tf.Tensor or jax.ndarray."
                 )
         validate_preprocess_arguments(
@@ -739,31 +749,56 @@ class SamImageProcessor(BaseImageProcessor):
             "scaled_sizes": scaled_sizes,
         }
 
-        if segmentation_maps is not None and len(segmentation_maps) > 0:
-            segmentation_maps, original_mask_sizes = zip(
-                *(
-                    self._preprocess_mask(
-                        segmentation_map=mask,
-                        do_resize=do_resize,
-                        mask_size=mask_size,
-                        do_flip=do_flip,
-                        flip_direction=flip_direction,
-                        do_crop=do_crop,
-                        crop_size=crop_size,
-                        do_pad=do_pad,
-                        mask_pad_size=mask_pad_size,
-                        ignore_index=ignore_index,
-                        input_data_format=input_data_format,
+        if mask_labels is not None and len(mask_labels) > 0:
+            if mask_labels[0].ndim == 2 and mask_labels[0].shape[0] > 0:
+                mask_labels, original_mask_sizes = zip(
+                    *(
+                        self._preprocess_mask(
+                            mask_label=mask_label,
+                            do_resize=do_resize,
+                            mask_size=mask_size,
+                            do_flip=do_flip,
+                            flip_direction=flip_direction,
+                            do_crop=do_crop,
+                            crop_size=crop_size,
+                            do_pad=do_pad,
+                            mask_pad_size=mask_pad_size,
+                            ignore_index=ignore_index,
+                            input_data_format=input_data_format,
+                        )
+                        for mask_label in mask_labels
                     )
-                    for mask in segmentation_maps
                 )
-            )
+            elif mask_labels[0].ndim == 3 and mask_labels[0].shape[0] > 0:
+                mask_labels, original_mask_sizes = zip(
+                    *[
+                        zip(
+                            *(
+                                self._preprocess_mask(
+                                    mask_label=_mask_label,
+                                    do_resize=do_resize,
+                                    mask_size=mask_size,
+                                    do_flip=do_flip,
+                                    flip_direction=flip_direction,
+                                    do_crop=do_crop,
+                                    crop_size=crop_size,
+                                    do_pad=do_pad,
+                                    mask_pad_size=mask_pad_size,
+                                    ignore_index=ignore_index,
+                                    input_data_format=input_data_format,
+                                )
+                                for _mask_label in mask_label
+                            )
+                        )
+                        for mask_label in mask_labels
+                    ]
+                )
 
-        if condition_maps is not None and len(condition_maps) > 0:
-            condition_maps, original_mask_sizes = zip(
+        if vprompt_masks is not None and len(vprompt_masks) > 0:
+            vprompt_masks, original_mask_sizes = zip(
                 *(
                     self._preprocess_mask(
-                        segmentation_map=mask,
+                        mask_label=mask,
                         do_resize=do_resize,
                         mask_size=mask_size,
                         do_crop=do_crop,
@@ -773,7 +808,7 @@ class SamImageProcessor(BaseImageProcessor):
                         ignore_index=ignore_index,
                         input_data_format=input_data_format,
                     )
-                    for mask in condition_maps
+                    for mask in vprompt_masks
                 )
             )
 
@@ -783,11 +818,11 @@ class SamImageProcessor(BaseImageProcessor):
                 for original_im_size, original_mask_size in zip(original_sizes, original_mask_sizes)
             ), "Segmentation maps should be the same size as input images."
 
-        if segmentation_maps is not None:
-            data["mask_labels"] = segmentation_maps
+        if mask_labels is not None:
+            data["mask_labels"] = mask_labels
 
-        if condition_maps is not None:
-            data["vprompt_masks"] = condition_maps
+        if vprompt_masks is not None:
+            data["vprompt_masks"] = vprompt_masks
 
         return BatchFeature(data=data, tensor_type=return_tensors)
 
@@ -1315,8 +1350,8 @@ def _generate_crop_boxes(
     Generates a list of crop boxes of different sizes. Each layer has (2**i)**2 boxes for the ith layer.
 
     Args:
-        image (Union[`numpy.ndarray`, `PIL.Image`, `torch.Tensor`]):
-            Image to generate crops for.
+        image (Union[`numpy.ndarray`, `PIL.Img`, `torch.Tensor`]):
+            Img to generate crops for.
         target_size (`int`):
             Size of the smallest crop.
         crop_n_layers (`int`, *optional*):

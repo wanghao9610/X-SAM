@@ -1,3 +1,4 @@
+import base64
 import json
 from io import BytesIO
 
@@ -5,6 +6,12 @@ import numpy as np
 import requests
 import torch
 from PIL import Image
+
+
+def decode_base64_to_image(base64_string):
+    image_data = base64.b64decode(base64_string)
+    image = Image.open(BytesIO(image_data))
+    return image
 
 
 def load_jsonl(json_file):
@@ -18,14 +25,35 @@ def load_jsonl(json_file):
 
 def load_image(image_file, threshold=128, mode="RGB", to_numpy=False, to_tensor=False):
     assert mode in ["RGB", "L"]
-    if image_file.startswith("http://") or image_file.startswith("https://"):
-        response = requests.get(image_file)
-        image = Image.open(BytesIO(response.content)).convert(mode)
+    if to_numpy and to_tensor:
+        raise ValueError("`to_numpy` and `to_tensor` cannot both be True.")
+
+    if isinstance(image_file, Image.Image):
+        image = image_file.convert(mode)
+    elif isinstance(image_file, np.ndarray):
+        image = Image.fromarray(image_file.astype(np.uint8)).convert(mode)
+    elif isinstance(image_file, torch.Tensor):
+        image = image.detach().cpu()
+        if image.ndim == 3 and image.shape[0] in [1, 3]:
+            image = image.permute(1, 2, 0).numpy()
+        elif image.ndim == 2:
+            image = image.numpy()
+        else:
+            image = image.numpy()
+        image = Image.fromarray(image.astype(np.uint8)).convert(mode)
+    elif isinstance(image_file, str):
+        if image_file.startswith("http://") or image_file.startswith("https://"):
+            response = requests.get(image_file)
+            response.raise_for_status()
+            image = Image.open(BytesIO(response.content)).convert(mode)
+        else:
+            image = Image.open(image_file).convert(mode)
     else:
-        image = Image.open(image_file).convert(mode)
+        raise ValueError(f"Unsupported image input: {type(image_file)}")
 
     if mode == "L" and threshold is not None:
         image = image.point(lambda x: 1 if x > threshold else 0, mode="L")
+
     if to_numpy:
         image = np.array(image)
     if to_tensor:

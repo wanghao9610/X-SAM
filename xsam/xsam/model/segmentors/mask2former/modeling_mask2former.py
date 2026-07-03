@@ -39,10 +39,20 @@ from transformers.pytorch_utils import is_torch_greater_or_equal_than_2_1
 from transformers.utils.backbone_utils import load_backbone
 from transformers.utils.import_utils import is_torchdynamo_compiling
 
+try:
+    from ...ops.functions.ms_deform_attn_func import MSDeformAttnFunction
+except ImportError:
+    print("MSDeformAttnFunction not compiled. Please run `bash xsam/xsam/model/ops/make.sh` to compile it.")
+    MSDeformAttnFunction = None
 from .configuration_mask2former import Mask2FormerConfig
 
 if is_scipy_available():
     from scipy.optimize import linear_sum_assignment
+
+# Global flags to control memory-efficient operations
+ENABLE_GRID_SAMPLE_CHUNKING = True
+GRID_SAMPLE_CHUNK_SIZE = 4  # Process 4 heads at a time to reduce memory
+ENABLE_CUDA_CACHE_CLEARING = False  # Set to True if experiencing memory fragmentation
 
 
 _CONFIG_FOR_DOC = "Mask2FormerConfig"
@@ -221,7 +231,7 @@ class Mask2FormerForUniversalSegmentationOutput(ModelOutput):
         transformer_decoder_hidden_states (`tuple(torch.FloatTensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
             Tuple of `torch.FloatTensor` (one for the output of the embeddings + one for the output of each stage) of
             shape `(batch_size, sequence_length, hidden_size)`. Hidden-states (also called feature maps) of the
-            transformer decoder at the output of each stage.
+            transformer decoder at the output of each stage. Returned when `output_hidden_states=True` is passed.
         attentions (`tuple(tuple(torch.FloatTensor))`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
             Tuple of `tuple(torch.FloatTensor)` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`. Self and Cross Attentions weights from transformer decoder.
@@ -238,6 +248,24 @@ class Mask2FormerForUniversalSegmentationOutput(ModelOutput):
     pixel_decoder_hidden_states: Optional[Tuple[torch.FloatTensor]] = None
     transformer_decoder_hidden_states: Optional[torch.FloatTensor] = None
     attentions: Optional[Tuple[torch.FloatTensor]] = None
+
+
+def cond_id_postprocess(cond_id, label_ids=None, ignore_label=-100, background_label=-1, training=True):
+    label_ids = label_ids if label_ids is not None and label_ids.shape[0] > 0 else torch.unique(cond_id)
+    if ((label_ids != ignore_label) & (label_ids != background_label)).sum() == 0:
+        return torch.zeros((0, cond_id.shape[0]), dtype=torch.float32, device=cond_id.device)
+    cond_id_map = torch.stack([cond_id == x for x in label_ids if x != background_label and x != ignore_label]).to(
+        torch.float32
+    )
+    if ignore_label in label_ids and training:
+        null_cond_id_map = (cond_id == ignore_label).unsqueeze(0).to(torch.float32)
+        cond_id_map = torch.cat([cond_id_map, null_cond_id_map], dim=0)
+    if background_label in label_ids:
+        bg_cond_id_map = (cond_id == background_label).unsqueeze(0).to(torch.float32)
+        cond_id_map = torch.cat([cond_id_map, bg_cond_id_map], dim=0)
+
+    cond_id_map = cond_id_map / (cond_id_map.sum(dim=-1)[:, None] + 1e-6)
+    return cond_id_map
 
 
 # Adapted from https://github.com/facebookresearch/detectron2/blob/main/projects/PointRend/point_rend/point_features.py
@@ -315,7 +343,7 @@ def sigmoid_cross_entropy_loss(
     inputs: torch.Tensor,
     labels: torch.Tensor,
     num_masks: torch.Tensor,
-    use_pos_weight: bool = False,
+    valid_mask: Optional[torch.Tensor] = None,
 ) -> torch.Tensor:
     r"""
     Args:
@@ -328,16 +356,11 @@ def sigmoid_cross_entropy_loss(
     Returns:
         loss (`torch.Tensor`): The computed loss.
     """
-    num_positive = (labels == 1).sum()
-    num_negative = (labels == 0).sum()
-    pos_weight = (
-        num_negative / num_positive if num_positive > 0 and use_pos_weight else torch.tensor(1.0).to(inputs.device)
-    )
-    criterion = nn.BCEWithLogitsLoss(reduction="none", pos_weight=pos_weight)
-    cross_entropy_loss = criterion(inputs, labels)
-
-    loss = cross_entropy_loss.mean(1).sum() / num_masks
-    return loss
+    criterion = nn.BCEWithLogitsLoss(reduction="none")
+    loss = criterion(inputs, labels)
+    if valid_mask is not None:
+        loss = loss * valid_mask.to(loss.dtype)
+    return loss.mean(1).sum() / num_masks
 
 
 # Copied from transformers.models.maskformer.modeling_maskformer.pair_wise_dice_loss
@@ -394,6 +417,7 @@ def sigmoid_focal_loss(
     inputs: torch.Tensor,
     labels: torch.Tensor,
     num_masks: int,
+    valid_mask: Optional[torch.Tensor] = None,
     alpha: float = 0.25,
     gamma: float = 2.0,
 ) -> torch.Tensor:
@@ -404,10 +428,16 @@ def sigmoid_focal_loss(
         labels (`torch.Tensor`):
             A tensor with the same shape as inputs. Stores the binary classification labels for each element in inputs
             (0 for the negative class and 1 for the positive class).
+        valid_mask (`torch.Tensor`):
+            A tensor with the same shape as inputs. When use_masked_select=True, should be boolean mask.
+        use_masked_select (`bool`):
+            If True, use masked_select to extract valid elements for computation.
 
     Returns:
         loss (`torch.Tensor`): The computed loss.
     """
+    labels = labels.to(inputs.dtype)
+
     prob = inputs.sigmoid()
     criterion = nn.BCEWithLogitsLoss(reduction="none")
     cross_entropy_loss = criterion(inputs, labels)
@@ -419,8 +449,9 @@ def sigmoid_focal_loss(
         alpha_t = alpha * labels + (1 - alpha) * (1 - labels)
         loss = alpha_t * loss
 
-    loss = loss.mean(1).sum() / num_masks
-    return loss
+    if valid_mask is not None:
+        loss = loss * valid_mask.to(loss.dtype)
+    return loss.sum() / num_masks
 
 
 # Adapted from https://github.com/facebookresearch/Mask2Former/blob/main/mask2former/modeling/matcher.py
@@ -442,6 +473,8 @@ class Mask2FormerHungarianMatcher(nn.Module):
         cost_cls_type: str = "ce_cost",
         alpha: float = 0.25,
         gamma: float = 2.0,
+        ignore_label: int = -100,
+        background_label: int = -1,
     ):
         """Creates the matcher
 
@@ -469,6 +502,8 @@ class Mask2FormerHungarianMatcher(nn.Module):
         self.cost_cls_type = cost_cls_type
         self.alpha = alpha
         self.gamma = gamma
+        self.ignore_label = ignore_label
+        self.background_label = background_label
 
     @torch.no_grad()
     def forward(
@@ -477,6 +512,7 @@ class Mask2FormerHungarianMatcher(nn.Module):
         class_queries_logits: Optional[torch.Tensor] = None,
         mask_labels: torch.Tensor = None,
         class_labels: Optional[torch.Tensor] = None,
+        cond_ids: Optional[torch.Tensor] = None,
     ) -> List[Tuple[Tensor]]:
         """
         Params:
@@ -507,16 +543,36 @@ class Mask2FormerHungarianMatcher(nn.Module):
                 cost_class = None
             elif class_labels is None:
                 cost_class = torch.zeros_like(class_queries_logits[i])
-            elif self.cost_cls_type == "ce_cost":
+            elif self.cost_cls_type in ["ce_cost", "binary_ce_cost"]:
                 pred_probs = class_queries_logits[i].softmax(-1)
-                # Compute the classification cost. Contrary to the loss, we don't use the NLL, but approximate it in 1 - proba[target class]. The 1 is a constant that doesn't change the matching, it can be omitted.
-                cost_class = -pred_probs[:, class_labels[i]]
-
-            elif self.cost_cls_type == "focal_cost":
+                # Compute the classification cost. Contrary to the loss, we don't use the NLL, but approximate it in 1 - proba[target class].
+                # The 1 is a constant that doesn't change the matching, it can be omitted.
+                if cond_ids is not None and class_labels[i].shape[0] > 0:
+                    cond_id_maps = cond_id_postprocess(
+                        cond_ids[i],
+                        class_labels[i],
+                        ignore_label=self.ignore_label,
+                        background_label=self.background_label,
+                        training=False,  # exclude null class
+                    ).to(pred_probs.dtype)
+                    cost_class = -pred_probs @ cond_id_maps.T
+                else:
+                    cost_class = -pred_probs[:, class_labels[i]]
+            elif self.cost_cls_type in ["focal_cost", "binary_focal_cost"]:
                 pred_probs = class_queries_logits[i].sigmoid()
                 neg_cost_class = (1 - self.alpha) * (pred_probs**self.gamma) * (-(1 - pred_probs + 1e-6).log())
                 pos_cost_class = self.alpha * ((1 - pred_probs) ** self.gamma) * (-(pred_probs + 1e-6).log())
-                cost_class = pos_cost_class[:, class_labels[i]] - neg_cost_class[:, class_labels[i]]
+                if cond_ids is not None and class_labels[i].shape[0] > 0:
+                    cond_id_maps = cond_id_postprocess(
+                        cond_ids[i],
+                        class_labels[i],
+                        ignore_label=self.ignore_label,
+                        background_label=self.background_label,
+                        training=False,  # exclude null class
+                    ).to(pred_probs.dtype)
+                    cost_class = pos_cost_class @ cond_id_maps.T - neg_cost_class @ cond_id_maps.T
+                else:
+                    cost_class = pos_cost_class[:, class_labels[i]] - neg_cost_class[:, class_labels[i]]
 
             pred_mask = masks_queries_logits[i]
 
@@ -554,11 +610,10 @@ class Mask2FormerHungarianMatcher(nn.Module):
                 cost_matrix = self.cost_mask * cost_mask + self.cost_class * cost_class + self.cost_dice * cost_dice
 
             # eliminate infinite values in cost_matrix to avoid the error ``ValueError: cost matrix is infeasible``
-            cost_matrix = torch.minimum(cost_matrix, torch.tensor(1e10, device=cost_matrix.device))
-            cost_matrix = torch.maximum(cost_matrix, torch.tensor(-1e10, device=cost_matrix.device))
-            cost_matrix = torch.nan_to_num(cost_matrix, 0)
+            cost_matrix = torch.nan_to_num(cost_matrix, nan=0.0, posinf=1e10, neginf=-1e10)
+            cost_matrix = torch.clamp(cost_matrix, min=-1e10, max=1e10)
             cost_matrix = cost_matrix.cpu().to(torch.float32)
-            # do the assigmented using the hungarian algorithm in scipy
+            # do the assigented using the hungarian algorithm in scipy
             assigned_indices: Tuple[np.array] = linear_sum_assignment(cost_matrix)
             indices.append(assigned_indices)
 
@@ -592,6 +647,8 @@ class Mask2FormerLoss(nn.Module):
         self.num_labels = config.num_labels
         self.loss_cls_type = config.loss_cls_type
         self.weight_dict = weight_dict
+        self.ignore_label = config.ignore_label
+        self.background_label = config.background_label
 
         # ce_loss configs
         self.eos_coef = config.no_object_weight
@@ -612,9 +669,11 @@ class Mask2FormerLoss(nn.Module):
             cost_mask=config.mask_weight,
             num_points=self.num_points,
             use_sample_point=self.use_sample_point,
-            cost_cls_type=self.loss_cls_type.split("_")[0] + "_cost",
+            cost_cls_type=self.loss_cls_type.rsplit("_", 1)[0] + "_cost",
             alpha=self.alpha,
             gamma=self.gamma,
+            ignore_label=self.ignore_label,
+            background_label=self.background_label,
         )
 
     def _max_by_axis(self, sizes: List[List[int]]) -> List[int]:
@@ -646,6 +705,7 @@ class Mask2FormerLoss(nn.Module):
         self,
         class_queries_logits: Optional[Tensor] = None,
         class_labels: Optional[List[Tensor]] = None,
+        cond_ids: Optional[Tensor] = None,
         indices: Tuple[np.array] = None,
         num_masks: int = 1,
     ) -> Dict[str, Tensor]:
@@ -664,42 +724,184 @@ class Mask2FormerLoss(nn.Module):
             - **loss_cls** -- The loss computed using cross entropy on the predicted and ground truth labels.
         """
         pred_logits = class_queries_logits
-        num_labels = pred_logits.shape[2]
-        batch_size, num_queries, _ = pred_logits.shape
+        batch_size, num_queries, num_labels = pred_logits.shape
         idx = self._get_predictions_permutation_indices(indices)  # shape of (batch_size, num_queries)
 
         # for general_seg
-        if class_labels is not None:
-            target_classes_o = torch.cat(
-                [target[j] for target, (_, j) in zip(class_labels, indices)]
-            )  # shape of (batch_size, num_queries)
-            target_classes = torch.full(
-                (batch_size, num_queries),
-                fill_value=(
-                    num_labels - 1 if self.loss_cls_type == "ce_loss" else num_labels
-                ),  # -1: add background class for ce_loss
-                dtype=torch.int64,
-                device=pred_logits.device,
-            )
-            target_classes[idx] = target_classes_o
-
-            if self.loss_cls_type == "ce_loss":
+        if self.loss_cls_type in ["ce_loss", "binary_ce_loss"]:
+            if cond_ids is not None and self.loss_cls_type == "ce_loss":
                 # Weight to apply to the null class
+                cond_id_maps = [
+                    cond_id_postprocess(
+                        cond_id, ignore_label=self.ignore_label, background_label=self.background_label
+                    ).to(pred_logits.dtype)
+                    for cond_id in cond_ids
+                ]
+                max_len = max(len(x) for x in cond_id_maps)
+                # the last one is the bg class, the second last one is the null class
+                # TODO: check if this is correct, may exists bug
+                cond_id_maps = torch.stack(
+                    [
+                        (
+                            torch.cat([cm[:-2], cm[-2].repeat(max_len - len(cm) + 1, 1), cm[-1:]])
+                            if len(cm) < max_len and self.ignore_label in ci
+                            else cm
+                        )
+                        for ci, cm in zip(cond_ids, cond_id_maps)
+                    ]
+                )
+                pred_logits = pred_logits @ cond_id_maps.transpose(1, 2)
+
+                target_classes_o = torch.cat(
+                    [target[j] for target, (_, j) in zip(class_labels, indices)]
+                )  # shape of (batch_size, num_queries)
+                target_classes = torch.full(
+                    (batch_size, num_queries),
+                    fill_value=pred_logits.shape[2] - 1,
+                    dtype=torch.int64,
+                    device=pred_logits.device,
+                )
+                target_classes[idx] = target_classes_o
+                empty_weight = torch.ones(
+                    pred_logits.shape[2],
+                    device=pred_logits.device,
+                    dtype=pred_logits.dtype,
+                )
+                empty_weight[-1] = self.eos_coef
+
+                criterion = nn.CrossEntropyLoss(weight=empty_weight)
+                loss_cls = criterion(pred_logits.transpose(1, 2), target_classes)
+            elif cond_ids is not None and self.loss_cls_type == "binary_ce_loss":
+                # num_labels is the number of tokens
+                target_classes_onehot = torch.zeros(
+                    (batch_size, num_queries, num_labels),
+                    dtype=pred_logits.dtype,
+                    device=pred_logits.device,
+                )
+                target_classes_onehot[..., -1] = 1
+                target_classes_o = torch.stack(
+                    [
+                        (cond_id == class_label[i]).to(pred_logits.dtype)
+                        for cond_id, class_label, (_, ii) in zip(cond_ids, class_labels, indices)
+                        for i in ii
+                    ]
+                )  # shape of (batch_size, num_queries)
+                target_classes_onehot[idx] = target_classes_o
+                valid_mask = cond_ids.unsqueeze(1) != self.ignore_label  # (batch_size, 1, num_labels)
+
+                loss_cls = num_queries * sigmoid_cross_entropy_loss(
+                    pred_logits,
+                    target_classes_onehot,
+                    num_masks,
+                    valid_mask,
+                )
+            else:
+                target_classes_o = torch.cat(
+                    [target[j] for target, (_, j) in zip(class_labels, indices)]
+                )  # shape of (batch_size, num_queries)
+                target_classes = torch.full(
+                    (batch_size, num_queries),
+                    fill_value=num_labels - 1,
+                    dtype=torch.int64,
+                    device=pred_logits.device,
+                )
+                target_classes[idx] = target_classes_o
+
                 empty_weight = torch.ones(
                     num_labels,
                     device=pred_logits.device,
                     dtype=pred_logits.dtype,
                 )
                 empty_weight[-1] = self.eos_coef
-                criterion = nn.CrossEntropyLoss(weight=empty_weight)
                 # Permute target_classes (batch_size, num_queries, num_labels) -> (batch_size, num_labels, num_queries)
-                pred_logits_transposed = pred_logits.transpose(1, 2)
-                loss_cls = criterion(pred_logits_transposed, target_classes)
-            elif self.loss_cls_type == "focal_loss":
+                criterion = nn.CrossEntropyLoss(weight=empty_weight)
+                loss_cls = criterion(pred_logits.transpose(1, 2), target_classes)
+        elif self.loss_cls_type in ["focal_loss", "binary_focal_loss"]:
+            if cond_ids is not None and self.loss_cls_type == "focal_loss":
+                cond_id_maps = [
+                    cond_id_postprocess(
+                        cond_id, ignore_label=self.ignore_label, background_label=self.background_label
+                    ).to(pred_logits.dtype)
+                    for cond_id in cond_ids
+                ]
+                max_len = max(len(x) for x in cond_id_maps)
+                # the last one is the null class, without background class
+                # TODO: check if this is correct, may exists bug
+                cond_id_maps = torch.stack(
+                    [
+                        (
+                            torch.cat([cm[:-1], cm[-1].repeat(max_len - len(cm), 1)])
+                            if len(cm) < max_len and self.ignore_label in ci
+                            else cm
+                        )
+                        for ci, cm in zip(cond_ids, cond_id_maps)
+                    ]
+                )
+                pred_logits = pred_logits @ cond_id_maps.transpose(1, 2)
+
+                target_classes_o = torch.cat(
+                    [target[j] for target, (_, j) in zip(class_labels, indices)]
+                )  # shape of (batch_size, num_queries)
+                target_classes = torch.full(
+                    (batch_size, num_queries),
+                    fill_value=pred_logits.shape[-1],
+                    dtype=torch.int64,
+                    device=pred_logits.device,
+                )
+                target_classes[idx] = target_classes_o
+
                 target_classes_onehot = torch.zeros(
                     [
-                        pred_logits.shape[0],
-                        pred_logits.shape[1],
+                        batch_size,
+                        num_queries,
+                        pred_logits.shape[2] + 1,
+                    ],
+                    dtype=pred_logits.dtype,
+                    device=pred_logits.device,
+                    layout=pred_logits.layout,
+                )
+                target_classes_onehot.scatter_(2, target_classes.unsqueeze(-1), 1)
+                valid_mask = cond_ids.unsqueeze(1) != self.ignore_label  # (batch_size, 1, num_labels)
+
+                loss_cls = sigmoid_focal_loss(
+                    pred_logits,
+                    target_classes_onehot,
+                    num_masks,
+                    valid_mask,
+                    alpha=self.alpha,
+                    gamma=self.gamma,
+                )
+
+            elif cond_ids is not None and self.loss_cls_type == "binary_focal_loss":
+                # num_labels is the number of tokens
+                target_classes_onehot = torch.zeros(
+                    (batch_size, num_queries, num_labels),
+                    dtype=pred_logits.dtype,
+                    device=pred_logits.device,
+                )
+                target_classes_o = torch.stack(
+                    [
+                        (cond_id == class_label[i]).to(pred_logits.dtype)
+                        for cond_id, class_label, (_, ii) in zip(cond_ids, class_labels, indices)
+                        for i in ii
+                    ]
+                )  # shape of (batch_size, num_queries)
+                target_classes_onehot[idx] = target_classes_o
+                valid_mask = cond_ids.unsqueeze(1) != self.ignore_label  # (batch_size, 1, num_labels)
+
+                loss_cls = sigmoid_focal_loss(
+                    pred_logits,
+                    target_classes_onehot,
+                    num_masks,
+                    valid_mask,
+                    alpha=self.alpha,
+                    gamma=self.gamma,
+                )
+            else:
+                target_classes_onehot = torch.zeros(
+                    [
+                        batch_size,
+                        num_queries,
                         pred_logits.shape[2] + 1,
                     ],
                     dtype=pred_logits.dtype,
@@ -708,40 +910,7 @@ class Mask2FormerLoss(nn.Module):
                 )
                 target_classes_onehot.scatter_(2, target_classes.unsqueeze(-1), 1)
                 target_classes_onehot = target_classes_onehot[:, :, :-1]
-                loss_cls = sigmoid_focal_loss(
-                    pred_logits,
-                    target_classes_onehot,
-                    num_masks,
-                    alpha=self.alpha,
-                    gamma=self.gamma,
-                )
-        # for refer_seg/grounded_seg
-        elif class_labels is None and self.use_nolabel_cls_loss:
-            assert pred_logits.shape[2] == 1
-            target_classes_onehot = torch.zeros(
-                [pred_logits.shape[0], pred_logits.shape[1] + 1, pred_logits.shape[2]],
-                dtype=pred_logits.dtype,
-                device=pred_logits.device,
-                layout=pred_logits.layout,
-            )
-            target_classes = torch.full(
-                (batch_size, num_queries),
-                fill_value=num_queries,
-                dtype=torch.int64,
-                device=pred_logits.device,
-            )
-            # the matched query indices will be the positive samples as no class_labels
-            # indices: (src, tgt)
-            target_classes_o = torch.cat([i for (i, _) in indices]).to(pred_logits.device)
-            target_classes[idx] = target_classes_o
-            target_classes_onehot.scatter_(1, target_classes.unsqueeze(-1), 1)
-            target_classes_onehot = target_classes_onehot[:, :-1, :]
 
-            if self.loss_cls_type == "ce_loss":
-                loss_cls = sigmoid_cross_entropy_loss(
-                    pred_logits, target_classes_onehot, num_masks, use_pos_weight=True
-                )
-            elif self.loss_cls_type == "focal_loss":
                 loss_cls = sigmoid_focal_loss(
                     pred_logits,
                     target_classes_onehot,
@@ -750,7 +919,7 @@ class Mask2FormerLoss(nn.Module):
                     gamma=self.gamma,
                 )
         else:
-            loss_cls = torch.tensor(0.0, device=pred_logits.device, dtype=pred_logits.dtype) * pred_logits.sum()
+            raise ValueError(f"Unsupported loss type: {self.loss_cls_type}")
 
         losses = {"loss_cls": loss_cls}
         return losses
@@ -923,6 +1092,7 @@ class Mask2FormerLoss(nn.Module):
         class_queries_logits: torch.Tensor,
         mask_labels: List[torch.Tensor],
         class_labels: List[torch.Tensor],
+        cond_ids: torch.Tensor,
         auxiliary_predictions: Optional[Dict[str, torch.Tensor]] = None,
     ) -> Dict[str, torch.Tensor]:
         """
@@ -942,7 +1112,7 @@ class Mask2FormerLoss(nn.Module):
                 the inner layers of the SamMaskedAttentionDecoder.
 
         Returns:
-            losses (`Dict[str, Tensor]`): A dict of `torch.Tensor` containing three keys:
+            losses (`Dict[str, Tensor]`: A dict of `torch.Tensor` containing three keys:
             - **loss_cls** -- The loss computed using cross entropy on the predicted and ground truth labels.
             - **loss_mask** -- The loss computed using sigmoid cross_entropy loss on the predicted and ground truth
               masks.
@@ -951,15 +1121,14 @@ class Mask2FormerLoss(nn.Module):
             if `use_auxiliary_loss` was set to `true` in [`SamConfig`], the dictionary contains additional
             losses for each auxiliary predictions.
         """
-
         # retrieve the matching between the outputs of the last layer and the labels
-        indices = self.matcher(masks_queries_logits, class_queries_logits, mask_labels, class_labels)
+        indices = self.matcher(masks_queries_logits, class_queries_logits, mask_labels, class_labels, cond_ids)
         # compute the average number of target masks for normalization purposes
-        num_masks = self.get_num_masks(mask_labels, device=mask_labels[0].device)
+        num_masks = self.get_num_masks(mask_labels, device=masks_queries_logits.device)
         # get all the losses
         losses: Dict[str, Tensor] = {**self.loss_masks(masks_queries_logits, mask_labels, indices, num_masks)}
         if class_queries_logits is not None:
-            losses.update(self.loss_labels(class_queries_logits, class_labels, indices, num_masks))
+            losses.update(self.loss_labels(class_queries_logits, class_labels, cond_ids, indices, num_masks))
         # in case of auxiliary losses, we repeat this process with the output of each intermediate layer.
         if auxiliary_predictions is not None:
             for idx, aux_outputs in enumerate(auxiliary_predictions):
@@ -970,6 +1139,7 @@ class Mask2FormerLoss(nn.Module):
                     class_queries_logits,
                     mask_labels,
                     class_labels,
+                    cond_ids,
                 )
                 loss_dict = {f"{key}_{idx}": value for key, value in loss_dict.items()}
                 losses.update(loss_dict)
@@ -980,8 +1150,16 @@ class Mask2FormerLoss(nn.Module):
         """
         Computes the average number of target masks across the batch, for normalization purposes.
         """
-        num_masks = sum([len(masks) for masks in mask_labels])
-        num_masks = torch.as_tensor(num_masks, dtype=torch.float, device=device)
+        # NOTE: This value is used for loss normalization and must be computed consistently across ranks.
+        # If any rank skips the collective (e.g. returns early on empty labels), other ranks will hang
+        # in the all_reduce and eventually trigger NCCL watchdog timeouts.
+        if len(mask_labels) == 0:
+            # No target masks on this rank for this step.
+            num_masks = torch.tensor(0.0, device=device, dtype=torch.float)
+        else:
+            num_masks = sum(len(masks) for masks in mask_labels)
+            num_masks = torch.as_tensor(num_masks, dtype=torch.float, device=device)
+
         world_size = 1
         # print_log(f"before reduce num_masks: {num_masks}, world_size: {world_size}", logger="current")
         if is_distributed():
@@ -995,7 +1173,7 @@ class Mask2FormerLoss(nn.Module):
 
 
 # Copied from transformers.models.deformable_detr.modeling_deformable_detr.multi_scale_deformable_attention
-def multi_scale_deformable_attention(
+def multi_scale_deformable_attention_pytorch_v1(
     value: Tensor,
     value_spatial_shapes: Union[Tensor, List[Tuple]],
     sampling_locations: Tensor,
@@ -1035,6 +1213,108 @@ def multi_scale_deformable_attention(
         .view(batch_size, num_heads * hidden_dim, num_queries)
     )
     return output.transpose(1, 2).contiguous()
+
+
+# Copied from transformers.models.rtdetr.modeling_rtdetr.multi_scale_deformable_attention_v2
+def multi_scale_deformable_attention_pytorch_v2(
+    value: Tensor,
+    value_spatial_shapes: Tensor,
+    sampling_locations: Tensor,
+    attention_weights: Tensor,
+    n_points_list: list[int],
+    attn_method: str = "default",
+) -> Tensor:
+    batch_size, _, num_heads, hidden_dim = value.shape
+    _, num_queries, num_heads, num_levels, num_points, _ = sampling_locations.shape
+    sampling_locations = sampling_locations.view(batch_size, num_queries, num_heads, num_levels * num_points, 2)
+    value_list = (
+        value.permute(0, 2, 3, 1)
+        .flatten(0, 1)
+        .split([height * width for height, width in value_spatial_shapes], dim=-1)
+    )
+    # sampling_offsets [8, 480, 8, 12, 2]
+    if attn_method == "default":
+        sampling_grids = 2 * sampling_locations - 1
+    elif attn_method == "discrete":
+        sampling_grids = sampling_locations
+    sampling_grids = sampling_grids.permute(0, 2, 1, 3, 4).flatten(0, 1)
+    sampling_grids = sampling_grids.split(n_points_list, dim=-2)
+    sampling_value_list = []
+    for level_id, (height, width) in enumerate(value_spatial_shapes):
+        # batch_size, height*width, num_heads, hidden_dim
+        # -> batch_size, height*width, num_heads*hidden_dim
+        # -> batch_size, num_heads*hidden_dim, height*width
+        # -> batch_size*num_heads, hidden_dim, height, width
+        value_l_ = value_list[level_id].reshape(batch_size * num_heads, hidden_dim, height, width)
+        # batch_size, num_queries, num_heads, num_points, 2
+        # -> batch_size, num_heads, num_queries, num_points, 2
+        # -> batch_size*num_heads, num_queries, num_points, 2
+        sampling_grid_l_ = sampling_grids[level_id]
+        # batch_size*num_heads, hidden_dim, num_queries, num_points
+        if attn_method == "default":
+            sampling_value_l_ = nn.functional.grid_sample(
+                value_l_, sampling_grid_l_, mode="bilinear", padding_mode="zeros", align_corners=False
+            )
+        elif attn_method == "discrete":
+            sampling_coord = (sampling_grid_l_ * torch.tensor([[width, height]], device=value.device) + 0.5).to(
+                torch.int64
+            )
+
+            # Separate clamping for x and y coordinates
+            sampling_coord_x = sampling_coord[..., 0].clamp(0, width - 1)
+            sampling_coord_y = sampling_coord[..., 1].clamp(0, height - 1)
+
+            # Combine the clamped coordinates
+            sampling_coord = torch.stack([sampling_coord_x, sampling_coord_y], dim=-1)
+            sampling_coord = sampling_coord.reshape(batch_size * num_heads, num_queries * n_points_list[level_id], 2)
+            sampling_idx = (
+                torch.arange(sampling_coord.shape[0], device=value.device)
+                .unsqueeze(-1)
+                .repeat(1, sampling_coord.shape[1])
+            )
+            sampling_value_l_ = value_l_[sampling_idx, :, sampling_coord[..., 1], sampling_coord[..., 0]]
+            sampling_value_l_ = sampling_value_l_.permute(0, 2, 1).reshape(
+                batch_size * num_heads, hidden_dim, num_queries, n_points_list[level_id]
+            )
+        sampling_value_list.append(sampling_value_l_)
+    # (batch_size, num_queries, num_heads, num_levels, num_points)
+    # -> (batch_size, num_heads, num_queries, num_levels, num_points)
+    # -> (batch_size, num_heads, 1, num_queries, num_levels*num_points)
+    attention_weights = attention_weights.permute(0, 2, 1, 3, 4).reshape(
+        batch_size * num_heads, 1, num_queries, sum(n_points_list)
+    )
+    output = (
+        (torch.cat(sampling_value_list, dim=-1) * attention_weights)
+        .sum(-1)
+        .view(batch_size, num_heads * hidden_dim, num_queries)
+    )
+    return output.transpose(1, 2).contiguous()
+
+
+def multi_scale_deformable_attention_compiled(
+    value: Tensor,
+    value_spatial_shapes: Union[Tensor, List[Tuple]],
+    sampling_locations: Tensor,
+    attention_weights: Tensor,
+    im2col_step: int = 64,
+) -> Tensor:
+    # Convert list to tensor if necessary
+    if isinstance(value_spatial_shapes, list):
+        value_spatial_shapes = torch.tensor(value_spatial_shapes, dtype=torch.long, device=value.device)
+
+    level_start_index = torch.cat((value_spatial_shapes.new_zeros((1,)), value_spatial_shapes.prod(1).cumsum(0)[:-1]))
+
+    output = MSDeformAttnFunction.apply(
+        value.float(),
+        value_spatial_shapes,
+        level_start_index,
+        sampling_locations.float(),
+        attention_weights.float(),
+        im2col_step,
+    )
+    output = output.to(value.dtype)
+
+    return output
 
 
 # Copied from transformers.models.maskformer.modeling_maskformer.MaskFormerSinePositionEmbedding with MaskFormer->Mask2Former
@@ -1083,7 +1363,16 @@ class Mask2FormerPixelDecoderEncoderMultiscaleDeformableAttention(nn.Module):
     Multiscale deformable attention as proposed in Deformable DETR.
     """
 
-    def __init__(self, embed_dim: int, num_heads: int, n_levels: int, n_points: int):
+    def __init__(
+        self,
+        embed_dim: int,
+        num_heads: int,
+        n_levels: int,
+        n_points: int,
+        offset_scale: float,
+        attn_implementation: str = "v1",
+        attn_method: str = "discrete",
+    ):
         super().__init__()
         if embed_dim % num_heads != 0:
             raise ValueError(
@@ -1104,11 +1393,17 @@ class Mask2FormerPixelDecoderEncoderMultiscaleDeformableAttention(nn.Module):
         self.n_levels = n_levels
         self.n_heads = num_heads
         self.n_points = n_points
+        self.offset_scale = offset_scale
 
         self.sampling_offsets = nn.Linear(embed_dim, num_heads * n_levels * n_points * 2)
         self.attention_weights = nn.Linear(embed_dim, num_heads * n_levels * n_points)
         self.value_proj = nn.Linear(embed_dim, embed_dim)
         self.output_proj = nn.Linear(embed_dim, embed_dim)
+
+        self.n_points_list = [self.n_points for _ in range(self.n_levels)]
+        attn_implementation = "pytorch_v1" if MSDeformAttnFunction is None else attn_implementation
+        self.attn_implementation = attn_implementation
+        self.attn_method = attn_method
 
     def with_pos_embed(self, tensor: torch.Tensor, position_embeddings: Optional[Tensor]):
         return tensor if position_embeddings is None else tensor + position_embeddings
@@ -1170,7 +1465,21 @@ class Mask2FormerPixelDecoderEncoderMultiscaleDeformableAttention(nn.Module):
         else:
             raise ValueError(f"Last dim of reference_points must be 2 or 4, but got {reference_points.shape[-1]}")
 
-        output = multi_scale_deformable_attention(value, spatial_shapes_list, sampling_locations, attention_weights)
+        if self.attn_implementation == "pytorch_v1":
+            output = multi_scale_deformable_attention_pytorch_v1(
+                value, spatial_shapes_list, sampling_locations, attention_weights
+            )
+        elif self.attn_implementation == "pytorch_v2":
+            output = multi_scale_deformable_attention_pytorch_v2(
+                value, spatial_shapes_list, sampling_locations, attention_weights, self.n_points_list, self.attn_method
+            )
+        elif self.attn_implementation == "compiled":
+            output = multi_scale_deformable_attention_compiled(
+                value, spatial_shapes_list, sampling_locations, attention_weights
+            )
+        else:
+            raise ValueError(f"Invalid attention implementation: {self.attn_implementation}")
+
         output = self.output_proj(output)
 
         return output, attention_weights
@@ -1184,6 +1493,9 @@ class Mask2FormerPixelDecoderEncoderLayer(nn.Module):
             embed_dim=self.embed_dim,
             num_heads=config.num_attention_heads,
             n_levels=config.num_feature_levels,
+            offset_scale=config.offset_scale,
+            attn_method=config.attn_method,
+            attn_implementation=config.attn_implementation,
             n_points=4,
         )
 
@@ -1498,12 +1810,13 @@ class Mask2FormerPixelDecoder(nn.Module):
         encoder_outputs=None,
         output_attentions=None,
         output_hidden_states=None,
-        return_dict=None,
+        return_dict=True,
     ):
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         # Apply 1x1 convolution to reduce the channel dimension to d_model (256 by default)
         input_embeds = []
@@ -1586,6 +1899,13 @@ class Mask2FormerPixelDecoder(nn.Module):
             if num_cur_levels < self.num_feature_levels:
                 multi_scale_features.append(out)
                 num_cur_levels += 1
+
+        if not return_dict:
+            return (
+                self.mask_projection(outputs[-1]),
+                tuple(multi_scale_features),
+                encoder_outputs.attentions,
+            )
 
         return Mask2FormerPixelDecoderOutput(
             mask_features=self.mask_projection(outputs[-1]),
@@ -1690,18 +2010,15 @@ class Mask2FormerAttention(nn.Module):
             hidden_states_original = hidden_states
             hidden_states = self.with_pos_embed(hidden_states, position_embeddings)
 
-        # add key-value position embeddings to the key value states
-        if key_value_position_embeddings is not None:
-            key_value_states_original = key_value_states
-            key_value_states = self.with_pos_embed(key_value_states, key_value_position_embeddings)
-
         # get query proj
         query_states = self.q_proj(hidden_states) * self.scaling
         # get key, value proj
         if is_cross_attention:
             # cross_attentions
-            key_states = self._shape(self.k_proj(key_value_states), -1, batch_size)
-            value_states = self._shape(self.v_proj(key_value_states_original), -1, batch_size)
+            key_states = self._shape(
+                self.k_proj(self.with_pos_embed(key_value_states, key_value_position_embeddings)), -1, batch_size
+            )
+            value_states = self._shape(self.v_proj(key_value_states), -1, batch_size)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, batch_size)
@@ -1780,6 +2097,8 @@ class Mask2FormerMaskedAttentionDecoderLayer(nn.Module):
         self.config = config
         self.embed_dim = self.config.hidden_dim
         self.pre_norm = self.config.pre_norm
+        self.use_text_cross_attn = self.config.use_text_cross_attn
+        self.use_zero_init = self.config.use_zero_init
         self.self_attn = Mask2FormerAttention(
             embed_dim=self.embed_dim,
             num_heads=config.num_attention_heads,
@@ -1794,6 +2113,13 @@ class Mask2FormerMaskedAttentionDecoderLayer(nn.Module):
         self.self_attn_layer_norm = nn.LayerNorm(self.embed_dim)
         self.cross_attn = nn.MultiheadAttention(self.embed_dim, self.config.num_attention_heads, self.config.dropout)
         self.cross_attn_layer_norm = nn.LayerNorm(self.embed_dim)
+
+        if self.use_text_cross_attn:
+            self.text_cross_attn = nn.MultiheadAttention(
+                self.embed_dim, self.config.num_attention_heads, self.config.dropout
+            )
+            self.text_cross_attn_layer_norm = nn.LayerNorm(self.embed_dim)
+
         self.fc1 = nn.Linear(self.embed_dim, self.config.dim_feedforward)
         self.fc2 = nn.Linear(self.config.dim_feedforward, self.embed_dim)
         self.final_layer_norm = nn.LayerNorm(self.embed_dim)
@@ -1810,36 +2136,52 @@ class Mask2FormerMaskedAttentionDecoderLayer(nn.Module):
         query_position_embeddings: Optional[torch.Tensor] = None,
         encoder_hidden_states: Optional[torch.Tensor] = None,
         encoder_attention_mask: Optional[torch.Tensor] = None,
+        llm_hidden_states: Optional[torch.Tensor] = None,
+        llm_attention_mask: Optional[torch.Tensor] = None,
+        llm_position_embeddings: Optional[torch.Tensor] = None,
         output_attentions: Optional[bool] = False,
     ):
+        # valid attention order: <image cross attn, image self attn>
         # Masked(Cross)-Attention Block
-        cross_attn_weights = None
+        image_cross_attn_weights = None
+        text_cross_attn_weights = None
         self_attn_weights = None
 
+        # image cross attention
         residual = hidden_states
-
-        hidden_states, cross_attn_weights = self.cross_attn(
+        hidden_states, image_cross_attn_weights = self.cross_attn(
             query=self.with_pos_embed(hidden_states, query_position_embeddings),
             key=self.with_pos_embed(encoder_hidden_states[level_index], position_embeddings[level_index]),
             value=encoder_hidden_states[level_index],
             attn_mask=encoder_attention_mask,
             key_padding_mask=None,
         )
-
         hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.cross_attn_layer_norm(hidden_states)
 
+        # text cross attention
+        if self.use_text_cross_attn:
+            assert llm_hidden_states is not None, "llm_hidden_states is required for text cross attention"
+            residual = hidden_states
+            hidden_states, text_cross_attn_weights = self.text_cross_attn(
+                query=self.with_pos_embed(hidden_states, query_position_embeddings),
+                key=self.with_pos_embed(llm_hidden_states, llm_position_embeddings),
+                value=llm_hidden_states,
+                key_padding_mask=llm_attention_mask,
+            )
+            hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
+            hidden_states = residual + hidden_states
+            hidden_states = self.text_cross_attn_layer_norm(hidden_states)
+
         # Self Attention Block
         residual = hidden_states
-
         hidden_states, self_attn_weights = self.self_attn(
             hidden_states=hidden_states,
             position_embeddings=query_position_embeddings,
             attention_mask=None,
             output_attentions=True,
         )
-
         hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
@@ -1856,7 +2198,7 @@ class Mask2FormerMaskedAttentionDecoderLayer(nn.Module):
         outputs = (hidden_states,)
 
         if output_attentions:
-            outputs += (self_attn_weights, cross_attn_weights)
+            outputs += (self_attn_weights, image_cross_attn_weights, text_cross_attn_weights)
 
         return outputs
 
@@ -1869,39 +2211,52 @@ class Mask2FormerMaskedAttentionDecoderLayer(nn.Module):
         query_position_embeddings: Optional[torch.Tensor] = None,
         encoder_hidden_states: Optional[torch.Tensor] = None,
         encoder_attention_mask: Optional[torch.Tensor] = None,
+        llm_hidden_states: Optional[torch.Tensor] = None,
+        llm_attention_mask: Optional[torch.Tensor] = None,
+        llm_position_embeddings: Optional[torch.Tensor] = None,
         output_attentions: Optional[bool] = False,
     ):
         # Masked(Cross)-Attention Block
-        cross_attn_weights = None
+        image_cross_attn_weights = None
+        text_cross_attn_weights = None
         self_attn_weights = None
 
+        # Image cross attention
         residual = hidden_states
-
         hidden_states = self.cross_attn_layer_norm(hidden_states)
-
-        hidden_states, cross_attn_weights = self.cross_attn(
+        hidden_states, image_cross_attn_weights = self.cross_attn(
             query=self.with_pos_embed(hidden_states, query_position_embeddings),
             key=self.with_pos_embed(encoder_hidden_states[level_index], position_embeddings[level_index]),
             value=encoder_hidden_states[level_index],
             attn_mask=encoder_attention_mask,
             key_padding_mask=None,
         )
-
         hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
 
+        # Text cross attention
+        if self.use_text_cross_attn:
+            assert llm_hidden_states is not None, "llm_hidden_states is required for text cross attention"
+            residual = hidden_states
+            hidden_states = self.text_cross_attn_layer_norm(hidden_states)
+            hidden_states, text_cross_attn_weights = self.text_cross_attn(
+                query=self.with_pos_embed(hidden_states, query_position_embeddings),
+                key=self.with_pos_embed(llm_hidden_states, llm_position_embeddings),
+                value=llm_hidden_states,
+                key_padding_mask=llm_attention_mask,
+            )
+            hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
+            hidden_states = residual + hidden_states
+
         # Self Attention Block
         residual = hidden_states
-
         hidden_states = self.self_attn_layer_norm(hidden_states)
-
         hidden_states, self_attn_weights = self.self_attn(
             hidden_states=hidden_states,
             position_embeddings=query_position_embeddings,
             attention_mask=None,
             output_attentions=True,
         )
-
         hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
 
@@ -1917,7 +2272,7 @@ class Mask2FormerMaskedAttentionDecoderLayer(nn.Module):
         outputs = (hidden_states,)
 
         if output_attentions:
-            outputs += (self_attn_weights, cross_attn_weights)
+            outputs += (self_attn_weights, image_cross_attn_weights, text_cross_attn_weights)
 
         return outputs
 
@@ -1930,6 +2285,9 @@ class Mask2FormerMaskedAttentionDecoderLayer(nn.Module):
         query_position_embeddings: Optional[torch.Tensor] = None,
         encoder_hidden_states: Optional[torch.Tensor] = None,
         encoder_attention_mask: Optional[torch.Tensor] = None,
+        llm_hidden_states: Optional[torch.Tensor] = None,
+        llm_attention_mask: Optional[torch.Tensor] = None,
+        llm_position_embeddings: Optional[torch.Tensor] = None,
         output_attentions: Optional[bool] = False,
     ):
         """
@@ -1942,10 +2300,20 @@ class Mask2FormerMaskedAttentionDecoderLayer(nn.Module):
                 Position embeddings that are added to the keys in the masked-attention layer.
             query_position_embeddings (`torch.FloatTensor`, *optional*):
                 Position embeddings that are added to the queries and keys in the self-attention layer.
-            encoder_hidden_states (`torch.FloatTensor`):
-                Cross attention input to the layer of shape `(seq_len, batch, embed_dim)`.
-            encoder_attention_mask (`torch.FloatTensor`):
-                Encoder attention mask of size`(1, seq_len, tgt_len, src_len)`.
+            encoder_hidden_states (`torch.FloatTensor` of shape `(batch_size, encoder_sequence_length, hidden_size)`):
+                Sequence of hidden-states at the output of the last layer of the encoder. Used in the
+                cross(masked)-attention of the decoder.
+            encoder_attention_mask (`torch.FloatTensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Mask to avoid performing attention on padding pixel features. Mask values selected in `[0, 1]`:
+                - 1 for pixel features that are real (i.e. **not masked**),
+                - 0 for pixel features that are padding (i.e. **masked**).
+                [What are attention masks?](../glossary#attention-mask)
+            llm_hidden_states (`torch.FloatTensor`, *optional*):
+                Token-level hidden states used for text cross-attention.
+            llm_attention_mask (`torch.FloatTensor`, *optional*):
+                Mask to avoid performing attention on padding tokens.
+            llm_position_embeddings (`torch.FloatTensor`, *optional*):
+                Position embeddings added to token keys in text cross-attention.
             output_attentions (`bool`, *optional*):
                 Whether or not to return the attentions tensors of all attention layers. See `attentions` under
                 returned tensors for more detail.
@@ -1959,6 +2327,9 @@ class Mask2FormerMaskedAttentionDecoderLayer(nn.Module):
                 query_position_embeddings=query_position_embeddings,
                 encoder_hidden_states=encoder_hidden_states,
                 encoder_attention_mask=encoder_attention_mask,
+                llm_hidden_states=llm_hidden_states,
+                llm_attention_mask=llm_attention_mask,
+                llm_position_embeddings=llm_position_embeddings,
                 output_attentions=output_attentions,
             )
         else:
@@ -1969,6 +2340,9 @@ class Mask2FormerMaskedAttentionDecoderLayer(nn.Module):
                 query_position_embeddings=query_position_embeddings,
                 encoder_hidden_states=encoder_hidden_states,
                 encoder_attention_mask=encoder_attention_mask,
+                llm_hidden_states=llm_hidden_states,
+                llm_attention_mask=llm_attention_mask,
+                llm_position_embeddings=llm_position_embeddings,
                 output_attentions=output_attentions,
             )
 
@@ -2019,6 +2393,9 @@ class Mask2FormerMaskedAttentionDecoder(nn.Module):
         encoder_hidden_states: torch.Tensor = None,
         query_position_embeddings: torch.Tensor = None,
         feature_size_list: List = None,
+        llm_hidden_states: Optional[torch.Tensor] = None,
+        llm_attention_mask: Optional[torch.Tensor] = None,
+        llm_position_embeddings: Optional[torch.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
@@ -2046,7 +2423,7 @@ class Mask2FormerMaskedAttentionDecoder(nn.Module):
                 Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors
                 for more detail.
             return_dict (`bool`, *optional*):
-                Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
+                Whether or not to return a [`~file_utils.ModelOutput`] instead of a plain tuple.
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -2085,9 +2462,11 @@ class Mask2FormerMaskedAttentionDecoder(nn.Module):
                 continue
 
             level_index = idx % self.num_feature_levels
-            where = (attention_mask.sum(-1) != attention_mask.shape[-1]).to(attention_mask.dtype)
+            # More memory-efficient: use torch.any to detect padding rows
+            # Only keep rows that have some padding (not all ones)
+            has_padding = attention_mask.lt(1).any(dim=-1, keepdim=True)
             # Multiply the attention mask instead of indexing to avoid issue in torch.export.
-            attention_mask = attention_mask * where.unsqueeze(-1)
+            attention_mask = attention_mask * has_padding.to(attention_mask.dtype)
 
             if self.gradient_checkpointing and self.training:
                 layer_outputs = self._gradient_checkpointing_func(
@@ -2099,6 +2478,9 @@ class Mask2FormerMaskedAttentionDecoder(nn.Module):
                     query_position_embeddings,
                     encoder_hidden_states,
                     attention_mask,
+                    llm_hidden_states,
+                    llm_attention_mask,
+                    llm_position_embeddings,
                     output_attentions,
                 )
             else:
@@ -2109,6 +2491,9 @@ class Mask2FormerMaskedAttentionDecoder(nn.Module):
                     query_position_embeddings=query_position_embeddings,
                     encoder_hidden_states=encoder_hidden_states,
                     encoder_attention_mask=attention_mask,
+                    llm_hidden_states=llm_hidden_states,
+                    llm_attention_mask=llm_attention_mask,
+                    llm_position_embeddings=llm_position_embeddings,
                     output_attentions=output_attentions,
                 )
 
@@ -2136,15 +2521,15 @@ class Mask2FormerMaskedAttentionDecoder(nn.Module):
 
         hidden_states = hidden_states.transpose(1, 0)
         if not return_dict:
-            outputs = [hidden_states, all_hidden_states, attentions, intermediate, intermediate_mask_predictions]
+            outputs = [intermediate, intermediate_mask_predictions, hidden_states, all_hidden_states, attentions]
             return tuple(v for v in outputs if v is not None)
 
         return Mask2FormerMaskedAttentionDecoderOutput(
+            intermediate_hidden_states=intermediate,
+            masks_queries_logits=intermediate_mask_predictions,
             last_hidden_state=hidden_states,
             hidden_states=all_hidden_states,
             attentions=attentions,
-            intermediate_hidden_states=intermediate,
-            masks_queries_logits=intermediate_mask_predictions,
         )
 
 
@@ -2225,9 +2610,10 @@ class Mask2FormerMaskPredictor(nn.Module):
 
         self.mask_embedder = Mask2FormerMLPPredictionHead(self.hidden_size, self.hidden_size, mask_feature_size)
 
-    def forward(self, outputs: torch.Tensor, pixel_embeddings: torch.Tensor, attention_mask_target_size: int = None):
-        mask_embeddings = self.mask_embedder(outputs.transpose(0, 1))
+        self.gradient_checkpointing = False
 
+    def _forward(self, outputs: torch.Tensor, pixel_embeddings: torch.Tensor, attention_mask_target_size: int = None):
+        mask_embeddings = self.mask_embedder(outputs.transpose(0, 1))
         is_tracing = torch.jit.is_tracing() or isinstance(outputs, torch.fx.Proxy) or is_torchdynamo_compiling()
         # Sum up over the channels
         if is_tracing and not is_torch_greater_or_equal_than_2_1:
@@ -2237,19 +2623,23 @@ class Mask2FormerMaskPredictor(nn.Module):
             outputs_mask = torch.zeros((batch_size, num_queries, height, width), device=mask_embeddings.device)
             for c in range(num_channels):
                 outputs_mask += mask_embeddings[..., c][..., None, None] * pixel_embeddings[:, None, c]
-
         else:
             outputs_mask = torch.einsum("bqc, bchw -> bqhw", mask_embeddings, pixel_embeddings)
-
         attention_mask = nn.functional.interpolate(
             outputs_mask, size=attention_mask_target_size, mode="bilinear", align_corners=False
         )
-
         attention_mask = attention_mask.sigmoid().flatten(2).unsqueeze(1).repeat(1, self.num_heads, 1, 1)
         attention_mask = (attention_mask.flatten(0, 1) < 0.5).bool()
         attention_mask = attention_mask.detach()
-
         return outputs_mask, attention_mask
+
+    def forward(self, outputs: torch.Tensor, pixel_embeddings: torch.Tensor, attention_mask_target_size: int = None):
+        if self.gradient_checkpointing and self.training:
+            return self._gradient_checkpointing_func(
+                self._forward, outputs, pixel_embeddings, attention_mask_target_size
+            )
+        else:
+            return self._forward(outputs, pixel_embeddings, attention_mask_target_size)
 
 
 class Mask2FormerTransformerModule(nn.Module):
@@ -2281,7 +2671,9 @@ class Mask2FormerTransformerModule(nn.Module):
         self,
         multi_scale_features: List[Tensor],
         mask_features: Tensor,
-        seg_embeddings: Optional[Tensor] = None,
+        seg_embeds: Optional[Tensor] = None,
+        token_embeds: Optional[torch.Tensor] = None,
+        token_masks: Optional[torch.Tensor] = None,
         cond_lens: Optional[List] = None,
         output_hidden_states: bool = True,
         output_attentions: bool = False,
@@ -2327,20 +2719,30 @@ class Mask2FormerTransformerModule(nn.Module):
         _, batch_size, _ = multi_stage_features[0].shape
 
         # [num_queries, batch_size, num_channels]
-        query_embeddings = self.queries_embedder.weight.unsqueeze(1).repeat(1, batch_size, 1)
+        query_embeds = self.queries_embedder.weight.unsqueeze(1).repeat(1, batch_size, 1)
         query_features = self.queries_features.weight.unsqueeze(1).repeat(1, batch_size, 1)
 
-        if seg_embeddings is not None:
-            assert seg_embeddings.shape[1] == 1
-            query_features = query_features + seg_embeddings.transpose(0, 1)
+        if seg_embeds is not None:
+            assert seg_embeds.shape[1] == 1
+            query_features = query_features + seg_embeds.transpose(0, 1)
+
+        if token_embeds is not None:
+            # [batch_size, num_tokens, num_channels] -> [num_tokens, batch_size, num_channels]
+            token_embeds = token_embeds.permute(1, 0, 2)
+
+        if token_masks is not None:
+            # 1=padding, 0=valid
+            token_masks = ~token_masks.bool()
 
         decoder_output = self.decoder(
             inputs_embeds=query_features,
             multi_stage_positional_embeddings=multi_stage_positional_embeddings,
             pixel_embeddings=mask_features,
             encoder_hidden_states=multi_stage_features,
-            query_position_embeddings=query_embeddings,
+            query_position_embeddings=query_embeds,
             feature_size_list=size_list,
+            llm_hidden_states=token_embeds,
+            llm_attention_mask=token_masks,
             output_hidden_states=output_hidden_states,
             output_attentions=output_attentions,
             return_dict=True,
@@ -2376,7 +2778,8 @@ MASK2FORMER_INPUTS_DOCSTRING = r"""
             Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
             more detail.
         output_attentions (`bool`, *optional*):
-            Whether or not to return the attentions tensors of Detr's decoder attention layers.
+            Whether or not to return the attentions tensors of all attention layers. See `attentions` under
+            returned tensors for more detail.
         return_dict (`bool`, *optional*):
             Whether or not to return a [`~Mask2FormerModelOutput`] instead of a plain tuple.
 """
@@ -2414,9 +2817,11 @@ class Mask2FormerPreTrainedModel(PreTrainedModel):
 
             nn.init.constant_(module.attention_weights.weight.data, 0.0)
             nn.init.constant_(module.attention_weights.bias.data, 0.0)
-            nn.init.xavier_uniform_(module.value_proj.weight.data)
+            if module.value_proj.weight.data.dim() > 1:
+                nn.init.xavier_uniform_(module.value_proj.weight.data)
             nn.init.constant_(module.value_proj.bias.data, 0.0)
-            nn.init.xavier_uniform_(module.output_proj.weight.data)
+            if module.output_proj.weight.data.dim() > 1:
+                nn.init.xavier_uniform_(module.output_proj.weight.data)
             nn.init.constant_(module.output_proj.bias.data, 0.0)
 
         elif isinstance(module, Mask2FormerMaskedAttentionDecoderLayer):
@@ -2578,7 +2983,7 @@ class Mask2FormerForUniversalSegmentation(Mask2FormerPreTrainedModel):
             "loss_dice": config.dice_weight,
         }
 
-        self.class_predictor = nn.Linear(config.hidden_dim, config.num_labels + 1)
+        self.cls_predictor = nn.Linear(config.hidden_dim, config.num_labels + 1)
 
         self.criterion = Mask2FormerLoss(config=config, weight_dict=self.weight_dict)
         self.post_init()
@@ -2762,8 +3167,8 @@ class Mask2FormerForUniversalSegmentation(Mask2FormerPreTrainedModel):
         class_queries_logits = ()
 
         for decoder_output in outputs.transformer_decoder_intermediate_states:
-            class_prediction = self.class_predictor(decoder_output.transpose(0, 1))
-            class_queries_logits += (class_prediction,)
+            class_logits = self.cls_predictor(decoder_output.transpose(0, 1))
+            class_queries_logits += (class_logits,)
 
         masks_queries_logits = outputs.masks_queries_logits
 

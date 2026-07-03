@@ -14,7 +14,7 @@ this_dir = osp.dirname(osp.abspath(__file__))
 
 
 if __name__ == "__main__":
-    dataset_dir = osp.join(os.getenv("root_dir", "."), "datas/ovseg_data")
+    dataset_dir = osp.join(os.getenv("PROJ_HOME", "."), "datas")
 
     for name, dirname in [("train", "training"), ("val", "validation")]:
         image_dir = osp.join(dataset_dir, f"ade20k/images/{dirname}/")
@@ -41,7 +41,7 @@ if __name__ == "__main__":
                     continue
                 ins_id, sem_id, _ = line.strip().split()
                 # shift id by 1 because we want it to start from 0!
-                # ignore_label becomes 255
+                # ignore_value becomes 255
                 map_id[int(ins_id)] = int(sem_id) - 1
 
         for cat in category_dict:

@@ -1,0 +1,6 @@
+inits/
+datas/
+wkdrs/
+*.mdc
+.env
+__pycache__/

@@ -3,25 +3,33 @@ from os import getenv
 
 import vlmeval.config as vlmeval_config
 
-from .xsam_xtuner import XSam_XTuner
+from .xsam_chat import XSamChat
 
 init_dir = getenv("INIT_DIR", "./inits/")
 
 xsam_series = {
-    "llava-phi3-siglip2-ft": partial(
-        XSam_XTuner,
-        xsam_path=init_dir + "llava-phi3-siglip2-ft",
-        visual_encoder_path=init_dir + "siglip2-so400m-patch14-384",
+    "xsam-phi3-mini-4k-instruct-siglip2-so400m-p14-384-sam-large-m2f": partial(
+        XSamChat,
+        xsam_path=init_dir + "xsam-phi3-mini-4k-instruct-siglip2-so400m-p14-384-sam-large-m2f",
         visual_select_layer=-2,
         visual_select_indx=0,
         prompt_template="phi3_chat",
+        expand2square=False,
+        use_placeholder=False,
+        use_dual_encoder=True,
+        image_token="<image>",
     ),
-    "xsam-phi3-siglip2-sam-l-mft": partial(
-        XSam_XTuner,
-        xsam_path=init_dir + "xsam-phi3-siglip2-sam-l-mft",
+    "xsam-qwen3-vl-4b-sam-large-m2f-lora": partial(
+        XSamChat,
+        xsam_path=init_dir + "xsam-qwen3-vl-4b-sam-large-m2f-lora",
+        vlm_path=init_dir + "Qwen3-VL-4B-Instruct",
         visual_select_layer=-2,
         visual_select_indx=0,
-        prompt_template="phi3_chat",
+        prompt_template="qwen3_instruct",
+        expand2square=False,
+        use_placeholder=True,
+        use_dual_encoder=False,
+        image_token="<|vision_start|><image><|vision_end|>",
     ),
 }
 

@@ -1,4 +1,5 @@
 *.
+.env
 wkdrs
 datas
 inits

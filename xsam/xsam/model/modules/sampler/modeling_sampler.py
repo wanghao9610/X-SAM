@@ -35,7 +35,7 @@ class GeoSamplerModel(nn.Module):
         self.num_init_point = config.num_init_point
         self.num_sub_point = config.num_sub_point
         self.num_neighbor = config.num_neighbor
-        self.pooler_mode = config.pooler_mode
+        self.pooling_mode = config.pooling_mode
 
         self.diff_projectors = nn.ModuleList()
         self.agg_projectors = nn.ModuleList()
@@ -49,17 +49,29 @@ class GeoSamplerModel(nn.Module):
                     out_channels=self.input_dim,
                 )
             )
-            if self.pooler_mode == "mean":
+            if self.pooling_mode == "mean":
                 self.poolers.append(nn.AvgPool1d(kernel_size=self.num_neighbor[i]))
-            elif self.pooler_mode == "max":
+            elif self.pooling_mode == "max":
                 self.poolers.append(nn.AdaptiveMaxPool1d(output_size=1))
             else:
-                raise NotImplementedError(f"{self.pooler_mode} is not supported.")
+                raise NotImplementedError(f"{self.pooling_mode} is not supported.")
 
         self.flatten_projector = nn.Linear(self.input_dim * self.num_sub_point[-1], self.input_dim)
         self.dim_projector = nn.Linear(self.input_dim, self.output_dim)
 
-    def forward(self, input_feats, vprompt_masks, original_dtype=None, return_dtype=None):
+    def forward(
+        self,
+        input_feats,
+        vprompt_masks,
+        grid_thw=None,
+        vprompt_indices=None,
+        spatial_merge_size=2,
+        original_dtype=None,
+        return_dtype=None,
+    ):
+        if isinstance(input_feats, torch.Tensor) and input_feats.ndim == 4:
+            # only select the feature of the first frame in the video
+            input_feats = input_feats[0, :, :, :]
         assert len(input_feats) == len(vprompt_masks)
         if original_dtype is None:
             original_dtype = input_feats[0].dtype
@@ -71,7 +83,7 @@ class GeoSamplerModel(nn.Module):
         all_img_ids = []
 
         # Sample points and their features
-        for img_idx, (feat, mask) in enumerate(zip(input_feats, vprompt_masks)):
+        for batch_idx, (feat, mask) in enumerate(zip(input_feats, vprompt_masks)):
             if len(mask) == 0:
                 continue
 
@@ -88,8 +100,23 @@ class GeoSamplerModel(nn.Module):
             points_pos = torch.stack(points_pos)  # [num_mask, num_sample_point, 2]
 
             # Reshape feature map
-            h = w = int(math.sqrt(feat.shape[0]))
+            if grid_thw is not None:
+                h = grid_thw[batch_idx][1] // spatial_merge_size
+                w = grid_thw[batch_idx][2] // spatial_merge_size
+                vprompt_ind = int(vprompt_indices[batch_idx]) if vprompt_indices is not None else 0
+
+                frame_length = int(h * w)
+                num_frames = int(feat.shape[0] // frame_length) if frame_length > 0 else 0
+                if num_frames <= 0:
+                    continue
+                vprompt_ind = max(0, min(vprompt_ind, num_frames - 1))
+                start = vprompt_ind * frame_length
+                feat = feat[start : start + frame_length]
+            else:
+                h = w = int(math.sqrt(feat.shape[0]))
             c = feat.shape[-1]
+            if feat.numel() == 0:
+                continue
             feat_map = feat.reshape(h, w, c).permute(2, 0, 1)
             feat_map = feat_map.unsqueeze(0).repeat(points_pos.shape[0], 1, 1, 1)
 
@@ -104,7 +131,7 @@ class GeoSamplerModel(nn.Module):
             sampled_feats = sampled_feats.transpose(-2, -1)
 
             # Track image indices
-            cur_img_ids = [img_idx] * len(points_pos)
+            cur_img_ids = [batch_idx] * len(points_pos)
 
             # Save to global lists
             all_points.append(points_pos)
@@ -171,8 +198,8 @@ class GeoSamplerModel(nn.Module):
 
         # Group features by image
         output_feats = []
-        for img_idx in range(len(vprompt_masks)):
-            mask = all_img_ids == img_idx
+        for batch_idx in range(len(vprompt_masks)):
+            mask = all_img_ids == batch_idx
             if not mask.any():
                 output_feats.append(None)
             else:
@@ -185,9 +212,34 @@ class NaiveSamplerModel(nn.Module):
     def __init__(self, config: SamplerConfig):
         super(NaiveSamplerModel, self).__init__()
         self.num_sample_point = config.num_sample_point
-        self.pooler = nn.AdaptiveMaxPool1d(output_size=1)
+        if config.pooling_mode == "mean":
+            self.pooler = (
+                nn.AvgPool1d(kernel_size=config.pooling_kernel_size)
+                if config.pooling_kernel_size != None
+                else nn.AdaptiveAvgPool1d(output_size=config.pooling_output_size)
+            )
+        elif config.pooling_mode == "max":
+            self.pooler = (
+                nn.MaxPool1d(kernel_size=config.pooling_kernel_size)
+                if config.pooling_kernel_size != None
+                else nn.AdaptiveMaxPool1d(output_size=config.pooling_output_size)
+            )
+        else:
+            raise NotImplementedError(f"{config.pooling_mode} is not supported.")
 
-    def forward(self, input_feats, vprompt_masks, original_dtype=None, return_dtype=None):
+    def forward(
+        self,
+        input_feats,
+        vprompt_masks,
+        grid_thw=None,
+        vprompt_indices=None,
+        spatial_merge_size=2,
+        original_dtype=None,
+        return_dtype=None,
+    ):
+        if isinstance(input_feats, torch.Tensor) and input_feats.ndim == 4:
+            # only select the feature of the first frame in the video
+            input_feats = input_feats[0, :, :, :]
         assert len(input_feats) == len(vprompt_masks)
         if original_dtype is None:
             original_dtype = input_feats[0].dtype
@@ -199,7 +251,7 @@ class NaiveSamplerModel(nn.Module):
         all_img_ids = []
         # input_feats: [B, H*W, C]
         # vprompt_masks: ([N, H, W], [N, H, W], ...), len(vprompt_masks) = B, N = num_masks
-        for img_idx, (feat, mask) in enumerate(zip(input_feats, vprompt_masks)):
+        for batch_idx, (feat, mask) in enumerate(zip(input_feats, vprompt_masks)):
             # [H*W, C]
             if len(mask) != 0:
                 img_wh = torch.tensor(
@@ -216,8 +268,24 @@ class NaiveSamplerModel(nn.Module):
                 # [num_mask, num_sample_point, 2]
                 points_pos = torch.stack(points_pos)
 
-                h = w = int(math.sqrt(feat.shape[0]))
+                # Reshape feature map
+                if grid_thw is not None:
+                    h = grid_thw[batch_idx][1] // spatial_merge_size
+                    w = grid_thw[batch_idx][2] // spatial_merge_size
+                    vprompt_ind = int(vprompt_indices[batch_idx]) if vprompt_indices is not None else 0
+
+                    frame_length = int(h * w)
+                    num_frames = int(feat.shape[0] // frame_length) if frame_length > 0 else 0
+                    if num_frames <= 0:
+                        continue
+                    vprompt_ind = max(0, min(vprompt_ind, num_frames - 1))
+                    start = vprompt_ind * frame_length
+                    feat = feat[start : start + frame_length]
+                else:
+                    h = w = int(math.sqrt(feat.shape[0]))
                 c = feat.shape[-1]
+                if feat.numel() == 0:
+                    continue
 
                 feat_map = feat.reshape(h, w, c).permute(2, 0, 1)
                 feat_map = feat_map.unsqueeze(0).repeat(points_pos.shape[0], 1, 1, 1)
@@ -231,7 +299,7 @@ class NaiveSamplerModel(nn.Module):
                 # [num_mask, num_sample_point, C]
                 sampled_feats = sampled_feats.transpose(-2, -1)
 
-                cur_img_ids = [img_idx] * len(points_pos)
+                cur_img_ids = [batch_idx] * len(points_pos)
 
                 all_points.append(points_pos)
                 all_feats.append(sampled_feats)
@@ -243,11 +311,11 @@ class NaiveSamplerModel(nn.Module):
         all_points = torch.cat(all_points, dim=0).to(return_dtype)
         all_feats = torch.cat(all_feats, dim=0).to(return_dtype)
         all_img_ids = torch.tensor(all_img_ids, device=all_feats.device)
-        vprompt_feats = self.pooler(all_feats.transpose(-2, -1)).transpose(-2, -1).squeeze(1)
+        vprompt_feats = self.pooler(all_feats.transpose(-2, -1)).transpose(-2, -1)
 
         output_feats = []
-        for img_idx in range(len(vprompt_masks)):
-            mask = all_img_ids == img_idx
+        for batch_idx in range(len(vprompt_masks)):
+            mask = all_img_ids == batch_idx
             if not mask.any():
                 output_feats.append(None)
             else:
@@ -282,5 +350,16 @@ class SamplerModel(PreTrainedModel):
 
         self.post_init()
 
-    def forward(self, vprompt_feats, vprompt_masks, original_dtype=None, return_dtype=None):
-        return self.model(vprompt_feats, vprompt_masks, original_dtype, return_dtype)
+    def forward(
+        self,
+        vprompt_feats,
+        vprompt_masks,
+        grid_thw=None,
+        vprompt_indices=None,
+        spatial_merge_size=2,
+        original_dtype=None,
+        return_dtype=None,
+    ):
+        return self.model(
+            vprompt_feats, vprompt_masks, grid_thw, vprompt_indices, spatial_merge_size, original_dtype, return_dtype
+        )

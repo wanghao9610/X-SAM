@@ -1,17 +1,21 @@
+import re
+
 from mmengine.hooks import Hook
 from tabulate import tabulate
 from torch.utils.data import ConcatDataset as TorchConcatDataset
-from xtuner.registry import BUILDER
 
-from ...utils.constants import (
+from xsam.registry import BUILDER
+from xsam.utils.constants import (
     DEFAULT_CLS_TOKEN,
+    DEFAULT_IMAGE_TOKEN,
     DEFAULT_PEND_TOKEN,
+    DEFAULT_PLACEHOLDER_TOKEN,
     DEFAULT_PSTART_TOKEN,
     DEFAULT_SEG_TOKEN,
     DEFAULT_SPECIAL_TOKENS,
     INDEX2TOKEN,
 )
-from ..utils.util import split_list
+from xsam.utils.utils import split_list
 
 
 class DatasetInfoHook(Hook):
@@ -51,6 +55,8 @@ class DatasetInfoHook(Hook):
                     text += INDEX2TOKEN[ids[0]]
                 else:
                     text += self.tokenizer.decode(ids)
+
+            text = re.sub(f"({re.escape(DEFAULT_PLACEHOLDER_TOKEN)}\\s*)+", DEFAULT_IMAGE_TOKEN, text)
             runner.logger.info(text)
 
         if isinstance(dataset, TorchConcatDataset):
@@ -58,20 +64,20 @@ class DatasetInfoHook(Hook):
         else:
             dataset = [dataset]
 
-        headers = ["#", "Dataset", "Task", "# Repeats", "# Data", "# Samples"]
+        headers = ["#", "Dataset", "Task", "# Data", "# Repeats", "# Samples"]
         data_table = tabulate(
             [
                 *[
-                    [i, ds.data_name, ds.task_name, f"{ds.repeats:.2f}", f"{ds.data_length:,}", f"{len(ds):,}"]
+                    [i, ds.data_name, ds.task_name, f"{ds.data_length:,}", f"{ds.repeats:.2f}", f"{len(ds):,}"]
                     for i, ds in enumerate(dataset)
                 ],
-                ["=" * int(len(header) * scale) for header, scale in zip(headers, [5.0, 2.5, 2.0, 1.4, 1.4, 1.4])],
+                ["=" * int(len(header) * scale) for header, scale in zip(headers, [5.0, 5.0, 2.0, 1.4, 1.4, 1.4])],
                 [
                     "Total",
                     len(dataset),
                     len(set(ds.task_name for ds in dataset)),
-                    f"{sum(ds.repeats for ds in dataset):.2f}",
                     f"{sum(ds.data_length for ds in dataset):,}",
+                    f"{sum(ds.repeats for ds in dataset):.2f}",
                     f"{sum(len(ds) for ds in dataset):,}",
                 ],
             ],
@@ -79,12 +85,12 @@ class DatasetInfoHook(Hook):
             tablefmt="outline",
             colalign=("center", "center", "center", "center", "right", "right"),
         )
-        runner.logger.info(f"Dataset summary:\n{data_table}")
+        runner.logger.info(f"Dataset summary of {mode}:\n{data_table}")
         for ds in dataset:
             if self.tokenizer is None:
                 continue
 
-            runner.logger.info(f"{mode} of {ds.data_name} example:")
+            runner.logger.info(f"Dataset sample of {ds.data_name}:")
             if "chosen_ids" in ds[0]:
                 _log(ds[0]["chosen_ids"], log_prefix="chosen: ")
                 _log(ds[0]["rejected_ids"], log_prefix="rejected: ")
@@ -100,11 +106,3 @@ class DatasetInfoHook(Hook):
         if do_eval:
             eval_dataset = runner.val_dataloader.dataset
             self.log(runner, eval_dataset, mode="eval")
-
-    def before_val(self, runner) -> None:
-        eval_dataset = runner.val_dataloader.dataset
-        self.log(runner, eval_dataset, mode="eval")
-
-    def before_test(self, runner) -> None:
-        test_dataset = runner.test_dataloader.dataset
-        self.log(runner, test_dataset, mode="test")

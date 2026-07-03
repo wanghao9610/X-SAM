@@ -1,17 +1,18 @@
-from .gcgseg_process_fn import gcgseg_postprocess_fn
-from .genseg_process_fn import genseg_postprocess_fn
-from .intseg_process_fn import intseg_postprocess_fn
-from .ovseg_process_fn import ovseg_postprocess_fn
-from .reaseg_process_fn import reaseg_postprocess_fn
-from .refseg_process_fn import refseg_postprocess_fn
-from .vgdseg_process_fn import vgdseg_postprocess_fn
+from .img_gcgseg_process_fn import img_gcgseg_postprocess_fn
+from .img_genseg_process_fn import img_genseg_postprocess_fn
+from .img_intseg_process_fn import img_intseg_postprocess_fn
+from .img_ovseg_process_fn import img_ovseg_postprocess_fn
+from .img_reaseg_process_fn import img_reaseg_postprocess_fn
+from .img_refseg_process_fn import img_grefseg_postprocess_fn, img_refseg_postprocess_fn
+from .img_vgdseg_process_fn import img_vgdseg_postprocess_fn
 
 __all__ = [
-    "reaseg_postprocess_fn",
-    "refseg_postprocess_fn",
-    "genseg_postprocess_fn",
-    "gcgseg_postprocess_fn",
-    "vgdseg_postprocess_fn",
-    "ovseg_postprocess_fn",
-    "intseg_postprocess_fn",
+    "img_gcgseg_postprocess_fn",
+    "img_genseg_postprocess_fn",
+    "img_intseg_postprocess_fn",
+    "img_ovseg_postprocess_fn",
+    "img_reaseg_postprocess_fn",
+    "img_refseg_postprocess_fn",
+    "img_grefseg_postprocess_fn",
+    "img_vgdseg_postprocess_fn",
 ]

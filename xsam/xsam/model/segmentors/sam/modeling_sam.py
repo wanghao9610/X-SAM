@@ -134,6 +134,26 @@ class SamImageSegmentationOutput(ModelOutput):
     mask_decoder_attentions: Optional[Tuple[torch.FloatTensor, ...]] = None
 
 
+class SamPreTrainedModel(PreTrainedModel):
+    config_class = SamConfig
+    base_model_prefix = "sam"
+    main_input_name = "pixel_values"
+    _no_split_modules = ["SamVisionAttention"]
+    supports_gradient_checkpointing = True
+    _supports_sdpa = True
+
+    def _init_weights(self, module):
+        std = self.config.initializer_range
+        if isinstance(module, (nn.Linear, nn.Conv2d, nn.ConvTranspose2d)):
+            module.weight.data.normal_(mean=0.0, std=std)
+            if module.bias is not None:
+                module.bias.data.zero_()
+        elif isinstance(module, nn.Embedding):
+            module.weight.data.normal_(mean=0.0, std=std)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx].zero_()
+
+
 class SamPatchEmbeddings(nn.Module):
     """
     This class turns `pixel_values` of shape `(batch_size, num_channels, height, width)` into the initial
@@ -426,7 +446,7 @@ class SamTwoWayTransformer(nn.Module):
     def forward(
         self,
         point_embeddings: Tensor,
-        image_embeddings: Tensor,
+        image_embeds: Tensor,
         image_positional_embeddings: Tensor,
         attention_similarity: Tensor,
         target_embedding=None,
@@ -443,15 +463,15 @@ class SamTwoWayTransformer(nn.Module):
         all_attentions = ()
         intermediate_hidden_states = ()
 
-        if image_embeddings is None:
+        if image_embeds is None:
             raise ValueError("You have to specify an image_embedding")
 
-        image_embeddings = image_embeddings.flatten(2).permute(0, 2, 1).unsqueeze(1)
+        image_embeds = image_embeds.flatten(2).permute(0, 2, 1).unsqueeze(1)
         image_positional_embeddings = image_positional_embeddings.flatten(2).permute(0, 2, 1).unsqueeze(1)
 
         # Prepare queries
         queries = point_embeddings
-        keys = image_embeddings
+        keys = image_embeds
 
         # Apply transformer blocks and final layernorm
         for layer in self.layers:
@@ -541,7 +561,7 @@ class SamMaskDecoder(nn.Module):
 
     def forward(
         self,
-        image_embeddings: torch.Tensor,
+        image_embeds: torch.Tensor,
         image_positional_embeddings: torch.Tensor,
         sparse_prompt_embeddings: torch.Tensor,
         dense_prompt_embeddings: torch.Tensor,
@@ -556,10 +576,10 @@ class SamMaskDecoder(nn.Module):
         Predict masks given image and prompt embeddings.
 
         Args:
-            image_embeddings (`torch.Tensor`):
+            image_embeds (`torch.Tensor`):
                 the embeddings from the image encoder
             image_positional_embedding (`torch.Tensor`):
-                positional encoding with the shape of image_embeddings
+                positional encoding with the shape of image_embeds
             sparse_prompt_embeddings (`torch.Tensor`):
                 The embeddings of the points and boxes
             dense_prompt_embeddings (`torch.Tensor`):
@@ -573,10 +593,10 @@ class SamMaskDecoder(nn.Module):
         """
         # repeat the image embeddings according the cond_lens
         if cond_lens is not None:
-            image_embeddings = torch.cat(
+            image_embeds = torch.cat(
                 [
                     image_embedding.unsqueeze(0).repeat(cond_len, 1, 1, 1)
-                    for image_embedding, cond_len in zip(image_embeddings, cond_lens)
+                    for image_embedding, cond_len in zip(image_embeds, cond_lens)
                 ]
             )
             image_positional_embeddings = torch.cat(
@@ -585,7 +605,7 @@ class SamMaskDecoder(nn.Module):
                     for image_positional_embedding, cond_len in zip(image_positional_embeddings, cond_lens)
                 ]
             )
-        batch_size, num_channels, height, width = image_embeddings.shape
+        batch_size, num_channels, height, width = image_embeds.shape
 
         output_tokens = torch.cat([self.iou_token.weight, self.mask_tokens.weight], dim=0)
         if sparse_prompt_embeddings.sum().item() != 0:
@@ -600,19 +620,19 @@ class SamMaskDecoder(nn.Module):
         point_embeddings = tokens.to(self.iou_token.weight.dtype)
 
         # Expand per-image data in batch direction to be per-point
-        image_embeddings = image_embeddings + dense_prompt_embeddings
-        image_embeddings = image_embeddings.repeat_interleave(point_batch_size, 0)
+        image_embeds = image_embeds + dense_prompt_embeddings
+        image_embeds = image_embeds.repeat_interleave(point_batch_size, 0)
         image_positional_embeddings = image_positional_embeddings.repeat_interleave(point_batch_size, 0)
 
         # Run the transformer, image_positional_embedding are consumed
         # point_embeddings is the transformer layer outputs
-        # image_embeddings is the last updated image_embeddings with transformer layers, attentions is the all attentions
+        # image_embeds is the last updated image_embeds with transformer layers, attentions is the all attentions
         # intermediate_hidden_states are output of each transformer layers(2 layers in sam, actually is 3), which not include the last transformer layer
         if self.gradient_checkpointing and self.training:
             transformer_outputs = self._gradient_checkpointing_func(
                 self.transformer.__call__,
                 point_embeddings,
-                image_embeddings,
+                image_embeds,
                 image_positional_embeddings,
                 attention_similarity,
                 target_embedding,
@@ -621,25 +641,23 @@ class SamMaskDecoder(nn.Module):
         else:
             transformer_outputs = self.transformer(
                 point_embeddings,
-                image_embeddings,
+                image_embeds,
                 image_positional_embeddings,
                 attention_similarity,
                 target_embedding,
                 output_attentions,
             )
 
-        point_embeddings, image_embeddings, attentions, intermediate_hidden_states = transformer_outputs
+        point_embeddings, image_embeds, attentions, intermediate_hidden_states = transformer_outputs
         # upscaled_embeddings = ()
         intermediate_mask_predictions = ()
 
-        image_embeddings = image_embeddings.transpose(2, 3).reshape(
-            batch_size * point_batch_size, num_channels, height, width
-        )
+        image_embeds = image_embeds.transpose(2, 3).reshape(batch_size * point_batch_size, num_channels, height, width)
         # 1/32 feature
-        # upscaled_embeddings += (image_embeddings,)
+        # upscaled_embeddings += (image_embeds,)
 
         # Upscale mask embeddings and predict masks using the mask tokens
-        upscaled_embedding = self.upscale_conv1(image_embeddings)
+        upscaled_embedding = self.upscale_conv1(image_embeds)
         upscaled_embedding = self.activation(self.upscale_layer_norm(upscaled_embedding))
         # 1/16 feature
         # upscaled_embeddings += (upscaled_embedding,)
@@ -691,8 +709,8 @@ class SamMaskDecoder(nn.Module):
         assert len(intermediate_hidden_states) == len(intermediate_mask_predictions)
 
         outputs = (
-            intermediate_mask_predictions,
             intermediate_hidden_states,
+            intermediate_mask_predictions,
         )
 
         if output_attentions:
@@ -1242,11 +1260,12 @@ class SamVisionNeck(nn.Module):
         return hidden_states
 
 
-class SamVisionEncoder(nn.Module):
+class SamVisionEncoder(SamPreTrainedModel):
     def __init__(self, config: SamVisionConfig):
-        super().__init__()
+        super().__init__(config)
         self.config = config
         self.image_size = config.image_size
+        self.image_embedding_size = (config.image_size // config.patch_size, config.image_size // config.patch_size)
 
         self.patch_embed = SamPatchEmbeddings(config)
 
@@ -1336,26 +1355,6 @@ class SamVisionEncoder(nn.Module):
         )
 
 
-class SamPreTrainedModel(PreTrainedModel):
-    config_class = SamConfig
-    base_model_prefix = "sam"
-    main_input_name = "pixel_values"
-    _no_split_modules = ["SamVisionAttention"]
-    supports_gradient_checkpointing = True
-    _supports_sdpa = True
-
-    def _init_weights(self, module):
-        std = self.config.initializer_range
-        if isinstance(module, (nn.Linear, nn.Conv2d, nn.ConvTranspose2d)):
-            module.weight.data.normal_(mean=0.0, std=std)
-            if module.bias is not None:
-                module.bias.data.zero_()
-        elif isinstance(module, nn.Embedding):
-            module.weight.data.normal_(mean=0.0, std=std)
-            if module.padding_idx is not None:
-                module.weight.data[module.padding_idx].zero_()
-
-
 SAM_START_DOCSTRING = r"""
     This model inherits from [`PreTrainedModel`]. Check the superclass documentation for the generic methods the
     library implements for all its model (such as downloading or saving, resizing the input embeddings, pruning heads
@@ -1417,9 +1416,9 @@ SAM_INPUTS_DOCSTRING = r"""
             generate a corresponding embedding, that will be fed later on to the mask decoder. These masks needs to be
             manually fed by the user, and they need to be of shape (`batch_size`, `image_size`, `image_size`).
 
-        image_embeddings (`torch.FloatTensor` of shape `(batch_size, output_channels, window_size, window_size)`):
+        image_embeds (`torch.FloatTensor` of shape `(batch_size, output_channels, window_size, window_size)`):
             Image embeddings, this is used by the mask decder to generate masks and iou scores. For more memory
-            efficient computation, users can first retrieve the image embeddings using the `get_image_embeddings`
+            efficient computation, users can first retrieve the image embeddings using the `get_image_embeds`
             method, and then feed them to the `forward` method instead of feeding the `pixel_values`.
         multimask_output (`bool`, *optional*):
             In the original implementation and paper, the model always outputs 3 masks per image (or per point / per
@@ -1464,20 +1463,20 @@ class SamModel(SamPreTrainedModel):
         return self.vision_encoder.get_input_embeddings()
 
     def get_image_wide_positional_embeddings(self):
-        size = self.config.prompt_encoder_config.image_embedding_size
+        size = self.prompt_encoder.image_embedding_size
         target_device = self.shared_image_embedding.positional_embedding.device
         target_dtype = self.shared_image_embedding.positional_embedding.dtype
-        grid = torch.ones((size, size), device=target_device, dtype=target_dtype)
+        grid = torch.ones(size, device=target_device, dtype=target_dtype)
         y_embed = grid.cumsum(dim=0) - 0.5
         x_embed = grid.cumsum(dim=1) - 0.5
-        y_embed = y_embed / size
-        x_embed = x_embed / size
+        y_embed = y_embed / size[0]
+        x_embed = x_embed / size[1]
 
         positional_embedding = self.shared_image_embedding(torch.stack([x_embed, y_embed], dim=-1))
         return positional_embedding.permute(2, 0, 1).unsqueeze(0)  # channel x height x width
 
     @torch.no_grad()
-    def get_image_embeddings(
+    def get_image_embeds(
         self,
         pixel_values,
         output_attentions: Optional[bool] = None,
@@ -1504,8 +1503,8 @@ class SamModel(SamPreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-        image_embeddings = vision_output[0]
-        return image_embeddings
+        image_embeds = vision_output[0]
+        return image_embeds
 
     @torch.no_grad()
     def get_prompt_embeddings(
@@ -1548,7 +1547,7 @@ class SamModel(SamPreTrainedModel):
         input_labels: Optional[torch.LongTensor] = None,
         input_boxes: Optional[torch.FloatTensor] = None,
         input_masks: Optional[torch.LongTensor] = None,
-        image_embeddings: Optional[torch.FloatTensor] = None,
+        image_embeds: Optional[torch.FloatTensor] = None,
         multimask_output: bool = True,
         attention_similarity: Optional[torch.FloatTensor] = None,
         target_embedding: Optional[torch.FloatTensor] = None,
@@ -1588,11 +1587,11 @@ class SamModel(SamPreTrainedModel):
         )
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        if pixel_values is None and image_embeddings is None:
-            raise ValueError("Either pixel_values or image_embeddings must be provided.")
+        if pixel_values is None and image_embeds is None:
+            raise ValueError("Either pixel_values or image_embeds must be provided.")
 
-        if pixel_values is not None and image_embeddings is not None:
-            raise ValueError("Only one of pixel_values and image_embeddings can be provided.")
+        if pixel_values is not None and image_embeds is not None:
+            raise ValueError("Only one of pixel_values and image_embeds can be provided.")
 
         if input_points is not None and len(input_points.shape) != 4:
             raise ValueError(
@@ -1616,7 +1615,7 @@ class SamModel(SamPreTrainedModel):
 
         image_positional_embeddings = self.get_image_wide_positional_embeddings()
         # repeat with batch size
-        batch_size = pixel_values.shape[0] if pixel_values is not None else image_embeddings.shape[0]
+        batch_size = pixel_values.shape[0] if pixel_values is not None else image_embeds.shape[0]
         image_positional_embeddings = image_positional_embeddings.repeat(batch_size, 1, 1, 1)
 
         vision_attentions = None
@@ -1629,7 +1628,7 @@ class SamModel(SamPreTrainedModel):
                 output_hidden_states=output_hidden_states,
                 return_dict=return_dict,
             )
-            image_embeddings = vision_outputs[0]
+            image_embeds = vision_outputs[0]
 
             if output_hidden_states:
                 vision_hidden_states = vision_outputs[1]
@@ -1639,10 +1638,10 @@ class SamModel(SamPreTrainedModel):
         if input_points is not None and input_labels is None:
             input_labels = torch.ones_like(input_points[:, :, :, 0], dtype=torch.int, device=input_points.device)
 
-        if input_points is not None and image_embeddings.shape[0] != input_points.shape[0]:
+        if input_points is not None and image_embeds.shape[0] != input_points.shape[0]:
             raise ValueError(
                 "The batch size of the image embeddings and the input points must be the same. ",
-                "Got {} and {} respectively.".format(image_embeddings.shape[0], input_points.shape[0]),
+                "Got {} and {} respectively.".format(image_embeds.shape[0], input_points.shape[0]),
                 " if you want to pass multiple points for the same image, make sure that you passed ",
                 " input_points of shape (batch_size, point_batch_size, num_points_per_image, 3) and ",
                 " input_labels of shape (batch_size, point_batch_size, num_points_per_image)",
@@ -1656,7 +1655,7 @@ class SamModel(SamPreTrainedModel):
         )
 
         low_res_masks, iou_predictions, mask_decoder_attentions = self.mask_decoder(
-            image_embeddings=image_embeddings,
+            image_embeds=image_embeds,
             image_positional_embeddings=image_positional_embeddings,
             sparse_prompt_embeddings=sparse_embeddings,
             dense_prompt_embeddings=dense_embeddings,

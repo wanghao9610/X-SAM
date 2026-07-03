@@ -1,4 +1,3 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
 class BaseEvaluator:
     """
     Base class for a dataset evaluator.

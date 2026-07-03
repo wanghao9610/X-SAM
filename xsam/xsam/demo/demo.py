@@ -1,60 +1,66 @@
 #!/usr/bin/env python
-# Copyright (c) OpenMMLab. All rights reserved.
+
+import os
+
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
 import argparse
-import os
+import gc
+import logging
 import os.path as osp
 import random
 import re
 import traceback
 import warnings
-from typing import List
+from typing import List, Optional
 
 import cv2
-import numpy as np
 import torch
 import torch.nn as nn
 from mmengine.config import Config, DictAction
 from mmengine.runner.utils import set_random_seed
-from PIL import Image
-from xtuner.configs import cfgs_name_path
-from xtuner.dataset.utils import expand2square
-from xtuner.model.utils import traverse_dict
-from xtuner.registry import BUILDER
-from xtuner.tools.utils import set_model_resource
-from xtuner.utils.device import get_device
 
 from xsam.dataset.collate_fns import xsam_collate_fn
 from xsam.dataset.map_fns import (
     dataset_map_fn_factory,
-    gcgseg_map_fn,
-    genseg_map_fn,
-    imgconv_map_fn,
-    intseg_map_fn,
-    reaseg_map_fn,
-    refseg_map_fn,
+    img_chat_map_fn,
+    img_gcgseg_map_fn,
+    img_genseg_map_fn,
+    img_intseg_map_fn,
+    img_reaseg_map_fn,
+    img_refseg_map_fn,
+    img_vgdseg_map_fn,
     template_map_fn_factory,
-    vgdseg_map_fn,
 )
 from xsam.dataset.process_fns import (
-    gcgseg_postprocess_fn,
-    genseg_postprocess_fn,
-    intseg_postprocess_fn,
+    img_gcgseg_postprocess_fn,
+    img_genseg_postprocess_fn,
+    img_intseg_postprocess_fn,
+    img_reaseg_postprocess_fn,
+    img_refseg_postprocess_fn,
+    img_vgdseg_postprocess_fn,
     process_map_fn_factory,
-    reaseg_postprocess_fn,
-    refseg_postprocess_fn,
-    vgdseg_postprocess_fn,
 )
 from xsam.dataset.utils.catalog import MetadataCatalog
 from xsam.dataset.utils.encode import encode_fn
+from xsam.dataset.utils.image import expand2square
 from xsam.dataset.utils.load import load_image
-from xsam.engine.utils.util import split_list
+from xsam.model.utils import traverse_dict
+from xsam.registry import BUILDER
 from xsam.utils.checkpoint import load_checkpoint
 from xsam.utils.config import setup_model_config
-from xsam.utils.constants import DEFAULT_IMAGE_TOKEN, INDEX2TOKEN
+from xsam.utils.configs import cfgs_name_path
+from xsam.utils.constants import (
+    DEFAULT_IMAGE_TOKEN,
+    DEFAULT_PEND_TOKEN,
+    DEFAULT_PLACEHOLDER_TOKEN,
+    DEFAULT_PSTART_TOKEN,
+    INDEX2TOKEN,
+)
+from xsam.utils.device import get_device
 from xsam.utils.logging import print_log, set_default_logging_format
 from xsam.utils.misc import data_dict_to_device
-from xsam.utils.utils import register_function
+from xsam.utils.utils import register_function, set_model_resource, split_list
 
 # Global setup
 set_default_logging_format()
@@ -66,12 +72,22 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Single image demo for X-SAM model")
     parser.add_argument("config", help="config file name or path")
     parser.add_argument("--image", type=str, required=True, help="path to input image")
-    parser.add_argument("--prompt", type=str, required=True, help="user prompt for the task_name")
-    parser.add_argument("--task_name", type=str, required=True, help="task_name name (e.g., segmentation, referring)")
-    parser.add_argument("--vprompt_masks", type=str, required=False, help="path to vprompt masks")
-    parser.add_argument("--score_thr", type=float, default=0.5, help="score threshold for the task_name")
     parser.add_argument("--work-dir", type=str, required=False, help="directory to save logs and visualizations")
-    parser.add_argument("--output_dir", type=str, required=False, help="directory to save output images")
+    parser.add_argument("--output-dir", type=str, required=False, help="directory to save output images")
+    parser.add_argument("--prompt", type=str, required=False, default="", help="user prompt for the task name")
+    parser.add_argument(
+        "--task-name",
+        type=str,
+        required=True,
+        help="image task name (e.g., img_vgdseg)",
+    )
+    parser.add_argument(
+        "--vprompt-masks",
+        nargs="+",
+        required=False,
+        help="paths to vprompt mask files or directories",
+    )
+    parser.add_argument("--score-thr", type=float, default=0.5, help="score threshold for the task name")
     parser.add_argument(
         "--pth_model",
         type=str,
@@ -131,9 +147,6 @@ class XSamDemo:
         cfg,
         pth_model=None,
         output_ids_with_output=True,
-        max_length=4096,
-        cond_type="phrase",
-        pad_image_to_square=True,
         **kwargs,
     ):
         self.cfg = cfg
@@ -146,9 +159,10 @@ class XSamDemo:
         self.model.eval()
         self.model = self.model.to(self.device)
         if pth_model is not None:
-            print_log(f"Loading checkpoint from {pth_model}", logger="current")
             assert osp.exists(pth_model), f"Checkpoint file {pth_model} does not exist"
             load_checkpoint(self.model, pth_model)
+        else:
+            print_log("No checkpoint file provided, using default checkpoint", logger="current", level=logging.WARNING)
         self.stop_criteria, self.generation_config = setup_model_config(self.model, cfg)
 
         self.tokenizer = self.model.tokenizer
@@ -156,51 +170,55 @@ class XSamDemo:
         self.image_processor = build_from_cfg_or_module(cfg.image_processor)
         self.extra_image_processor = build_from_cfg_or_module(cfg.extra_image_processor)
 
-        self.cond_type = cond_type
+        self.cond_type = cfg.cond_type
+        self.image_token = cfg.image_token
+        self.max_length = cfg.max_length
+        self.expand2square = cfg.expand2square
+        self.use_placeholder = cfg.use_placeholder
+        self.use_vision_token = "vision" in self.image_token
         self.output_ids_with_output = output_ids_with_output
-        self.max_length = max_length
-        self.pad_image_to_square = pad_image_to_square
         self.metadata = MetadataCatalog.get("default")
-        self.metadata.set(ignore_label=255, label_divisor=1000)
+        self.metadata.set(ignore_value=255, label_divisor=1000)
         self.dtype = self.model.dtype
 
         self.task_map_fns = self.build_map_fns()
         self.template_map_fns = self.build_template_map_fns()
         self.postprocess_fns = self.build_postprocess_fn()
+        self._last_infer_error = None
 
     def build_template_map_fns(self):
         template_map_fns = {
-            "imgconv": dict(
+            "img_chat": dict(
                 type=template_map_fn_factory,
                 template=self.cfg.prompt_template,
                 output_suffix=self.output_ids_with_output,
             ),
-            "genseg": dict(
+            "img_genseg": dict(
                 type=template_map_fn_factory,
                 template=self.cfg.prompt_template,
                 output_suffix=self.output_ids_with_output,
             ),
-            "refseg": dict(
+            "img_refseg": dict(
                 type=template_map_fn_factory,
                 template=self.cfg.prompt_template,
                 output_suffix=self.output_ids_with_output,
             ),
-            "reaseg": dict(
+            "img_reaseg": dict(
                 type=template_map_fn_factory,
                 template=self.cfg.prompt_template,
                 output_suffix=self.output_ids_with_output,
             ),
-            "gcgseg": dict(
+            "img_gcgseg": dict(
                 type=template_map_fn_factory,
                 template=self.cfg.prompt_template,
                 output_suffix=False,
             ),
-            "intseg": dict(
+            "img_vgdseg": dict(
                 type=template_map_fn_factory,
                 template=self.cfg.prompt_template,
-                output_suffix=self.output_ids_with_output,
+                output_suffix=False,
             ),
-            "vgdseg": dict(
+            "img_intseg": dict(
                 type=template_map_fn_factory,
                 template=self.cfg.prompt_template,
                 output_suffix=self.output_ids_with_output,
@@ -214,36 +232,46 @@ class XSamDemo:
 
     def build_map_fns(self):
         task_map_fns = {
-            "imgconv": imgconv_map_fn,
-            "genseg": dict(
+            "img_chat": dict(
                 type=dataset_map_fn_factory,
-                fn=genseg_map_fn,
-                cond_type=self.cond_type,
+                fn=img_chat_map_fn,
+                image_token=self.image_token,
             ),
-            "refseg": dict(
+            "img_genseg": dict(
                 type=dataset_map_fn_factory,
-                fn=refseg_map_fn,
+                fn=img_genseg_map_fn,
                 cond_type=self.cond_type,
+                image_token=self.image_token,
             ),
-            "reaseg": dict(
+            "img_refseg": dict(
                 type=dataset_map_fn_factory,
-                fn=reaseg_map_fn,
+                fn=img_refseg_map_fn,
                 cond_type=self.cond_type,
+                image_token=self.image_token,
             ),
-            "gcgseg": dict(
+            "img_reaseg": dict(
                 type=dataset_map_fn_factory,
-                fn=gcgseg_map_fn,
+                fn=img_reaseg_map_fn,
                 cond_type=self.cond_type,
+                image_token=self.image_token,
             ),
-            "intseg": dict(
+            "img_gcgseg": dict(
                 type=dataset_map_fn_factory,
-                fn=intseg_map_fn,
+                fn=img_gcgseg_map_fn,
                 cond_type=self.cond_type,
+                image_token=self.image_token,
             ),
-            "vgdseg": dict(
+            "img_vgdseg": dict(
                 type=dataset_map_fn_factory,
-                fn=vgdseg_map_fn,
+                fn=img_vgdseg_map_fn,
                 cond_type=self.cond_type,
+                image_token=self.image_token,
+            ),
+            "img_intseg": dict(
+                type=dataset_map_fn_factory,
+                fn=img_intseg_map_fn,
+                cond_type=self.cond_type,
+                image_token=self.image_token,
             ),
         }
         task_map_fns = {
@@ -253,28 +281,28 @@ class XSamDemo:
 
     def build_postprocess_fn(self):
         postprocess_fns = {
-            "imgconv": None,
-            "genseg(pan)": dict(
+            "img_chat": None,
+            "img_genseg|pan": dict(
                 type=process_map_fn_factory,
-                fn=genseg_postprocess_fn,
-                task_name="genseg(pan)",
+                fn=img_genseg_postprocess_fn,
+                task_name="img_genseg_panoptic",
                 threshold=0.5,
             ),
-            "genseg(sem)": dict(
+            "img_genseg|sem": dict(
                 type=process_map_fn_factory,
-                fn=genseg_postprocess_fn,
-                task_name="genseg(sem)",
+                fn=img_genseg_postprocess_fn,
+                task_name="img_genseg_semantic",
             ),
-            "genseg(ins)": dict(
+            "img_genseg|ins": dict(
                 type=process_map_fn_factory,
-                fn=genseg_postprocess_fn,
-                task_name="genseg(ins)",
+                fn=img_genseg_postprocess_fn,
+                task_name="img_genseg_instance",
             ),
-            "refseg": refseg_postprocess_fn,
-            "reaseg": reaseg_postprocess_fn,
-            "gcgseg": gcgseg_postprocess_fn,
-            "intseg": intseg_postprocess_fn,
-            "vgdseg": vgdseg_postprocess_fn,
+            "img_refseg": img_refseg_postprocess_fn,
+            "img_reaseg": img_reaseg_postprocess_fn,
+            "img_gcgseg": img_gcgseg_postprocess_fn,
+            "img_vgdseg": img_vgdseg_postprocess_fn,
+            "img_intseg": img_intseg_postprocess_fn,
         }
         postprocess_fns = {
             task_name: build_from_cfg_or_module(postprocess_fn)
@@ -282,22 +310,26 @@ class XSamDemo:
         }
         return postprocess_fns
 
-    def _get_input_ids(self, data_dict, task_name, with_image_token=True, next_needs_bos_token=False):
+    def _get_input_ids(self, data_dict, task_name, next_needs_bos_token=False):
         if self.tokenizer is None:
             return data_dict
 
         if self.task_map_fns[task_name] is not None:
-            data_dict = self.task_map_fns[task_name](data_dict, self.output_ids_with_output)
+            data_dict.update(
+                self.task_map_fns[task_name](data_dict, output_ids_with_output=self.output_ids_with_output)
+            )
         if self.template_map_fns[task_name] is not None:
-            data_dict = self.template_map_fns[task_name](data_dict)
+            data_dict.update(self.template_map_fns[task_name](data_dict))
         if self.tokenizer is not None:
             data_dict = encode_fn(
                 data_dict,
                 self.tokenizer,
                 self.max_length,
-                self.output_ids_with_output,
-                with_image_token,
-                next_needs_bos_token,
+                self.image_processor,
+                input_ids_with_output=self.output_ids_with_output,
+                use_placeholder=self.use_placeholder,
+                use_vision_token=self.use_vision_token,
+                next_needs_bos_token=next_needs_bos_token,
             )
         return data_dict
 
@@ -373,15 +405,15 @@ class XSamDemo:
         all_classes = random.sample(all_classes, len(all_classes))
         assert len(all_classes) > 0, "Please provide at least one thing or stuff class"
         if len(thing_classes) > 0 and len(stuff_classes) > 0:
-            task_name = "genseg(pan)"
+            task_name = f"{task_name}|pan"
         elif len(thing_classes) > 0 and len(stuff_classes) == 0:
-            task_name = "genseg(ins)"
+            task_name = f"{task_name}|ins"
         elif len(thing_classes) == 0 and len(stuff_classes) > 0:
-            task_name = "genseg(sem)"
+            task_name = f"{task_name}|sem"
         return (all_classes, thing_classes, stuff_classes), task_name
 
     def _process_prompt(self, prompt, task_name, classes=None):
-        if task_name == "imgconv":
+        if task_name == "img_chat":
             example = {
                 "conversations": [
                     {"from": "human", "value": DEFAULT_IMAGE_TOKEN + prompt},
@@ -391,27 +423,23 @@ class XSamDemo:
         elif "genseg" in task_name:
             example = {
                 "sampled_cats": classes[0],
-                "caption": None,
             }
-        elif task_name == "refseg":
+        elif "refseg" in task_name:
             example = {
                 "sampled_sents": [prompt],
             }
-        elif task_name == "reaseg":
+        elif "reaseg" in task_name:
             example = {
                 "sampled_sents": [prompt],
-                "explain": None,
                 "is_sentence": True,
             }
-        elif task_name == "gcgseg":
+        elif "gcgseg" in task_name:
             example = {}
-        elif task_name == "intseg":
-            # TODO: add intseg example
+        elif "intseg" in task_name or "objseg" in task_name:
             example = {
                 "sampled_labels": [0],
             }
-        elif task_name == "vgdseg":
-            # TODO: add vgdseg example
+        elif "vgdseg" in task_name:
             example = {
                 "sampled_labels": [0],
             }
@@ -421,14 +449,7 @@ class XSamDemo:
         return example
 
     def _process_image(self, image):
-        if isinstance(image, Image.Image):
-            pil_image = image
-        elif isinstance(image, np.ndarray):
-            pil_image = Image.fromarray(image)
-        else:
-            raise ValueError(f"Unsupported image type: {type(image)}")
-
-        image = np.array(pil_image)
+        image = load_image(image, to_numpy=True)
         height, width = image.shape[:2]
         _image_info = {
             "height": height,
@@ -441,25 +462,28 @@ class XSamDemo:
         }
         return image_info
 
-    def _process_data_dict(self, data_dict):
+    def _process_image_data_dict(self, data_dict):
         data_dict["image_file"] = None
         pil_image = data_dict["pil_image"]
         if self.image_processor is not None:
             image = pil_image
-            if self.pad_image_to_square:
+            if self.expand2square:
                 image = expand2square(pil_image, tuple(int(x * 255) for x in self.image_processor.image_mean))
-            image = self.image_processor.preprocess(image, return_tensors="pt")["pixel_values"][0]
-            data_dict["pixel_values"] = image
+            output = self.image_processor.preprocess(image, return_tensors="pt")
+            pixel_values = output["pixel_values"][0] if output["pixel_values"].ndim == 4 else output["pixel_values"]
+            image_grid_thw = output.get("image_grid_thw", None)
+            data_dict["pixel_values"] = pixel_values
+            data_dict["image_grid_thw"] = image_grid_thw
         if self.extra_image_processor is not None:
-            seg_output = self.extra_image_processor.preprocess(
-                pil_image, condition_maps=data_dict["vprompt_masks"], return_tensors="pt"
+            extra_output = self.extra_image_processor.preprocess(
+                pil_image, vprompt_masks=data_dict.get("vprompt_masks", None), return_tensors="pt"
             )
-            data_dict["extra_pixel_values"] = seg_output["pixel_values"][0]
-            data_dict["scaled_size"] = tuple(seg_output["scaled_sizes"][0].tolist())
-            data_dict["vprompt_masks"] = seg_output.get("vprompt_masks", None)
+            data_dict["extra_pixel_values"] = extra_output["pixel_values"][0]
+            data_dict["scaled_size"] = extra_output["scaled_sizes"][0].tolist()
+            data_dict["vprompt_masks"] = extra_output.get("vprompt_masks", None)
 
         data_dict.update(self._get_vgd_labels(data_dict))
-        data_dict.update(self._get_input_ids(data_dict, data_dict["task_name"], with_image_token=True))
+        data_dict.update(self._get_input_ids(data_dict, data_dict["task_name"]))
         data_dict.update(self._get_cond_ids(data_dict))
         data_dict.update(self._get_seg_ids(data_dict))
 
@@ -494,7 +518,16 @@ class XSamDemo:
                 text += INDEX2TOKEN[ids[0]]
             else:
                 text += self.tokenizer.decode(ids)
-        ignore_tokens = ["<image>\n", "<p> ", "</p> ", "<|user|>", "<|assistant|>", "<|end|>"]
+        ignore_tokens = [
+            f"{DEFAULT_IMAGE_TOKEN}",
+            f"{DEFAULT_IMAGE_TOKEN}\n",
+            f"{DEFAULT_PSTART_TOKEN} ",
+            f"{DEFAULT_PEND_TOKEN} ",
+            "<|user|>",
+            "<|assistant|>",
+            "<|im_start|>"
+            "<|im_end|>",
+        ]
         for ignore_token in ignore_tokens:
             text = text.replace(ignore_token, "")
         return text
@@ -504,7 +537,7 @@ class XSamDemo:
         metadata = MetadataCatalog.get(task_name)
         metadata.set(
             label_divisor=1000,
-            ignore_label=255,
+            ignore_value=255,
             data_name=task_name,
         )
         if "genseg" in task_name:
@@ -519,8 +552,93 @@ class XSamDemo:
 
         return metadata
 
+    def _visualize_image_predictions(
+        self, image, seg_output, task_name, phrases=None, output_dir=None, file_prefix="image"
+    ):
+        visualized_image = self.visualizer.draw_predictions(
+            image,
+            data_name=task_name,
+            phrases=phrases,
+            **seg_output,
+        )
+        visualized_image = visualized_image.get_image()
+        if output_dir is not None:
+            os.makedirs(output_dir, exist_ok=True)
+            output_file = osp.join(output_dir, f"{file_prefix}.png")
+            cv2.imwrite(output_file, cv2.cvtColor(visualized_image, cv2.COLOR_RGB2BGR))
+        return visualized_image
+
+    @staticmethod
+    def _is_cuda_oom(exc: Optional[BaseException]) -> bool:
+        if exc is None:
+            return False
+        if isinstance(exc, torch.cuda.OutOfMemoryError):
+            return True
+        msg = str(exc).lower()
+        return "out of memory" in msg or "cuda oom" in msg
+
+    @staticmethod
+    def _dispose_mlm_outputs(mlm_outputs) -> None:
+        """Drop generation hidden states; they can occupy multiple GB on GPU."""
+        if mlm_outputs is None:
+            return
+        for attr in ("hidden_states", "past_key_values", "attentions", "scores"):
+            if hasattr(mlm_outputs, attr):
+                setattr(mlm_outputs, attr, None)
+
+    @staticmethod
+    def _release_gpu_memory(aggressive: bool = False) -> None:
+        """Return cached GPU memory to the driver (also needed after OOM)."""
+        gc.collect()
+        if not torch.cuda.is_available():
+            return
+        torch.cuda.empty_cache()
+        torch.cuda.synchronize()
+        if hasattr(torch.cuda, "ipc_collect"):
+            torch.cuda.ipc_collect()
+        if aggressive:
+            gc.collect()
+            torch.cuda.empty_cache()
+            torch.cuda.synchronize()
+
+    @staticmethod
+    def _tensor_to_cpu(value):
+        if torch.is_tensor(value):
+            return value.detach().cpu()
+        if isinstance(value, dict):
+            return {k: XSamDemo._tensor_to_cpu(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [XSamDemo._tensor_to_cpu(v) for v in value]
+        if isinstance(value, tuple):
+            return tuple(XSamDemo._tensor_to_cpu(v) for v in value)
+        return value
+
+    def _finalize_inference(
+        self,
+        data_dict,
+        data_samples,
+        infer_error=None,
+        mlm_outputs=None,
+    ) -> None:
+        """Release per-request GPU tensors; model weights stay loaded."""
+        if infer_error is not None:
+            self._dispose_mlm_outputs(mlm_outputs)
+        self._clear_inference_buffers(data_dict, data_samples)
+        self._release_gpu_memory(aggressive=self._is_cuda_oom(infer_error))
+
+    @staticmethod
+    def _clear_inference_buffers(data_dict, data_samples):
+        """Drop references to GPU tensors from a failed or finished forward pass."""
+        if isinstance(data_dict, dict):
+            data_dict.clear()
+        if isinstance(data_samples, list):
+            data_samples.clear()
+
     def run_on_image(self, image, prompt, task_name, vprompt_masks=None, **kwargs):
         mode = "tensor" if self.output_ids_with_output else "predict"
+        output_dir = kwargs.pop("output_dir", None)
+        file_prefix = kwargs.pop("file_prefix", "image")
+        image = load_image(image, mode="RGB")
         data_dict = {"pil_image": image, "vprompt_masks": vprompt_masks, "task_name": task_name}
 
         classes, task_name_postprocess = self._get_classes_from_prompt(prompt, task_name)
@@ -528,15 +646,18 @@ class XSamDemo:
         self._set_metadata(task_name, classes)
         data_dict.update(self._process_prompt(prompt, task_name, classes))
         data_dict.update(self._process_image(image))
-        data_dict.update(self._process_data_dict(data_dict))
+        data_dict.update(self._process_image_data_dict(data_dict))
         data_dict, data_samples = self._process_input_dict(data_dict)
-        input_ids = data_dict["input_ids"]
+        input_ids = self._tensor_to_cpu(data_dict["input_ids"])
 
         metadata = MetadataCatalog.get(f"{task_name}") if task_name in MetadataCatalog.list() else self.metadata
 
+        mlm_outputs = None
+        seg_outputs = None
+        infer_error = None
         with torch.no_grad():
             try:
-                llm_outputs, seg_outputs = self.model(
+                mlm_outputs, seg_outputs = self.model(
                     data_dict,
                     data_samples,
                     mode=mode,
@@ -547,18 +668,31 @@ class XSamDemo:
                     do_loss=False,
                     **kwargs,
                 )
-                torch.cuda.empty_cache()
-                torch.cuda.synchronize()
             except Exception as e:
-                print_log(f"Error in {task_name} prediction\n: {e}\n{traceback.format_exc()}", logger="current")
-                return None, None, None
+                infer_error = e
+                self._last_infer_error = e
+                print_log(f"Error in {task_name} prediction: {e}\n{traceback.format_exc()}", logger="current")
+            finally:
+                self._finalize_inference(
+                    data_dict,
+                    data_samples,
+                    infer_error=infer_error,
+                    mlm_outputs=mlm_outputs,
+                )
+                if infer_error is not None:
+                    mlm_outputs = None
+                    seg_outputs = None
 
-        output_ids = llm_outputs.sequences
+        if infer_error is not None:
+            return None, None, None
+
+        mlm_input = self._decode_input_ids(input_ids[0].tolist())
+        mlm_input = re.sub(f"({re.escape(DEFAULT_PLACEHOLDER_TOKEN)}\\s*)+", DEFAULT_IMAGE_TOKEN, mlm_input)
+        mlm_input = re.sub(r" {2,}", " ", mlm_input)
+
+        output_ids = mlm_outputs.sequences.detach().cpu()
         generation_output = self.tokenizer.decode(output_ids[0]).strip()
-        generation_output = generation_output.replace("<|end|>", "").replace("<p> ", "<p>").replace("</p> ", "</p>")
-        if task_name != "gcgseg":
-            generation_output = generation_output.replace("<p>", "").replace("</p>", "")
-        llm_input = self._decode_input_ids(input_ids[0].tolist())
+        generation_output = re.sub(r" {2,}", " ", generation_output)
 
         input_phrases = []
         output_phrases = []
@@ -571,28 +705,40 @@ class XSamDemo:
             output_phrases = self._decode_phrases_ids(output_phrases_ids)
         phrases = output_phrases or input_phrases
 
-        print_log(f"Sample output of {task_name}:\n" f"{llm_input + generation_output}\n", logger="current")
+        print_log(f"Sample output of {task_name}:\n" f"{mlm_input + generation_output}\n", logger="current")
         self.visualizer.metadata = metadata
 
+        self._dispose_mlm_outputs(mlm_outputs)
+        mlm_outputs = None
+        self._release_gpu_memory()
+
+        if seg_outputs is None:
+            return mlm_input, generation_output, None
+
         try:
-            visualized_image = self.visualizer.draw_predictions(
+            visualized_image = self._visualize_image_predictions(
                 image,
-                data_name=task_name_postprocess,
+                seg_outputs[0],
+                task_name_postprocess,
                 phrases=phrases,
-                **(seg_outputs[0]),
+                output_dir=output_dir,
+                file_prefix=file_prefix,
             )
         except Exception as e:
-            print_log(f"Error in {task_name} visualization\n: {e}\n{traceback.format_exc()}", logger="current")
-            return llm_input, generation_output, None
+            print_log(f"Error in {task_name} visualization: {e}\n{traceback.format_exc()}", logger="current")
+            self._release_gpu_memory(aggressive=self._is_cuda_oom(e))
+            return mlm_input, generation_output, None
+        finally:
+            seg_outputs = None
+            self._release_gpu_memory()
 
-        return llm_input, generation_output, visualized_image.get_image()
+        return mlm_input, generation_output, visualized_image
 
 
 def main():
-    """Main demo function for single image processing."""
+    """Main demo function for image processing."""
     args = parse_args()
 
-    # Validate input image exists
     if not osp.exists(args.image):
         raise FileNotFoundError(f"Input image not found: {args.image}")
 
@@ -624,44 +770,47 @@ def main():
             raise ValueError("work_dir must be specified when using 'latest' checkpoint")
         print_log(f"Found latest checkpoint: {args.pth_model}", logger="current")
 
-    # Create demo instance
+    # Create demo
     demo = XSamDemo(cfg, args.pth_model, output_ids_with_output=False)
 
-    if args.vprompt_masks and osp.exists(args.vprompt_masks):
-        if osp.isdir(args.vprompt_masks):
-            vprompt_masks = [
-                load_image(osp.join(args.vprompt_masks, file), mode="L") for file in os.listdir(args.vprompt_masks)
-            ]
+    vprompt_masks = []
+    for vprompt_mask_path in args.vprompt_masks or []:
+        if not osp.exists(vprompt_mask_path):
+            print_log(f"Vprompt mask path not found: {vprompt_mask_path}", logger="current", level=logging.WARNING)
+            continue
+        if osp.isdir(vprompt_mask_path):
+            vprompt_masks.extend(
+                load_image(osp.join(vprompt_mask_path, file), mode="L") for file in sorted(os.listdir(vprompt_mask_path))
+            )
         else:
-            vprompt_masks = [load_image(args.vprompt_masks, mode="L")]
-    else:
-        vprompt_masks = None
+            vprompt_masks.append(load_image(vprompt_mask_path, mode="L"))
+    vprompt_masks = vprompt_masks or None
 
-    if osp.isdir(args.image):
-        output_dir = args.image + "_vis" if args.output_dir is None else args.output_dir
-        os.makedirs(output_dir, exist_ok=True)
+    if args.image and osp.isdir(args.image):
+        output_dir = args.image + "_demo" if args.output_dir is None else args.output_dir
+        output_dir = osp.join(output_dir, args.task_name)
         for file in os.listdir(args.image):
-            pil_image = Image.open(osp.join(args.image, file))
-            llm_input, llm_output, seg_output = demo.run_on_image(
-                pil_image, args.prompt, args.task_name, vprompt_masks=vprompt_masks, threshold=args.score_thr
+            demo.run_on_image(
+                osp.join(args.image, file),
+                args.prompt,
+                args.task_name,
+                vprompt_masks=vprompt_masks,
+                threshold=args.score_thr,
+                output_dir=output_dir,
+                file_prefix=file[:-4],
             )
-            print(f"llm_input: {llm_input}\nllm_output: {llm_output}")
-            # Save seg_output image
-            if seg_output is not None:
-                cv2.imwrite(f"{output_dir}/{file[:-4]}.png", cv2.cvtColor(seg_output, cv2.COLOR_RGB2BGR))
-    elif osp.isfile(args.image):
-        pil_image = Image.open(args.image)
-        llm_input, llm_output, seg_output = demo.run_on_image(
-            pil_image, args.prompt, args.task_name, vprompt_masks=vprompt_masks, threshold=args.score_thr
+    elif args.image and osp.isfile(args.image):
+        output_dir = osp.dirname(args.image) + "_demo" if args.output_dir is None else args.output_dir
+        output_dir = osp.join(output_dir, args.task_name)
+        demo.run_on_image(
+            args.image,
+            args.prompt,
+            args.task_name,
+            vprompt_masks=vprompt_masks,
+            threshold=args.score_thr,
+            output_dir=output_dir,
+            file_prefix=osp.basename(args.image)[:-4],
         )
-        # Save seg_output image
-        output_dir = osp.dirname(args.image) + "_vis" if args.output_dir is None else args.output_dir
-        os.makedirs(output_dir, exist_ok=True)
-        if seg_output is not None:
-            print(f"llm_input: {llm_input}\nllm_output: {llm_output}")
-            cv2.imwrite(
-                f"{output_dir}/{osp.basename(args.image)[:-4]}.png", cv2.cvtColor(seg_output, cv2.COLOR_RGB2BGR)
-            )
     else:
         raise ValueError(f"Invalid image: {args.image}")
 

@@ -4,8 +4,8 @@ from mmengine.utils.misc import get_object_from_string
 
 
 def template_map_fn(example, template, output_suffix=True):
-    conversation = example.get("conversation", [])
-    for i, single_turn_conversation in enumerate(conversation):
+    conversations = example.get("conversations", [])
+    for i, single_turn_conversation in enumerate(conversations):
         input = single_turn_conversation.get("input", "")
         if input is None:
             input = ""
@@ -25,7 +25,7 @@ def template_map_fn(example, template, output_suffix=True):
         single_turn_conversation["need_eos_token"] = not template.get("SUFFIX_AS_EOS", False)
         single_turn_conversation["sep"] = template.get("SEP", "")
 
-    return {"conversation": conversation}
+    return {"conversations": conversations}
 
 
 def template_map_fn_factory(template, output_suffix=True):

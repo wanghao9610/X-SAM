@@ -1,4 +1,3 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
 import copy
 import itertools
 from typing import Any, Generator, Iterator, List, Union
@@ -80,6 +79,24 @@ def rasterize_polygons_within_box(polygons: List[np.ndarray], box: np.ndarray, m
     mask = polygons_to_bitmask(polygons, mask_size, mask_size)
     mask = torch.from_numpy(mask)
     return mask
+
+def pairwise_mask_iou(masks1: torch.Tensor, masks2: torch.Tensor) -> torch.Tensor:
+    """
+    Compute IoU between **all** pairs of masks.
+    Args:
+        masks1: [N, H, W]
+        masks2: [M, H, W]
+    Returns:
+        iou: [N, M]
+    """
+    m1 = masks1.flatten(1).float()          # [N, H*W]
+    m2 = masks2.flatten(1).float()          # [M, H*W]
+    inter = m1 @ m2.T                       # [N, M]
+    area1 = m1.sum(-1, keepdim=True)        # [N, 1]
+    area2 = m2.sum(-1, keepdim=True).T      # [1, M]
+    union = area1 + area2 - inter
+    iou = inter / union.clamp(min=1e-6)
+    return iou
 
 
 class BitMasks:

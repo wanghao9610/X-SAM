@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Image processor class for Mask2Former."""
+"""Img processor class for Mask2Former."""
 
 import math
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union
@@ -28,6 +28,8 @@ from transformers.image_transforms import (
     to_channel_dimension_format,
 )
 from transformers.image_utils import (
+    IMAGENET_DEFAULT_MEAN,
+    IMAGENET_DEFAULT_STD,
     ChannelDimension,
     ImageInput,
     PILImageResampling,
@@ -92,7 +94,7 @@ def make_pixel_mask(
 
     Args:
         image (`np.ndarray`):
-            Image to make the pixel mask for.
+            Img to make the pixel mask for.
         output_size (`Tuple[int, int]`):
             Output size of the mask.
     """
@@ -376,10 +378,10 @@ class Mask2FormerImageProcessor(BaseImageProcessor):
         do_normalize (`bool`, *optional*, defaults to `True`):
             Whether or not to normalize the input with mean and standard deviation.
         image_mean (`int`, *optional*, defaults to `[0.485, 0.456, 0.406]`):
-            The sequence of means for each channel, to be used when normalizing images. Defaults to the ImageNet mean.
+            The sequence of means for each channel, to be used when normalizing images. Defaults to the ImgNet mean.
         image_std (`int`, *optional*, defaults to `[0.229, 0.224, 0.225]`):
             The sequence of standard deviations for each channel, to be used when normalizing images. Defaults to the
-            ImageNet std.
+            ImgNet std.
         ignore_index (`int`, *optional*):
             Label to be assigned to background pixels in segmentation maps. If provided, segmentation map pixels
             denoted with 0 (background) will be replaced with `ignore_index`.
@@ -463,7 +465,7 @@ class Mask2FormerImageProcessor(BaseImageProcessor):
             image_processor_dict["do_reduce_labels"] = image_processor_dict.pop("reduce_labels")
         return super().from_dict(image_processor_dict, **kwargs)
 
-    # Copied from transformers.models.maskformer.image_processing_maskformer.MaskFormerImageProcessor.to_dict
+    # Copied from transformers.models.maskformer.image_processing_maskformer.MaskFormerImgProcessor.to_dict
     def to_dict(self) -> Dict[str, Any]:
         """
         Serializes this instance to a Python dictionary. This method calls the superclass method and then removes the
@@ -485,7 +487,7 @@ class Mask2FormerImageProcessor(BaseImageProcessor):
         return (newh, neww)
 
     @deprecate_kwarg("max_size", version="4.27.0", warn_if_greater_or_equal_version=True)
-    # Copied from transformers.models.maskformer.image_processing_maskformer.MaskFormerImageProcessor.resize with get_maskformer_resize_output_image_size->get_mask2former_resize_output_image_size
+    # Copied from transformers.models.maskformer.image_processing_maskformer.MaskFormerImgProcessor.resize with get_maskformer_resize_output_image_size->get_mask2former_resize_output_image_size
     def resize(
         self,
         image: np.ndarray,
@@ -502,7 +504,7 @@ class Mask2FormerImageProcessor(BaseImageProcessor):
 
         Args:
             image (`np.ndarray`):
-                Image to resize.
+                Img to resize.
             size (`Dict[str, int]`):
                 The size of the output image.
             size_divisor (`int`, *optional*, defaults to 0):
@@ -550,7 +552,7 @@ class Mask2FormerImageProcessor(BaseImageProcessor):
         )
         return image
 
-    # Copied from transformers.models.detr.image_processing_detr.DetrImageProcessor.rescale
+    # Copied from transformers.models.detr.image_processing_detr.DetrImgProcessor.rescale
     def rescale(
         self,
         image: np.ndarray,
@@ -563,7 +565,7 @@ class Mask2FormerImageProcessor(BaseImageProcessor):
 
         Args:
             image (`np.ndarray`):
-                Image to rescale.
+                Img to rescale.
             rescale_factor (`float`):
                 The value to use for rescaling.
             data_format (`str` or `ChannelDimension`, *optional*):
@@ -579,7 +581,7 @@ class Mask2FormerImageProcessor(BaseImageProcessor):
         """
         return rescale(image, rescale_factor, data_format=data_format, input_data_format=input_data_format)
 
-    # Copied from transformers.models.maskformer.image_processing_maskformer.MaskFormerImageProcessor.convert_segmentation_map_to_binary_masks
+    # Copied from transformers.models.maskformer.image_processing_maskformer.MaskFormerImgProcessor.convert_segmentation_map_to_binary_masks
     def convert_segmentation_map_to_binary_masks(
         self,
         segmentation_map: "np.ndarray",
@@ -596,8 +598,8 @@ class Mask2FormerImageProcessor(BaseImageProcessor):
             do_reduce_labels=do_reduce_labels,
         )
 
-    def __call__(self, images, segmentation_maps=None, **kwargs) -> BatchFeature:
-        return self.preprocess(images, segmentation_maps=segmentation_maps, **kwargs)
+    def __call__(self, images, mask_labels=None, **kwargs) -> BatchFeature:
+        return self.preprocess(images, mask_labels=mask_labels, **kwargs)
 
     def _preprocess(
         self,
@@ -714,8 +716,8 @@ class Mask2FormerImageProcessor(BaseImageProcessor):
     def preprocess(
         self,
         images: ImageInput,
-        segmentation_maps: Optional[ImageInput] = None,
-        condition_maps: Optional[ImageInput] = None,
+        mask_labels: Optional[ImageInput] = None,
+        vprompt_masks: Optional[ImageInput] = None,
         instance_id_to_semantic_id: Optional[Dict[int, int]] = None,
         do_resize: Optional[bool] = None,
         size: Optional[Dict[str, int]] = None,
@@ -747,7 +749,7 @@ class Mask2FormerImageProcessor(BaseImageProcessor):
 
         if not valid_images(images):
             raise ValueError(
-                "Invalid image type. Must be of type PIL.Image.Image, numpy.ndarray, "
+                "Invalid image type. Must be of type PIL.Image.Img, numpy.ndarray, "
                 "torch.Tensor, tf.Tensor or jax.ndarray."
             )
 
@@ -762,25 +764,25 @@ class Mask2FormerImageProcessor(BaseImageProcessor):
             resample=resample,
         )
 
-        if segmentation_maps is not None and not valid_images(segmentation_maps):
+        if mask_labels is not None and not valid_images(mask_labels):
             raise ValueError(
-                "Invalid segmentation map type. Must be of type PIL.Image.Image, numpy.ndarray, "
+                "Invalid segmentation map type. Must be of type PIL.Image.Img, numpy.ndarray, "
                 "torch.Tensor, tf.Tensor or jax.ndarray."
             )
 
-        if condition_maps is not None and not valid_images(condition_maps):
+        if vprompt_masks is not None and not valid_images(vprompt_masks):
             raise ValueError(
-                "Invalid segmentation map type. Must be of type PIL.Image.Image, numpy.ndarray, "
+                "Invalid segmentation map type. Must be of type PIL.Image.Img, numpy.ndarray, "
                 "torch.Tensor, tf.Tensor or jax.ndarray."
             )
 
         if not is_batched(images):
             images = [images]
 
-        #     segmentation_maps = [segmentation_maps] if segmentation_maps is not None else None
+        #     mask_labels = [mask_labels] if mask_labels is not None else None
 
-        # if segmentation_maps is not None and len(images) != len(segmentation_maps):
-        #     raise ValueError("Images and segmentation maps must have the same length.")
+        # if mask_labels is not None and len(images) != len(mask_labels):
+        #     raise ValueError("Imgs and segmentation maps must have the same length.")
 
         images, original_sizes, scaled_sizes = zip(
             *(
@@ -802,13 +804,13 @@ class Mask2FormerImageProcessor(BaseImageProcessor):
             )
         )
 
-        if segmentation_maps is not None and len(segmentation_maps) > 0:
-            segmentation_maps, original_mask_sizes = zip(
+        if mask_labels is not None and len(mask_labels) > 0:
+            mask_labels, original_mask_sizes = zip(
                 *[
                     self._preprocess_mask(
                         segmentation_map, do_resize, size, size_divisor, input_data_format=input_data_format
                     )
-                    for segmentation_map in segmentation_maps
+                    for segmentation_map in mask_labels
                 ]
             )
             assert all(
@@ -816,13 +818,13 @@ class Mask2FormerImageProcessor(BaseImageProcessor):
                 for original_im_size, original_mask_size in zip(original_sizes, original_mask_sizes)
             ), "Segmentation maps should be the same size as input images."
 
-        if condition_maps is not None and len(condition_maps) > 0:
-            condition_maps, original_mask_sizes = zip(
+        if vprompt_masks is not None and len(vprompt_masks) > 0:
+            vprompt_masks, original_mask_sizes = zip(
                 *[
                     self._preprocess_mask(
                         condition_map, do_resize, size, size_divisor, input_data_format=input_data_format
                     )
-                    for condition_map in condition_maps
+                    for condition_map in vprompt_masks
                 ]
             )
             assert all(
@@ -832,8 +834,8 @@ class Mask2FormerImageProcessor(BaseImageProcessor):
 
         data = self.encode_inputs(
             images,
-            segmentation_maps,
-            condition_maps,
+            mask_labels,
+            vprompt_masks,
             original_sizes,
             scaled_sizes,
             instance_id_to_semantic_id,
@@ -844,7 +846,7 @@ class Mask2FormerImageProcessor(BaseImageProcessor):
         )
         return BatchFeature(data=data, tensor_type=return_tensors)
 
-    # Copied from transformers.models.vilt.image_processing_vilt.ViltImageProcessor._pad_image
+    # Copied from transformers.models.vilt.image_processing_vilt.ViltImgProcessor._pad_image
     def _pad_image(
         self,
         image: np.ndarray,
@@ -872,7 +874,7 @@ class Mask2FormerImageProcessor(BaseImageProcessor):
         )
         return padded_image
 
-    # Copied from transformers.models.vilt.image_processing_vilt.ViltImageProcessor.pad
+    # Copied from transformers.models.vilt.image_processing_vilt.ViltImgProcessor.pad
     def pad(
         self,
         images: List[np.ndarray],
@@ -887,7 +889,7 @@ class Mask2FormerImageProcessor(BaseImageProcessor):
 
         Args:
             image (`np.ndarray`):
-                Image to pad.
+                Img to pad.
             constant_values (`float` or `Iterable[float]`, *optional*):
                 The value to use for the padding if `mode` is `"constant"`.
             return_pixel_mask (`bool`, *optional*, defaults to `True`):
@@ -933,8 +935,8 @@ class Mask2FormerImageProcessor(BaseImageProcessor):
     def encode_inputs(
         self,
         pixel_values_list: List[ImageInput],
-        segmentation_maps: ImageInput = None,
-        condition_maps: ImageInput = None,
+        mask_labels: ImageInput = None,
+        vprompt_masks: ImageInput = None,
         original_sizes: List[Tuple[int, int]] = None,
         scaled_sizes: List[Tuple[int, int]] = None,
         instance_id_to_semantic_id: Optional[Union[List[Dict[int, int]], Dict[int, int]]] = None,
@@ -948,7 +950,7 @@ class Mask2FormerImageProcessor(BaseImageProcessor):
 
         Mask2Former addresses semantic segmentation with a mask classification paradigm, thus input segmentation maps
         will be converted to lists of binary masks and their respective labels. Let's see an example, assuming
-        `segmentation_maps = [[2,6,7,9]]`, the output will contain `mask_labels =
+        `mask_labels = [[2,6,7,9]]`, the output will contain `mask_labels =
         [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]` (four binary masks) and `class_labels = [2,6,7,9]`, the labels for
         each mask.
 
@@ -957,7 +959,7 @@ class Mask2FormerImageProcessor(BaseImageProcessor):
                 List of images (pixel values) to be padded. Each image should be a tensor of shape `(channels, height,
                 width)`.
 
-            segmentation_maps (`ImageInput`, *optional*):
+            mask_labels (`ImageInput`, *optional*):
                 The corresponding semantic segmentation maps with the pixel-wise annotations.
 
              (`bool`, *optional*, defaults to `True`):
@@ -969,7 +971,7 @@ class Mask2FormerImageProcessor(BaseImageProcessor):
                 - 0 for pixels that are padding (i.e. **masked**).
 
             instance_id_to_semantic_id (`List[Dict[int, int]]` or `Dict[int, int]`, *optional*):
-                A mapping between object instance ids and class ids. If passed, `segmentation_maps` is treated as an
+                A mapping between object instance ids and class ids. If passed, `mask_labels` is treated as an
                 instance segmentation map where each pixel represents an instance id. Can be provided as a single
                 dictionary with a global/dataset-level mapping or as a list of dictionaries (one per image), to map
                 instance ids in each image separately.
@@ -1003,14 +1005,14 @@ class Mask2FormerImageProcessor(BaseImageProcessor):
 
         data = self.pad(pixel_values_list, input_data_format=input_data_format)
 
-        if segmentation_maps is not None:
+        if mask_labels is not None:
             mask_labels = []
             if self.size_mode == "shortest_edge":
                 pad_size = get_max_height_width(pixel_values_list, input_data_format=input_data_format)
             else:
                 pad_size = (self._max_size, self._max_size)
             # Convert to list of binary masks and labels
-            for segmentation_map in segmentation_maps:
+            for segmentation_map in mask_labels:
                 segmentation_map = to_numpy_array(segmentation_map)
                 segmentation_map = segmentation_map[None, ...]
                 segmentation_map = self._pad_image(
@@ -1022,14 +1024,14 @@ class Mask2FormerImageProcessor(BaseImageProcessor):
             # we cannot batch them since they don't share a common class size
             data["mask_labels"] = mask_labels
 
-        if condition_maps is not None:
+        if vprompt_masks is not None:
             vprompt_masks = []
             if self.size_mode == "shortest_edge":
                 pad_size = get_max_height_width(pixel_values_list, input_data_format=input_data_format)
             else:
                 pad_size = (self._max_size, self._max_size)
             # Convert to list of binary masks and labels
-            for condition_map in condition_maps:
+            for condition_map in vprompt_masks:
                 condition_map = to_numpy_array(condition_map)
                 condition_map = condition_map[None, ...]
                 condition_map = self._pad_image(
@@ -1065,7 +1067,7 @@ class Mask2FormerImageProcessor(BaseImageProcessor):
                 corresponding to the target_sizes entry (if `target_sizes` is specified). Each entry of each
                 `torch.Tensor` correspond to a semantic class id.
         """
-        class_queries_logits = outputs.class_queries_logits  # [batch_size, num_queries, num_classes+1]
+        class_queries_logits = outputs.class_queries_logits  # [batch_size, num_queries, num_classes]
         masks_queries_logits = outputs.masks_queries_logits  # [batch_size, num_queries, height, width]
 
         # Scale back to preprocessed image size - (384, 384) for all models
@@ -1148,7 +1150,7 @@ class Mask2FormerImageProcessor(BaseImageProcessor):
         if return_coco_annotation and return_binary_maps:
             raise ValueError("return_coco_annotation and return_binary_maps can not be both set to True.")
 
-        # [batch_size, num_queries, num_classes+1]
+        # [batch_size, num_queries, num_classes]
         class_queries_logits = outputs.class_queries_logits
         # [batch_size, num_queries, height, width]
         masks_queries_logits = outputs.masks_queries_logits
@@ -1271,7 +1273,7 @@ class Mask2FormerImageProcessor(BaseImageProcessor):
             logger.warning("`label_ids_to_fuse` unset. No instance will be fused.")
             label_ids_to_fuse = set()
 
-        class_queries_logits = outputs.class_queries_logits  # [batch_size, num_queries, num_classes+1]
+        class_queries_logits = outputs.class_queries_logits  # [batch_size, num_queries, num_classes]
         masks_queries_logits = outputs.masks_queries_logits  # [batch_size, num_queries, height, width]
 
         # Scale back to preprocessed image size - (384, 384) for all models

@@ -1,21 +1,24 @@
 from .concat_dataset import ConcatDataset
-from .gcgseg_dataset import GCGSegDataset
-from .genseg_dataset import GenSegDataset
-from .imgconv_dataset import ImgConvDataset
-from .intseg_dataset import IntSegDataset
-from .ovseg_dataset import OVSegDataset
-from .reaseg_dataset import ReaSegDataset
-from .refseg_dataset import RefSegDataset
-from .vgdseg_dataset import VGDSegDataset
+from .img_chat_dataset import ImgChatDataset
+from .img_gcgseg_dataset import ImgGCGSegDataset
+from .img_genseg_dataset import ImgGenSegDataset
+from .img_intseg_dataset import ImgIntSegDataset
+from .img_ovseg_dataset import ImgOVSegDataset
+from .img_reaseg_dataset import ImgReaSegDataset
+from .img_refseg_dataset import ImgGRefSegDataset, ImgRefSegDataset
+from .img_sam_dataset import ImageSamDataset
+from .img_vgdseg_dataset import ImgVGDSegDataset
 
 __all__ = [
     "ConcatDataset",
-    "GenSegDataset",
-    "ImgConvDataset",
-    "RefSegDataset",
-    "GCGSegDataset",
-    "VGDSegDataset",
-    "ReaSegDataset",
-    "OVSegDataset",
-    "IntSegDataset",
+    "ImgGenSegDataset",
+    "ImageSamDataset",
+    "ImgChatDataset",
+    "ImgRefSegDataset",
+    "ImgGRefSegDataset",
+    "ImgGCGSegDataset",
+    "ImgReaSegDataset",
+    "ImgOVSegDataset",
+    "ImgIntSegDataset",
+    "ImgVGDSegDataset",
 ]

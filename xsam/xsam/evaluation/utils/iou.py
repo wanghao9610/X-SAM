@@ -3,10 +3,7 @@ from tabulate import tabulate
 
 
 class IouStat:
-    def __init__(self, cat_names=["ignore", "refer"]):
-        self.cat_names = cat_names
-        self.num_cats = len(cat_names)
-
+    def __init__(self):
         self.intersection = 0.0
         self.union = 0.0
         self.count = 0.0
@@ -47,16 +44,8 @@ class IouStat:
         self.giou.fill(0.0)
 
     def __repr__(self) -> str:
-        headers = ["", "cIoU", "gIoU"]
-        data = []
-        for i, cat_name in enumerate(self.cat_names):
-            data.append(
-                [
-                    cat_name,
-                    self.ciou[i],
-                    self.giou[i],
-                ]
-            )
+        headers = ["Metric", "cIoU", "gIoU"]
+        data = [["Value (%)", f"{self.ciou[1]:.2f}", f"{self.giou[1]:.2f}"]]
 
         table = tabulate(
             data,

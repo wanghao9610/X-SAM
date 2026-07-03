@@ -16,16 +16,19 @@ from mmengine.utils import digit_version
 from peft import get_peft_model, prepare_model_for_kbit_training
 from transformers import TrainingArguments
 from transformers.models.auto.modeling_auto import _BaseAutoModelClass
-from xtuner.configs import cfgs_name_path
-from xtuner.dataset.collate_fns import default_collate_fn
-from xtuner.model.modules import dispatch_modules
-from xtuner.model.modules.dispatch import SUPPORT_FLASH2
-from xtuner.model.utils import LoadWoInit, find_all_linear_names, traverse_dict
-from xtuner.registry import BUILDER, MAP_FUNC
-from xtuner.tools.utils import auto_dtype_of_deepspeed_config, get_seed_from_checkpoint, set_model_resource
 
+from xsam.dataset.collate_fns import default_collate_fn
+from xsam.model.modules.dispatch import SUPPORT_FLASH2
+from xsam.model.utils import LoadWoInit, find_all_linear_names, traverse_dict
+from xsam.registry import BUILDER, MAP_FUNC
+from xsam.utils.configs import cfgs_name_path
 from xsam.utils.logging import print_log, set_default_logging_format
-from xsam.utils.utils import register_function
+from xsam.utils.utils import (
+    auto_dtype_of_deepspeed_config,
+    get_seed_from_checkpoint,
+    register_function,
+    set_model_resource,
+)
 
 set_default_logging_format()
 warnings.filterwarnings("ignore")
@@ -195,7 +198,6 @@ def main():
                 traverse_dict(cfg.model)
             model = BUILDER.build(cfg.model)
             model.config.use_cache = False
-            dispatch_modules(model)
             if cfg.get("lora", None):
                 lora = BUILDER.build(cfg.lora)
                 model = prepare_model_for_kbit_training(model)
@@ -237,7 +239,8 @@ def main():
         elif args.resume is not None:
             # Use resumed seed
             from mmengine.fileio import PetrelBackend, get_file_backend
-            from xtuner.utils.fileio import patch_fileio
+
+            from xsam.utils.fileio import patch_fileio
 
             backend = get_file_backend(args.resume)
             if isinstance(backend, PetrelBackend):
@@ -287,7 +290,7 @@ def main():
                     "Please upgrade your DeepSpeed version " "by using the command pip install " "`deepspeed>=0.12.3`"
                 )
             optim_wrapper = cfg.optim_wrapper.type
-            if optim_wrapper == "DeepSpeedOptimWrapper":
+            if optim_wrapper in {"DeepSpeedOptimWrapper", "ModalityAwareDeepSpeedOptimWrapper"}:
                 print_log(
                     "Deepspeed training is already enabled in your config.",
                     logger="current",
@@ -302,21 +305,30 @@ def main():
                 with open(args.deepspeed) as f:
                     ds_cfg = json.load(f)
 
-                ds_grad_accum = ds_cfg.get("gradient_accumulation_steps", "auto")
                 mm_grad_accum = cfg.optim_wrapper.get("accumulative_counts", 1)
+                image_grad_accum = cfg.optim_wrapper.get("image_accumulative_counts", None)
+                video_grad_accum = cfg.optim_wrapper.get("video_accumulative_counts", None)
+                use_modality_accum = image_grad_accum is not None or video_grad_accum is not None
+                if use_modality_accum and (image_grad_accum is None or video_grad_accum is None):
+                    raise ValueError(
+                        "Both `image_accumulative_counts` and `video_accumulative_counts` "
+                        "must be set when enabling modality-aware DeepSpeed accumulation."
+                    )
+
+                ds_grad_accum = ds_cfg.get("gradient_accumulation_steps", "auto")
                 optim_constructor = cfg.optim_wrapper.get("constructor", "DefaultOptimWrapperConstructor")
-                if ds_grad_accum != "auto" and ds_grad_accum != mm_grad_accum:
+                grad_accum = mm_grad_accum
+                if ds_grad_accum != "auto" and ds_grad_accum != grad_accum:
                     print_log(
                         (
                             "Mismatch on gradient_accumulation_steps: "
-                            f"MMEngine {mm_grad_accum}, "
+                            f"MMEngine {grad_accum}, "
                             f"Deepspeed {ds_grad_accum}. "
-                            f"Set to {mm_grad_accum}"
+                            f"Set to {grad_accum}"
                         ),
                         logger="current",
                         level=logging.WARNING,
                     )
-                grad_accum = mm_grad_accum
 
                 ds_train_bs = ds_cfg.get("train_micro_batch_size_per_gpu", "auto")
                 mm_train_bs = cfg.train_dataloader.batch_size
@@ -355,7 +367,7 @@ def main():
                     True if digit_version(deepspeed.__version__) >= digit_version("0.10.1") else None
                 )
                 strategy = dict(
-                    type=LazyObject("xtuner.engine", "DeepSpeedStrategy"),
+                    type=LazyObject("xsam.engine", "DeepSpeedStrategy"),
                     config=ds_cfg,
                     gradient_accumulation_steps=grad_accum,
                     train_micro_batch_size_per_gpu=train_bs,
@@ -365,11 +377,14 @@ def main():
                 )
                 cfg.__setitem__("strategy", strategy)
                 optim_wrapper = dict(
-                    type="DeepSpeedOptimWrapper",
+                    type="ModalityAwareDeepSpeedOptimWrapper" if use_modality_accum else "DeepSpeedOptimWrapper",
                     constructor=optim_constructor,
                     optimizer=cfg.optim_wrapper.optimizer,
                     paramwise_cfg=paramwise_cfg,
                 )
+                if use_modality_accum:
+                    optim_wrapper["image_accumulative_counts"] = image_grad_accum
+                    optim_wrapper["video_accumulative_counts"] = video_grad_accum
                 cfg.__setitem__("optim_wrapper", optim_wrapper)
                 cfg.runner_type = "FlexibleRunner"
 

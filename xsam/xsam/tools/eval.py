@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
+import logging
 import os.path as osp
 import re
 import traceback
@@ -11,26 +12,40 @@ import torch
 from mmengine.config import Config, DictAction
 from mmengine.runner.utils import set_random_seed
 from torch.nn.parallel import DistributedDataParallel
-from torch.utils.data import DataLoader, DistributedSampler
+from torch.utils.data import DataLoader, Sampler
 from tqdm import tqdm
 from transformers import GenerationConfig, StoppingCriteriaList
-from xtuner.configs import cfgs_name_path
-from xtuner.registry import BUILDER
-from xtuner.tools.utils import set_model_resource
-from xtuner.utils.device import get_device
 
 from xsam.dataset.collate_fns import xsam_collate_fn
+from xsam.registry import BUILDER
 from xsam.utils.checkpoint import load_checkpoint
 from xsam.utils.config import setup_model_config
+from xsam.utils.configs import cfgs_name_path
 from xsam.utils.constants import DEFAULT_SEG_TOKEN
+from xsam.utils.device import get_device
 from xsam.utils.dist import setup_distributed
 from xsam.utils.logging import print_log, set_default_logging_format
 from xsam.utils.misc import data_dict_to_device
-from xsam.utils.utils import register_function
+from xsam.utils.utils import register_function, set_model_resource
 
 # Global setup
 set_default_logging_format()
 warnings.filterwarnings("ignore")
+
+
+class DistributedEvalSampler(Sampler):
+    """Shard evaluation data across ranks without padding duplicate samples."""
+
+    def __init__(self, dataset, rank: int, num_replicas: int):
+        self.dataset = dataset
+        self.rank = rank
+        self.num_replicas = num_replicas
+
+    def __iter__(self):
+        return iter(range(self.rank, len(self.dataset), self.num_replicas))
+
+    def __len__(self):
+        return max(0, (len(self.dataset) - self.rank + self.num_replicas - 1) // self.num_replicas)
 
 
 def parse_args() -> argparse.Namespace:
@@ -45,6 +60,7 @@ def parse_args() -> argparse.Namespace:
         help="path to model checkpoint for evaluation",
     )
     parser.add_argument("--seed", type=int, default=None, help="random seed")
+    parser.add_argument("--rerun", action="store_true", help="rerun the evaluation")
     parser.add_argument(
         "--cfg-options",
         nargs="+",
@@ -79,11 +95,14 @@ def get_gcg_caption(llm_generation_output):
     if DEFAULT_SEG_TOKEN not in llm_generation_output:
         return ""
 
-    parts = llm_generation_output.split(".")
-    sents = [part.strip() for part in parts if DEFAULT_SEG_TOKEN not in part]
-    caption = ". ".join(sents)
+    parts = re.split(
+        r"(?<=[.!?])(?:\s+|$)|(?:\n+)|(?<=\s)(?=[A-Z])",
+        llm_generation_output,
+    )
+    sents = [part.strip() for part in parts if part.strip() and DEFAULT_SEG_TOKEN not in part]
+    caption = " ".join(sents)
     caption = re.sub(r"<.*?>", "", caption)
-    caption = " ".join(caption.split()).strip("'").strip()
+    caption = " ".join(caption.split()).strip("'").strip('"').strip()
     return caption
 
 
@@ -114,8 +133,10 @@ def process_batch(
 
     data_dict = {
         "input_ids": data["data_dict"].get("input_ids", None),
+        "attention_mask": data["data_dict"].get("attention_mask", None),
         "pixel_values": data["data_dict"].get("pixel_values", None),
         "extra_pixel_values": data["data_dict"].get("extra_pixel_values", None),
+        "image_grid_thw": data["data_dict"].get("image_grid_thw", None),
         "cond_ids": data["data_dict"].get("cond_ids", None),
         "seg_ids": data["data_dict"].get("seg_ids", None),
         "vprompt_masks": data["data_dict"].get("vprompt_masks", None),
@@ -129,7 +150,7 @@ def process_batch(
     data_dict = data_dict_to_device(data_dict, device=model.device, dtype=model.dtype)
 
     with torch.no_grad():
-        llm_outputs, seg_outputs = model(
+        mlm_outputs, seg_outputs = model(
             data_dict,
             data_samples,
             mode=mode,
@@ -142,8 +163,8 @@ def process_batch(
 
     if seg_outputs is None:
         llm_generation_output = ""
-        if llm_outputs is not None and hasattr(llm_outputs, "sequences"):
-            llm_generation_output = model.tokenizer.batch_decode(llm_outputs.sequences)
+        if mlm_outputs is not None and hasattr(mlm_outputs, "sequences"):
+            llm_generation_output = model.tokenizer.batch_decode(mlm_outputs.sequences)
 
         print_log(
             rf"Failed to get segmentation outputs: {image_files}, "
@@ -153,15 +174,20 @@ def process_batch(
         )
         return False, None
 
-    if "gcg" in data_name and llm_outputs is not None and hasattr(llm_outputs, "sequences"):
-        llm_generation_output = model.tokenizer.batch_decode(llm_outputs.sequences)
+    if "gcg" in data_name and mlm_outputs is not None and hasattr(mlm_outputs, "sequences"):
+        llm_generation_output = model.tokenizer.batch_decode(mlm_outputs.sequences)
         gcg_phrases = [
             get_gcg_phrases(output_ids, model.tokenizer, model.pstart_token_idx, model.pend_token_idx)
-            for output_ids in llm_outputs.sequences
+            for output_ids in mlm_outputs.sequences
         ]
         gcg_captions = [get_gcg_caption(output) for output in llm_generation_output]
-        for i, segmentation_output in enumerate(seg_outputs):
-            segmentation_output.update({"gcg_phrases": gcg_phrases[i], "gcg_caption": gcg_captions[i]})
+        for i, seg_output in enumerate(seg_outputs):
+            if isinstance(seg_output, list):
+                for _seg_output in seg_output:
+                    _seg_output.update({"gcg_phrases": gcg_phrases[i], "gcg_caption": gcg_captions[i]})
+            else:
+                assert isinstance(seg_output, dict)
+                seg_output.update({"gcg_phrases": gcg_phrases[i], "gcg_caption": gcg_captions[i]})
 
     return True, seg_outputs
 
@@ -182,7 +208,7 @@ def evaluate_dataset(
     mode = "tensor" if output_ids_with_output else "predict"
 
     # Setup dataloader
-    sampler = DistributedSampler(dataset=dataset, rank=rank, num_replicas=world_size, shuffle=False)
+    sampler = DistributedEvalSampler(dataset=dataset, rank=rank, num_replicas=world_size)
     dataloader = DataLoader(
         dataset, batch_size=1, num_workers=4, sampler=sampler, shuffle=False, collate_fn=xsam_collate_fn
     )
@@ -198,18 +224,18 @@ def evaluate_dataset(
             failed_cnt += 1
             continue
 
-        image_infos = data["data_samples"].metainfo["image_infos"]
-        evaluator.process(image_infos, seg_outputs)
+        input_infos = data["data_samples"].metainfo["image_infos"]
+        evaluator.process(input_infos, seg_outputs)
 
     print_log(f"Failed number of {data_name}: {failed_cnt}", logger="current")
-    print_log(f"Evaluating {data_name} done!", logger="current")
     evaluator.evaluate()
+    print_log(f"Evaluating {data_name} done!", logger="current")
 
 
 def main():
     """Main evaluation function."""
     args = parse_args()
-    rank, local_rank, world_size = setup_distributed(args)
+    rank, local_rank, world_size = setup_distributed(args, kwargs={"timeout": 18000})
 
     # Load and process config
     if not osp.isfile(args.config):
@@ -250,25 +276,33 @@ def main():
     if world_size > 1:
         model = DistributedDataParallel(model, device_ids=[local_rank]).module
 
-    load_checkpoint(model, args.pth_model)
+    if args.pth_model is not None:
+        load_checkpoint(model, args.pth_model)
+    else:
+        print_log("No checkpoint provided, using random initialization", logger="current", level=logging.WARNING)
     stop_criteria, generation_config = setup_model_config(model, cfg)
 
     # Evaluate on all datasets
     assert len(cfg.val_datasets) == len(
-        cfg.val_evaluators
-    ), f"len(cfg.val_datasets) = {len(cfg.val_datasets)}, len(cfg.val_evaluators) = {len(cfg.val_evaluators)}"
+        cfg.val_evaluator
+    ), f"len(cfg.val_datasets) = {len(cfg.val_datasets)}, len(cfg.val_evaluator) = {len(cfg.val_evaluator)}"
     print_log(f"Evaluating {len(cfg.val_datasets)} datasets...", logger="current")
-    for dataset_cfg, evaluator_cfg in zip(cfg.val_datasets, cfg.val_evaluators):
+    for dataset_cfg, evaluator_cfg in zip(cfg.val_datasets, cfg.val_evaluator):
         try:
             dataset = BUILDER.build(dataset_cfg)
-            model.postprocess_fn = dataset.postprocess_fn
-
             evaluator = BUILDER.build(evaluator_cfg)
             evaluator.metadata = dataset.metadata
             evaluator.output_dir = osp.join(args.work_dir, "pred_data", evaluator.data_name)
+            model.postprocess_fn = dataset.postprocess_fn
+
+            if osp.exists(evaluator.output_dir) and evaluator.support_loading and not args.rerun:
+                print_log(f"Evaluating {evaluator.data_name} from existing predictions...", logger="current")
+                evaluator.reset()
+                evaluator.evaluate()
+                continue
             evaluate_dataset(model, dataset, evaluator, rank, world_size, generation_config, stop_criteria)
         except Exception as e:
-            print_log(f"Error evaluating {dataset_cfg.data_name}\n: {e}\n{traceback.format_exc()}", logger="current")
+            print_log(f"Error evaluating {evaluator_cfg.data_name}: {e}\n{traceback.format_exc()}", logger="current")
             continue
 
 

@@ -12,15 +12,18 @@ def decode_mask(segmentation, height, width):
             segmentation["counts"] = segmentation["counts"].decode("utf-8")
         mask = mask_utils.decode(segmentation).astype(np.uint8)
         binary_mask = np.maximum(binary_mask, mask.squeeze())
-    elif isinstance(segmentation[0], dict):
+    elif isinstance(segmentation, list) and isinstance(segmentation[0], dict):
         for seg in segmentation:
+            if isinstance(seg["counts"], list):
+                seg = mask_utils.frPyObjects(seg, *seg["size"])
+                seg["counts"] = seg["counts"].decode("utf-8")
             mask = mask_utils.decode(seg).astype(np.uint8)
             binary_mask = np.maximum(binary_mask, mask.squeeze())
-    elif isinstance(segmentation[0], list):
+    elif isinstance(segmentation, list) and isinstance(segmentation[0], list):
         for seg in segmentation:
             rles = mask_utils.frPyObjects([seg], height, width)
-            rle = mask_utils.merge(rles)
-            mask = mask_utils.decode(rle)
+            rles = mask_utils.merge(rles)
+            mask = mask_utils.decode(rles).astype(np.uint8)
             binary_mask = np.maximum(binary_mask, mask.squeeze())
     else:
         raise ValueError(f"Invalid segmentation type: {type(segmentation)}")
@@ -35,7 +38,7 @@ def encode_mask(mask, encoding="ascii"):
     return rle
 
 
-def calculate_iou(output, target, C, ignore_index=255):
+def calculate_iou(output, target, C=None, ignore_index=255):
     """
     Calculate intersection and union for numpy arrays
     Args:
@@ -64,6 +67,7 @@ def calculate_iou(output, target, C, ignore_index=255):
     intersection = output[mask]
 
     # Ensure correct number of bins
+    C = np.max(output[output != ignore_index]) + 1 if C is None else C
     valid_area = lambda x: (x != ignore_index) & (x < C)
     area_intersection = np.bincount(intersection[valid_area(intersection)], minlength=C)
     area_output = np.bincount(output[valid_area(output)], minlength=C)
@@ -73,6 +77,28 @@ def calculate_iou(output, target, C, ignore_index=255):
     area_union = area_output + area_target - area_intersection
 
     return area_intersection, area_union, area_target
+
+
+# Copied from transformers.models.detr.image_processing_detr.binary_mask_to_rle
+def binary_mask_to_bbox(mask):
+    """
+    Converts given binary mask of shape `(height, width)` to the bounding box format.
+
+    Args:
+        mask (`torch.Tensor` or `numpy.array`):
+            A binary mask tensor of shape `(height, width)` where 0 denotes background and 1 denotes the target
+            segment_id or class_id.
+    Returns:
+        `List`: Bounding box list of the binary mask in the format of [x0, y0, x1, y1].
+    """
+    if isinstance(mask, torch.Tensor):
+        mask = mask.numpy()
+
+    x0 = np.where(mask)[1].min()
+    y0 = np.where(mask)[0].min()
+    x1 = np.where(mask)[1].max()
+    y1 = np.where(mask)[0].max()
+    return [x0, y0, x1, y1]
 
 
 # Copied from transformers.models.detr.image_processing_detr.binary_mask_to_rle

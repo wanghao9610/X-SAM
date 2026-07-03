@@ -29,10 +29,10 @@ def create_small_table(small_dict):
     """
     keys, values = tuple(zip(*small_dict.items()))
     table = tabulate(
-        [values],
-        headers=keys,
+        [["Value (%)", *values]],
+        headers=["Metric", *keys],
         tablefmt="outline",
-        floatfmt=".3f",
+        floatfmt=".2f",
         stralign="center",
         numalign="center",
     )
@@ -314,7 +314,7 @@ def derive_coco_results(coco_eval, iou_type, class_names=None, show_categories=F
         table = tabulate(
             results_2d,
             tablefmt="outline",
-            floatfmt=".3f",
+            floatfmt=".2f",
             headers=["category", "AP"] * (N_COLS // 2),
             numalign="left",
         )
@@ -354,7 +354,9 @@ def convert_to_coco_dict(dataset_name, dataset_dicts):
     else:
         reverse_id_mapper = lambda contiguous_id: contiguous_id  # noqa
 
-    categories = [{"id": reverse_id_mapper(id), "name": name} for id, name in enumerate(metadata.thing_classes)]
+    categories = [
+        {"id": reverse_id_mapper(id), "name": name} for id, name in enumerate(metadata.thing_classes.values())
+    ]
 
     print_log("Converting dataset dicts into COCO format", logger="current")
     coco_images = []

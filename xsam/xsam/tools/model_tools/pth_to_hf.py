@@ -9,10 +9,10 @@ from mmengine.config import Config, DictAction
 from mmengine.fileio import PetrelBackend, get_file_backend
 from mmengine.utils import mkdir_or_exist
 from tqdm import tqdm
-from xtuner.configs import cfgs_name_path
-from xtuner.model.utils import guess_load_checkpoint
-from xtuner.registry import BUILDER
 
+from xsam.registry import BUILDER
+from xsam.utils.checkpoint import guess_load_checkpoint
+from xsam.utils.configs import cfgs_name_path
 from xsam.utils.logging import print_log
 
 
@@ -39,9 +39,9 @@ def parse_args():
     )
     parser.add_argument(
         "--save-format",
-        default="xtuner",
-        choices=("xtuner", "official", "huggingface"),
-        help="Only applicable for LLaVAModel. Indicate the save format.",
+        default="pytorch",
+        choices=("pytorch", "huggingface"),
+        help="Indicate the save format.",
     )
     parser.add_argument(
         "--cfg-options",
@@ -78,7 +78,7 @@ def main():
 
     if "LLaVAModel" in model_name:
         cfg.model.pretrained_pth = None
-        if args.save_format != "xtuner":
+        if args.save_format != "pytorch":
             use_meta_init = False
     if "Reward" in model_name:
         use_meta_init = False
@@ -117,7 +117,7 @@ def main():
 
     backend = get_file_backend(args.pth_model)
     if isinstance(backend, PetrelBackend):
-        from xtuner.utils.fileio import patch_fileio
+        from xsam.utils.fileio import patch_fileio
 
         with patch_fileio():
             state_dict = guess_load_checkpoint(args.pth_model)
@@ -127,8 +127,11 @@ def main():
     for name, param in tqdm(state_dict.items(), desc="Load State Dict"):
         set_module_tensor_to_device(model, name, "cpu", param)
 
-    if hasattr(model, "llm") and hasattr(model.llm, "config"):
+    if getattr(model, "llm", None) is not None and hasattr(model.llm, "config"):
         model.llm.config.use_cache = True
+
+    if getattr(model, "vlm", None) is not None and hasattr(model.vlm, "config"):
+        model.vlm.config.text_config.use_cache = True
 
     args.save_dir = osp.join(args.work_dir, f"{args.save_format}_model")
     mkdir_or_exist(args.save_dir)
@@ -146,7 +149,7 @@ def main():
         save_format=args.save_format,
     )
 
-    shutil.copyfile(args.config, osp.join(args.save_dir, "xtuner_config.py"))
+    shutil.copyfile(args.config, osp.join(args.save_dir, "pytorch_config.py"))
     print_log("All done!", "current")
 
 
