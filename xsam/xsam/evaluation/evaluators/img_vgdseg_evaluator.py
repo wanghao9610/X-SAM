@@ -113,6 +113,14 @@ class ImgVGDSegEvaluator(ImgBaseEvaluator):
         convert_to_coco_json(self.data_name, cache_path, gt_anns, allow_cached=False)
         coco_api = COCO(cache_path)
 
+        gt_img_ids = sorted(coco_api.getImgIds())
+        pred_img_ids = sorted({pred["image_id"] for pred in predictions})
+        if pred_img_ids != gt_img_ids:
+            print_log(
+                f"The number of images in predictions and ground truth is not the same. There are {len(pred_img_ids)} predictions and {len(gt_img_ids)} ground truth images.",
+                logger="current",
+            )
+
         coco_results = list(itertools.chain(*[x.get("instances", []) for x in predictions]))
         # unmap the category ids for COCO
         dataset_id_to_contiguous_id = self._metadata.thing_dataset_id_to_contiguous_id
@@ -143,7 +151,7 @@ class ImgVGDSegEvaluator(ImgBaseEvaluator):
                 coco_api,
                 new_coco_results,
                 "segm",
-                
+                img_ids=pred_img_ids,
             )
             if len(new_coco_results) > 0
             else None  # cocoapi does not handle empty results very well
