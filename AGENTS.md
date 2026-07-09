@@ -1,34 +1,85 @@
 # Agent Instructions
-> Use this Python environment for all Python execution, debugging, tests, and dependency checks.
 
-**Before running any Python or Conda command**, read the project root `.env` file and resolve:
+Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 
-If `.env` is missing, run `cp .env.example .env` and set machine-specific values. The repo tracks `.env.example` only; `.env` is gitignored.
+**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
-- `CONDA_HOME` — Conda installation root (all Conda paths derive from this)
-- `PYTHON_HOME` — active Conda env root (Python interpreter and env-specific paths derive from this)
+## 1. Think Before Coding
 
-Do not hardcode machine-specific paths. Do not use system Python.
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
 
-Derived paths (replace placeholders with values from `.env`):
+Before implementing:
+- State your assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them - don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
 
-| Purpose | Path |
-|--------|------|
-| Conda executable | `{CONDA_HOME}/bin/conda` |
-| Conda root | `{CONDA_HOME}` |
-| Conda environment name | basename of `{PYTHON_HOME}` (e.g. `xchat`) |
-| Python interpreter | `{PYTHON_HOME}/bin/python` |
+## 2. Simplicity First
 
-When running Python commands, prefer:
+**Minimum code that solves the problem. Nothing speculative.**
 
-`{CONDA_HOME}/bin/conda run -n <env_name> python ...`
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
 
-where `<env_name>` is the basename of `PYTHON_HOME`.
+Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
 
-For tests, prefer:
+## 3. Surgical Changes
 
-`{CONDA_HOME}/bin/conda run -n <env_name> pytest`
+**Touch only what you must. Clean up only your own mess.**
 
-For direct interpreter execution, use:
+When editing existing code:
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it - don't delete it.
 
-`{PYTHON_HOME}/bin/python ...`
+When your changes create orphans:
+- Remove imports/variables/functions that YOUR changes made unused.
+- Don't remove pre-existing dead code unless asked.
+
+The test: Every changed line should trace directly to the user's request.
+
+## 4. Goal-Driven Execution
+
+**Define success criteria. Loop until verified.**
+
+Transform tasks into verifiable goals:
+- "Add validation" -> "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" -> "Write a test that reproduces it, then make it pass"
+- "Refactor X" -> "Ensure tests pass before and after"
+
+For multi-step tasks, state a brief plan:
+```
+1. [Step] -> verify: [check]
+2. [Step] -> verify: [check]
+3. [Step] -> verify: [check]
+```
+
+Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+
+## 5. Project Runtime
+
+**Use the project environment. Do not guess local paths.**
+
+Before running Python, tests, or dependency checks:
+- Read the project root `.env` and use its `CONDA_HOME` and `PYTHON_HOME`.
+- If `.env` is missing, create it from `.env.example` and fill in machine-specific values first.
+- Run through that Conda environment, not system Python.
+- Do not hardcode local paths.
+
+## 6. Verification
+
+**Prove the change works before calling it done.**
+
+Before finishing:
+- Run the narrowest relevant checks first.
+- Broaden checks when changes touch shared behavior, public interfaces, or risky paths.
+- If a check cannot be run, say why and name the remaining risk.
+- Report what was verified, not just that it "works."
+
+---
+
+**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to over complication, and clarifying questions come before implementation rather than after mistakes.

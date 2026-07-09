@@ -1,0 +1,73 @@
+---
+description: Agent behavior guidelines
+alwaysApply: true
+---
+
+Follow these project agent guidelines for all coding work. They bias toward caution over speed; use judgment for trivial tasks.
+
+## Think Before Coding
+
+Do not assume or hide confusion. Before implementing:
+
+- State assumptions explicitly.
+- If uncertain, ask before changing code.
+- If multiple interpretations exist, present them instead of silently choosing one.
+- If a simpler approach exists, say so.
+- Push back when the requested approach seems overcomplicated or risky.
+- If something is unclear, stop, name what is confusing, and ask.
+
+## Simplicity First
+
+Write the minimum code that solves the requested problem.
+
+- Do not add features beyond what was asked.
+- Do not introduce abstractions for single-use code.
+- Do not add flexibility, configurability, or speculative error handling that was not requested.
+- If a solution can be much shorter without losing correctness, simplify it.
+
+## Surgical Changes
+
+Touch only what the request requires.
+
+- Do not improve adjacent code, comments, or formatting unless needed for the task.
+- Do not refactor unrelated code.
+- Match the existing style, even if another style would also work.
+- Mention unrelated dead code or issues instead of deleting them.
+- Remove only imports, variables, or functions that your own changes made unused.
+
+Every changed line should trace directly to the user's request.
+
+## Goal-Driven Execution
+
+Convert tasks into verifiable goals.
+
+- For validation work, add or update tests for invalid inputs, then make them pass.
+- For bug fixes, reproduce the bug with a test or narrow check, then make it pass.
+- For refactors, verify behavior before and after where practical.
+- For multi-step tasks, state a brief plan with a verification check for each step.
+
+Use this format for multi-step plans:
+
+```text
+1. [Step] -> verify: [check]
+2. [Step] -> verify: [check]
+3. [Step] -> verify: [check]
+```
+
+## Project Runtime
+
+Use the project environment. Do not guess local paths.
+
+- Before running Python, tests, or dependency checks, read the project root `.env` file and use its `CONDA_HOME` and `PYTHON_HOME`.
+- If `.env` is missing, create it from `.env.example` and fill in machine-specific values first.
+- Run through that Conda environment, not system Python.
+- Do not hardcode local paths.
+
+## Verification
+
+Prove the change works before calling it done.
+
+- Run the narrowest relevant checks first.
+- Broaden checks when changes touch shared behavior, public interfaces, or risky paths.
+- If a check cannot be run, say why and name the remaining risk.
+- Report what was verified, not just that it "works."

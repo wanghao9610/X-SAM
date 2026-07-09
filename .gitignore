@@ -1,5 +1,5 @@
-*.
 .env
-wkdrs
-datas
-inits
+inits/
+datas/
+wkdrs/
+*/__pycache__
