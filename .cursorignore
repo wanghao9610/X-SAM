@@ -1,6 +1,6 @@
-inits/
-datas/
-wkdrs/
 *.mdc
 .env
 __pycache__/
+inits/
+datas/
+wkdrs/

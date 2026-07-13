@@ -1,6 +1,6 @@
 # Agent Instructions
 
-Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
+Behavioral guidelines to reduce common LLM coding mistakes.
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
@@ -60,7 +60,17 @@ For multi-step tasks, state a brief plan:
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
-## 5. Project Runtime
+## 5. Project Layout
+
+**Keep project files in their designated directories.**
+
+- Core code belongs in `${CODE_NAME}/`, as defined in `.env`.
+- Data and data-related files belong in `datas/`.
+- Model weights and weight-related files belong in `inits/`.
+- Generated output files belong in `wkdrs/`.
+- Output names must distinguish tasks, experiments, or runs.
+
+## 6. Project Runtime
 
 **Use the project environment. Do not guess local paths.**
 
@@ -70,7 +80,7 @@ Before running Python, tests, or dependency checks:
 - Run through that Conda environment, not system Python.
 - Do not hardcode local paths.
 
-## 6. Verification
+## 7. Verification
 
 **Prove the change works before calling it done.**
 
